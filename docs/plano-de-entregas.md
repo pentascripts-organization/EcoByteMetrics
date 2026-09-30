@@ -1,0 +1,1 @@
+/* Planejamento das três sprints, critérios previstos, entregas, responsáveis, evidências e participação dos integrantes, conforme o item 6. */

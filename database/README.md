@@ -1,0 +1,1 @@
+/* Ordem e comandos para aplicar os scripts SQL em um banco vazio; localização das consultas DML usadas pela aplicação. */

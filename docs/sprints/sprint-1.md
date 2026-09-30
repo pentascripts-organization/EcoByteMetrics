@@ -1,0 +1,1 @@
+/* Objetivo, versão entregue, itens concluídos e pendentes, verificações realizadas e decisões da Sprint Review. */

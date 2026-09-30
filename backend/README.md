@@ -1,0 +1,1 @@
+/* Organização do backend, variáveis de ambiente, comandos de execução e forma de integração com as APIs auxiliares e com o PostgreSQL. */

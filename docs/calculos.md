@@ -1,0 +1,1 @@
+/* Fórmulas, unidades, fatores utilizados, período considerado e exemplo de cálculo de energia e CO₂e. */

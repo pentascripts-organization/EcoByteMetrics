@@ -1,0 +1,1 @@
+/* Partes da aplicação, responsabilidades e fluxo dos dados entre APIs auxiliares, backend, banco e frontend. */
