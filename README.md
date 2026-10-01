@@ -5,7 +5,7 @@
 
 ## 💡 Visão do Produto & Valor para o Cliente
 
-O **EcoByteMetrics** resolve a falta de visibilidade sobre o impacto ambiental de arquiteturas em nuvem e microsserviços [1]. A plataforma atua em três pilares fundamentais [1-3]:
+O **EcoByteMetrics** resolve a falta de visibilidade sobre o impacto ambiental de arquiteturas em nuvem e microsserviços. A plataforma atua em três pilares fundamentais:
 
 * 🔍 **Descoberta & Monitoramento Ativo:** Conecta-se ao ambiente para listar e monitorar dinamicamente microsserviços ativos, detectando indisponibilidades, oscilações ou falhas na exportação de dados em tempo real.
 * ⚡ **Análise Ambiental (ESG):** Converte a utilização de recursos (CPU, memória, rede) em consumo energético (kWh) e emissões de carbono (CO₂e) correlacionando dados com a localização geográfica e fatores regionais de carbono.
@@ -104,7 +104,7 @@ O backlog foi organizado para priorizar as entregas essenciais do MVP ao longo d
 | **US00** | **Setup Infra & Schema SQL:** Docker Compose, tabelas PostgreSQL nativas (DDL/DML) e documentação base. | [RNF05](#rnf05), [RP02](#rp02), [RP03](#rp03), [RP04](#rp04) | 1 | ⏳ |
 | **US01** | **UI Responsiva & Localização:** Layout no Figma, exibição da localização dos serviços e atualização automática. | [RF11](#rf11), [RF12](#rf12), [RNF01](#rnf01), [RP01](#rp01) | 1 | ⏳ |
 | **US02** | **Polling & Descoberta Dinâmica:** Discovery contínuo e consumo periódico das rotas `/services` e `/metrics`. | [RF01](#rf01), [RF02](#rf02), [RF03](#rf03) | 1 | ⏳ |
-| **US03** | **Dashboard & Ranking de Impacto:** Painel operacional com consumo/emissões em tempo real e ordenação por impacto. | [RF09](#rf09), [RF14](#rf14), [RNF02](#rnf02), [RNF03](#rnf03) | 2 | ⏳ |
+| **US03** | **Dashboard & Ranking de Impacto:** Painel operacional com consumo/emissões em tempo real e ordenação por impacto. | [RF09](#rf09), [RF14](#rf14), [RNF02](#rnf02), [RNF03](#rnf03) | 1 / 2 | ⏳ |
 | **US04** | **Motor Ambiental & Histórico:** Processamento de consumo elétrico, emissão de CO₂e e persistência temporal no banco. | [RF07](#rf07), [RF08](#rf08), [RF10](#rf10) | 2 | ⏳ |
 | **US05** | **Resiliência & Tolerância a Falhas:** Tratamento de oscilações de métricas e erros de APIs externas sem indisponibilidade. | [RF04](#rf04), [RF05](#rf05), [RF06](#rf06), [RNF04](#rnf04) | 2 | ⏳ |
 | **US06** | **Autenticação JWT na Configuração:** Acesso protegido por JWT no backend para rotas de configuração administrativa. | [RP06](#rp06) | 2 | ⏳ |
@@ -124,9 +124,9 @@ graph TD
 ##### Tabela Descritiva das Sprints
 | Período | Documentação da Sprint | Vídeo |
 | :--- | :--- | :--- |
-| **Sprint 1:** 13/04 a 30/04/2026 | [Sprint Review](./docs/sprint-1/sprint-1.md) | [▶ YouTube](Link) |
-| **Sprint 2:** 04/05 a 21/05/2026 | [Sprint Review](./docs/sprint-2/sprint-2.md) | [▶ YouTube](Link) |
-| **Sprint 3:** 25/05 a 11/06/2026 | [Sprint Review](./docs/sprint-3/sprint-3.md) | [▶ YouTube](Link) |
+| **Sprint 1:** 01/09 a 25/09/2026 | [Sprint Review](./docs/sprint-1/sprint-1.md) | [▶ YouTube](Link) |
+| **Sprint 2:** 28/09 a 23/10/2026 | [Sprint Review](./docs/sprint-2/sprint-2.md) | [▶ YouTube](Link) |
+| **Sprint 3:** 26/10 a 20/11/2026 | [Sprint Review](./docs/sprint-3/sprint-3.md) | [▶ YouTube](Link) |
 
 ---
 
@@ -198,6 +198,38 @@ docker exec -i greener_postgres psql -U greener_user -d greener_db < database/dm
 
 ---
 
+## 👥 Equipe
+
+<body>
+   <div align="center">
+      <table>
+         <thead>
+            <th>Scrum Master</th>
+            <th>Product Owner</th>
+            <th>Dev Team</th>
+            <th>Dev Team</th>
+            <th>Dev Team</th>
+         </thead>
+         <tbody>
+            <tr>
+               <th><a href="link github"><img src="github/png" width="75px" height="75px"/></a></th>
+               <th><a href="link github"><img src="github/png" width="75px" height="75px"/></a></th>
+               <th><a href="link github"><img src="github/png" width="75px" height="75px"/></a></th>
+               <th><a href="link github"><img src="github/png" width="75px" height="75px"/></a></th>
+               <th><a href="link github"><img src="github/png" width="75px" height="75px"/></a></th>
+            </tr>
+            <tr>
+               <th><a href="Link do Linkedin"><img src="Botão para acessar o linkedin"></a></th>
+               <th><a href="Link do Linkedin"><img src="Botão para acessar o linkedin"></a></th>
+               <th><a href="Link do Linkedin"><img src="Botão para acessar o linkedin"></a></th>
+               <th><a href="Link do Linkedin"><img src="Botão para acessar o linkedin"></a></th>
+               <th><a href="Link do Linkedin"><img src="Botão para acessar o linkedin"></a></th>
+            </tr>
+         </tbody>
+      </table>
+   </div>
+</body>
+
 ## 📝 Convenções de Versionamento (Git)
 
 ### Padrão de Commits
@@ -216,4 +248,3 @@ As mensagens devem conter o ID da Issue vinculada:
 ## 🔗 Documentos de Apoio
 * [Pasta de Documentação Técnica](./docs) 
 * [Documentação dos Endpoints da API](./docs/docApi.md)
-```
