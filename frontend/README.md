@@ -1,6 +1,8 @@
 # Frontend · EcoByteMetrics
 
-Interface em React com TypeScript, Vite e React Router. A apresentação usa paisagem com luz solar; a área de monitoramento usa céu azul e painéis claros. A logo é a fornecida pela equipe.
+Interface em React com TypeScript, Vite e React Router. A página inicial usa as cinco paisagens fornecidas, carrossel manual, painel curvo com opacidade de 48% e seletor PT/EN. A área de monitoramento mantém céu azul e painéis claros.
+
+A home está em `src/home`, com CSS limitado a essa página. A escala desktop aprovada é aplicada apenas enquanto a home está aberta; o dashboard e as demais rotas mantêm seus estilos e tamanhos. O exemplo de 0,072 gCO₂e em 60 segundos é ilustrativo e não representa uma coleta real.
 
 ## Executar com Docker
 
@@ -37,6 +39,8 @@ npm run build
 npx playwright install chromium
 npm run test:e2e
 ```
+
+Se a porta 5173 já estiver ocupada, defina `PLAYWRIGHT_PORT` com outra porta antes de executar os testes.
 
 Os testes de navegador verificam navegação, estados vazios, persistência de preferências, formulário de login, parallax, movimento reduzido e layout em desktop e celular. Para usar um Chrome já instalado, defina `PLAYWRIGHT_CHANNEL=chrome`; por padrão é usado o Chromium do Playwright.
 

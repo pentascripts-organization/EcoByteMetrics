@@ -11,7 +11,7 @@ import { ServicesPage } from './pages/ServicesPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 const titles: Record<string, string> = {
-  '/': 'Cada byte conta', '/dashboard': 'Visão geral', '/servicos': 'Serviços',
+  '/': 'Entendendo o hoje', '/dashboard': 'Visão geral', '/servicos': 'Serviços',
   '/emissoes': 'Emissões', '/energia': 'Energia', '/comparar': 'Comparar',
   '/login': 'Entrar', '/configuracoes': 'Configurações',
 };

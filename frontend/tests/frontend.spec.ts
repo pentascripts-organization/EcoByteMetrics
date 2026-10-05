@@ -75,13 +75,44 @@ test('navigation works on desktop and mobile', async ({ page }, testInfo) => {
 
 test('leaf parallax responds to the pointer and respects reduced motion', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'mobile', 'Touch screens use static decorative leaves.');
-  await page.goto('/');
+  await page.goto('/dashboard');
   const layer = page.locator('.leaf-scene');
   await page.mouse.move(1300, 650);
   await expect.poll(async () => layer.evaluate((element) => element.style.getPropertyValue('--pointer-x'))).not.toBe('0px');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect(page.locator('.floating-leaf').first()).toHaveCSS('animation-name', 'none');
   await expect.poll(async () => layer.evaluate((element) => Math.abs(parseFloat(element.style.getPropertyValue('--pointer-x'))))).toBeLessThan(0.1);
+});
+
+test('home changes landscapes, switches language and keeps its scale on its own route', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await expect(page.locator('.hero__background')).toHaveCount(5);
+  await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-landscape/);
+  await page.getByRole('button', { name: 'Slide anterior', exact: true }).click();
+  await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-lagoon/);
+  await page.getByRole('button', { name: 'Próximo slide', exact: true }).click();
+  await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-landscape/);
+  await page.getByRole('button', { name: 'Próximo slide', exact: true }).click();
+  await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-lugano/);
+  await page.getByRole('combobox', { name: 'Idioma' }).selectOption('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Understanding today');
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('pt');
+  await expect(page.getByText('Exemplo de cálculo', { exact: true })).toBeVisible();
+  await expect(page.locator('html')).toHaveCSS('font-size', testInfo.project.name === 'desktop' ? '28px' : '16px');
+  if (testInfo.project.name === 'desktop') {
+    await page.getByRole('button', { name: 'Ir para slide 3', exact: true }).click();
+    await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-lakes/);
+  } else {
+    await page.getByRole('button', { name: 'Abrir menu' }).click();
+    await expect(page.locator('#mobile-navigation')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#mobile-navigation')).toHaveCount(0);
+  }
+  await page.getByRole('link', { name: 'Explorar dashboard', exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.locator('html')).toHaveCSS('font-size', '16px');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
 });
 
 test('comparison stays empty and unknown routes provide a way home', async ({ page }) => {
