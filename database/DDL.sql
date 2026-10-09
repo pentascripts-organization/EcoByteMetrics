@@ -1,10 +1,3 @@
-/* 
-Instruções DDL para criar as tabelas, chaves, relacionamentos e restrições. 
-Se houver evolução do esquema, a equipe pode utilizar scripts SQL numerados 
-em vez de um único arquivo. 
-*/
-/* Este é um banco de dados de exemplo */
-
 create table Users(
 	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	name_user varchar(50) not null,
@@ -19,7 +12,7 @@ create table Services(
 );
 
 create table Locations(
-	id_location bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_service int,
 	name_location varchar(50)not null,
 	county_location varchar(50),
@@ -33,7 +26,7 @@ create table Locations(
 );
 
 create table Cabons(
-	id_carbon bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_service int,
 	date_houry TIMESTAMP not null,
 	intesity_co2e_kwh_carbon int not null,
@@ -44,7 +37,7 @@ create table Cabons(
 );
 
 create table Metrics (
-	id_metric bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_metric int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_service int,
 	date_houry TIMESTAMP NOT NULL,
 	path_metric varchar(50) not null,
@@ -57,5 +50,3 @@ create table Metrics (
 	foreign key (id_service)
 	references services(id_service)
 );
-
-insert into Users (name_user, email_user, password_user, token_user) values ('ecobytemetrics','ecobytemetrics@gamil.com', '123eco', '123');
