@@ -1,5 +1,6 @@
+import dotenv from "dotenv";
 
-import "dotenv/config";
+dotenv.config({ path: "../.env" });
 
 export interface ServiceLocation {
   region_code: string;
