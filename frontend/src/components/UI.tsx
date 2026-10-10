@@ -3,7 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useMonitoring } from '../hooks/useMonitoring';
-import type { Period } from '../types/monitoring';
+import type { CollectionPoint, Period } from '../types/monitoring';
 
 export function IconTile({ icon: Icon, tone = 'green' }: { icon: LucideIcon; tone?: 'green' | 'blue' | 'amber' }) {
   return <span className={`icon-tile icon-tile-${tone}`}><Icon size={21} strokeWidth={1.65} /></span>;
@@ -55,11 +55,16 @@ export function MetricCard({ label, value, unit, icon, note, tone = 'green' }: {
   </article>;
 }
 
-export function TrendChart({ metric = 'emissions' }: { metric?: 'emissions' | 'energy' }) {
+export function TrendChart({ metric = 'emissions', points: selectedPoints }: { metric?: 'emissions' | 'energy'; points?: CollectionPoint[] }) {
   const { snapshot } = useMonitoring();
-  const points = snapshot.history;
-  const values = points.map((point) => metric === 'emissions' ? point.emissionsG : point.energyKwh);
-  const max = Math.max(...values, 1);
+  const grouped = new Map<string, number>();
+  for (const point of selectedPoints ?? snapshot.history) {
+    const value = metric === 'emissions' ? point.emissionsG : point.energyKwh;
+    if (value !== null) grouped.set(point.collectedAt, (grouped.get(point.collectedAt) ?? 0) + value);
+  }
+  const points = [...grouped].sort(([a], [b]) => Date.parse(a) - Date.parse(b));
+  const values = points.map(([, value]) => value);
+  const max = Math.max(...values, 0) || 1;
   const coordinates = values.map((value, index) => `${45 + index / Math.max(values.length - 1, 1) * 650},${180 - value / max * 150}`).join(' ');
   return <div className={`trend-chart${points.length ? ' trend-chart-populated' : ''}`}>
     <div className="chart-unit">{metric === 'emissions' ? 'gCO₂e' : 'kWh'}</div>
