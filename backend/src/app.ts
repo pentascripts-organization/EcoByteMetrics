@@ -8,10 +8,15 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
+//saude do backend
+app.use("/health", (_req:Request, res:Response)=>{
+    res.json({ status: "ok" });
+});
 
 app.use("/",(_req:Request, res:Response )=>{
 
     async function usuarioNome():Promise<void> {
+        
         try{
             const response = await pool.query("Select name_user from users")
             res.status(200).json({
@@ -28,10 +33,7 @@ app.use("/",(_req:Request, res:Response )=>{
     usuarioNome();
 
 });
-//saude do backend
-app.use("/health", (_req:Request, res:Response)=>{
-    res.json({ status: "ok" });
-});
+
 //Rota da API
 app.use("/api", routes);
 
