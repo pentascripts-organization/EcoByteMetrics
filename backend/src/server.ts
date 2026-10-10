@@ -1,10 +1,10 @@
+
 import app from "./app.js";
 import {
     refreshDiscoveredServices,
 } from "./modules/services/services.service.js";
 
 const PORT = process.env.PORT || 3000;
-const PGPORT = process.env.PGPORT;
 
 // Intervalo de atualização: 30 segundos.
 const REFRESH_INTERVAL = 30_000;
@@ -12,8 +12,7 @@ const REFRESH_INTERVAL = 30_000;
 // Inicia o servidor backend.
 app.listen(PORT, () => {
     console.log(
-        `Servidor BackEnd está rodando http://localhost:${PORT}\n` +
-        `Servidor FrontEnd está rodando http://localhost:${PGPORT}`
+        `Servidor BackEnd está rodando http://localhost:${PORT}`
     );
 
     // Faz a primeira consulta ao Agregador assim que o servidor inicia.
