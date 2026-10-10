@@ -14,17 +14,22 @@
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
     "@fontsource-variable/manrope": "^5.3.0",
+    "d3-geo": "^3.1.1",
     "lucide-react": "^1.50.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-router-dom": "^7.18.4"
+    "react-globe.gl": "^2.37.1",
+    "react-router-dom": "^7.18.4",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
+    "@types/d3-geo": "^3.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^6.0.0",
     "eslint": "^10.0.0",
     "eslint-plugin-react-hooks": "^7.0.1",

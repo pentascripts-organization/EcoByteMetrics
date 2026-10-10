@@ -1,9 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('all screens load directly without JS errors or horizontal overflow', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  for (const path of ['/', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar', '/login', '/cadastro', '/configuracoes']) {
+  for (const path of ['/', '/pesquisa', '/gerenciamento', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar', '/login', '/cadastro', '/configuracoes']) {
     await page.goto(path);
     await expect(page.locator('h1')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
@@ -17,14 +17,13 @@ test('all screens load directly without JS errors or horizontal overflow', async
 
 test('dashboard does not invent measurements or collection timestamps', async ({ page }) => {
   await page.goto('/dashboard');
-  await expect(page.getByText('Aguardando a primeira coleta')).toBeVisible();
   await expect(page.locator('.metric-value').nth(0)).toHaveText('—gCO₂e');
   await expect(page.locator('.metric-value').nth(1)).toHaveText('—kWh');
   await expect(page.locator('.metric-value').nth(2)).toHaveText('0');
   await expect(page.locator('.metric-value').nth(3)).toHaveText('—');
   await page.getByRole('combobox', { name: 'Período de análise' }).selectOption('30d');
   await page.getByRole('button', { name: 'Atualizar indicadores' }).click();
-  await expect(page.getByText('Aguardando a primeira coleta')).toBeVisible();
+  await expect(page.locator('.metric-value').first()).toHaveText('—gCO₂e');
   await expect(page.getByText('Seu histórico começa aqui')).toBeVisible();
 });
 
@@ -78,6 +77,7 @@ test('leaf parallax responds to the pointer and respects reduced motion', async 
   test.skip(testInfo.project.name === 'mobile', 'Touch screens use static decorative leaves.');
   await page.goto('/dashboard');
   const layer = page.locator('.leaf-scene');
+  await expect(layer).toBeVisible();
   await page.mouse.move(1300, 650);
   await expect.poll(async () => layer.evaluate((element) => element.style.getPropertyValue('--pointer-x'))).not.toBe('0px');
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -99,12 +99,14 @@ test('home changes landscapes automatically and directs visitors to registration
     await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', new RegExp(`hero-${landscape}`));
   }
   await expect(page.getByRole('combobox', { name: 'Idioma' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Login / Cadastro' })).toHaveAttribute('href', '/login');
+  if (testInfo.project.name === 'desktop') await expect(page.getByRole('link', { name: 'Login / Cadastro' })).toHaveAttribute('href', '/login');
   await expect(page.getByText('Exemplo de cálculo', { exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveCSS('font-size', testInfo.project.name === 'desktop' ? '28px' : '16px');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: 'Abrir menu' }).click();
     await expect(page.locator('#mobile-navigation')).toBeVisible();
+    await expect(page.locator('#mobile-navigation a[href="/login"]')).toBeVisible();
+    await expect(page.locator('#mobile-navigation a[href="/pesquisa"]')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('#mobile-navigation')).toHaveCount(0);
   }

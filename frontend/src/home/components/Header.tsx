@@ -39,6 +39,7 @@ export function Header({ labels }: HeaderProps) {
       <Brand />
 
       <nav className="desktop-nav" aria-label="Navegação principal">
+        <Link to="/pesquisa">Pesquisa</Link>
         {links.map(([label, href], index) => (
           <a key={href} className={index === 0 ? 'active' : ''} href={href}>
             {label}
@@ -66,6 +67,7 @@ export function Header({ labels }: HeaderProps) {
 
       {menuOpen && (
         <nav className="mobile-nav" id="mobile-navigation" aria-label="Navegação móvel">
+          <Link to="/pesquisa" onClick={() => setMenuOpen(false)}>Pesquisa</Link>
           {links.map(([label, href]) => (
             <a key={href} href={href} onClick={() => setMenuOpen(false)}>
               {label}

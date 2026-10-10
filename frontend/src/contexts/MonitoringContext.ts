@@ -5,9 +5,11 @@ export interface MonitoringContextValue {
   snapshot: MonitoringSnapshot;
   period: Period;
   setPeriod: (period: Period) => void;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<MonitoringSnapshot | null>;
   loading: boolean;
   error: string | null;
+  demoMode: boolean;
+  setDemoMode: (enabled: boolean) => void;
 }
 
 export const MonitoringContext = createContext<MonitoringContextValue | null>(null);

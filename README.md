@@ -1,7 +1,7 @@
 # EcoByteMetrics
 EcoByteMetrics — Uma plataforma web voltada à análise e ao monitoramento do consumo energético e da emissão de CO₂e de softwares.
 
-O frontend inicial está implementado em React com TypeScript: apresentação, dashboard, serviços, emissões, energia, comparação, login e preferências de visualização. Os indicadores permanecem vazios até a integração com o backend; o login ainda não autentica.
+O frontend está implementado em React com TypeScript: apresentação, pesquisa regional com globo 3D, dashboard, serviços, emissões, energia, comparação, gerenciamento, login e preferências de visualização. Ele consome as APIs do desafio e calcula estimativas de energia e CO₂e para os serviços simulados. O histórico permanece na sessão do navegador; o login e o gerenciamento real de usuários ainda dependem do backend.
 
 Para executar somente o frontend com Docker:
 
