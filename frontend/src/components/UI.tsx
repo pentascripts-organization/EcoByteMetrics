@@ -38,11 +38,11 @@ export function PeriodSelect() {
   </label>;
 }
 
-export function PageHeading({ eyebrow = 'SEU AMBIENTE, EM PERSPECTIVA', title, description, refresh = false }: {
+export function PageHeading({ eyebrow, title, description, refresh = false }: {
   eyebrow?: string; title: string; description: string; refresh?: boolean;
 }) {
   const { refresh: refreshData, loading } = useMonitoring();
-  return <div className="page-heading"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>
+  return <div className="page-heading"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1><p>{description}</p></div>
     <div className="page-actions"><PeriodSelect />{refresh && <button className="button button-icon" title="Atualizar indicadores" aria-label="Atualizar indicadores" disabled={loading} onClick={() => void refreshData()}><RefreshCw size={18} className={loading ? 'spin' : ''} /></button>}</div>
   </div>;
 }

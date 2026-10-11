@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('all screens load directly without JS errors or horizontal overflow', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  for (const path of ['/', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar', '/login', '/configuracoes']) {
+  for (const path of ['/', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar', '/login', '/cadastro', '/configuracoes']) {
     await page.goto(path);
     await expect(page.locator('h1')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
@@ -59,7 +59,8 @@ test('login shows its pending state without storing or sending credentials', asy
 test('navigation works on desktop and mobile', async ({ page }, testInfo) => {
   await page.goto('/');
   await page.getByRole('link', { name: 'Explorar dashboard', exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/cadastro$/);
+  await page.goto('/dashboard');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: 'Abrir navegação' }).click();
     await page.getByRole('navigation', { name: 'Navegação móvel' }).getByRole('link', { name: 'Serviços', exact: true }).click();
@@ -84,33 +85,32 @@ test('leaf parallax responds to the pointer and respects reduced motion', async 
   await expect.poll(async () => layer.evaluate((element) => Math.abs(parseFloat(element.style.getPropertyValue('--pointer-x'))))).toBeLessThan(0.1);
 });
 
-test('home changes landscapes, switches language and keeps its scale on its own route', async ({ page }, testInfo) => {
+test('home changes landscapes automatically and directs visitors to registration', async ({ page }, testInfo) => {
+  await page.clock.install();
   await page.goto('/');
   await expect(page.locator('.hero__background')).toHaveCount(5);
   await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-landscape/);
-  await page.getByRole('button', { name: 'Slide anterior', exact: true }).click();
-  await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-lagoon/);
-  await page.getByRole('button', { name: 'Próximo slide', exact: true }).click();
-  await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-landscape/);
-  await page.getByRole('button', { name: 'Próximo slide', exact: true }).click();
+  await expect(page.locator('.hero-arrows, .slide-index')).toHaveCount(0);
+  await expect(page.locator('.hero__background').first()).toHaveCSS('transition-duration', '1.5s');
+  await page.clock.fastForward(6000);
   await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-lugano/);
-  await page.getByRole('combobox', { name: 'Idioma' }).selectOption('en');
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Understanding today');
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('pt');
+  for (const landscape of ['lakes', 'mountains', 'lagoon', 'landscape']) {
+    await page.clock.fastForward(6000);
+    await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', new RegExp(`hero-${landscape}`));
+  }
+  await expect(page.getByRole('combobox', { name: 'Idioma' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Login / Cadastro' })).toHaveAttribute('href', '/login');
   await expect(page.getByText('Exemplo de cálculo', { exact: true })).toBeVisible();
   await expect(page.locator('html')).toHaveCSS('font-size', testInfo.project.name === 'desktop' ? '28px' : '16px');
-  if (testInfo.project.name === 'desktop') {
-    await page.getByRole('button', { name: 'Ir para slide 3', exact: true }).click();
-    await expect(page.locator('.hero__background.active')).toHaveCSS('background-image', /hero-lakes/);
-  } else {
+  if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: 'Abrir menu' }).click();
     await expect(page.locator('#mobile-navigation')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('#mobile-navigation')).toHaveCount(0);
   }
   await page.getByRole('link', { name: 'Explorar dashboard', exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/cadastro$/);
+  await expect(page.getByRole('heading', { name: 'Crie sua conta.' })).toBeVisible();
   await expect(page.locator('html')).toHaveCSS('font-size', '16px');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
 });

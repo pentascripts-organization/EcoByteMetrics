@@ -582,3 +582,6 @@ td { padding: 16px 22px; border-bottom: 1px solid var(--line); color: #527680; }
   .floating-leaf, .orbit-card { animation: none; }
   .leaf-position { will-change: auto; }
 }
+
+.login-demo { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2ebe6; }
+.login-demo p { margin-top: 10px; font-size: 11px; line-height: 1.7; color: #5f7e72; text-align: center; }

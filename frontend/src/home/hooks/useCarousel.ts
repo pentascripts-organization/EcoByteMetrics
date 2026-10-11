@@ -1,15 +1,17 @@
-import { useCallback, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export function useCarousel(length: number) {
+export function useCarousel(length: number, intervalMs = 6000) {
   const [index, setIndex] = useState(0);
 
-  const previous = useCallback(() => {
-    setIndex((current) => (current - 1 + length) % length);
-  }, [length]);
+  useEffect(() => {
+    if (length <= 1) return;
 
-  const next = useCallback(() => {
-    setIndex((current) => (current + 1) % length);
-  }, [length]);
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % length);
+    }, intervalMs);
 
-  return { index, setIndex, previous, next };
+    return () => window.clearInterval(timer);
+  }, [length, intervalMs]);
+
+  return { index };
 }
