@@ -1,5 +1,4 @@
-import { Activity, ArrowUpRight, Clock3, Globe2, Leaf, Radio, Server, Zap } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Activity, Clock3, Globe2, Leaf, Radio, Server, Zap } from 'lucide-react';
 import { EmptyState, MetricCard, PageHeading, Panel, TrendChart } from '../components/UI';
 import { formatNumber } from '../utils/format';
 import { useMonitoring } from '../hooks/useMonitoring';
@@ -21,6 +20,6 @@ export function DashboardPage() {
       <Panel icon={Server} title="Serviços em destaque" link={{ to: '/servicos', label: 'Ver serviços' }}><EmptyState compact icon={Server} title="Tudo começa com o primeiro serviço" description="O ranking de impacto aparecerá após as primeiras coletas." /></Panel>
       <Panel icon={Globe2} title="Um impacto que tem lugar" link={{ to: '/servicos', label: 'Ver regiões' }}><div className="location-empty"><div className="globe-illustration" aria-hidden="true"><Globe2 size={118} strokeWidth={0.65} /><span className="globe-dot" /></div><div><span className="eyebrow">DISTRIBUIÇÃO GEOGRÁFICA</span><h3>Novas perspectivas,<br />em cada região.</h3><p>As localizações serão exibidas quando os serviços forem descobertos.</p></div></div></Panel>
     </div>
-    <div className="dashboard-footnote"><Leaf size={15} /><p>O impacto ambiental é uma estimativa baseada no uso de recursos e na intensidade de carbono da região.</p><Link to="/">Saiba como funciona<ArrowUpRight size={14} /></Link></div>
+    <div className="dashboard-footnote"><Leaf size={15} /><p>O impacto ambiental é uma estimativa baseada no uso de recursos e na intensidade de carbono da região.</p></div>
   </>;
 }

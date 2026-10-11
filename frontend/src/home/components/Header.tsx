@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Globe2, Menu, X } from 'lucide-react';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { Locale } from '../data/content';
 import { Brand } from './Brand';
 
 interface HeaderProps {
-  locale: Locale;
-  onLocaleChange: (locale: Locale) => void;
   labels: {
     home: string;
     solutions: string;
@@ -19,7 +16,7 @@ interface HeaderProps {
   };
 }
 
-export function Header({ locale, onLocaleChange, labels }: HeaderProps) {
+export function Header({ labels }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -50,19 +47,10 @@ export function Header({ locale, onLocaleChange, labels }: HeaderProps) {
       </nav>
 
       <div className="header-actions">
-        <Link className="platform-link" to="/dashboard">
-          <span>{labels.access}</span>
+        <Link className="platform-link" to="/login">
+          <span>Login / Cadastro</span>
           <ArrowUpRight size={13} strokeWidth={1.7} aria-hidden="true" />
         </Link>
-
-        <label className="language">
-          <Globe2 size={18} aria-hidden="true" />
-          <select aria-label={labels.language} value={locale}
-            onChange={(event) => onLocaleChange(event.target.value as Locale)}>
-            <option value="pt">PT</option>
-            <option value="en">EN</option>
-          </select>
-        </label>
 
         <button
           className="menu-button"
@@ -84,8 +72,8 @@ export function Header({ locale, onLocaleChange, labels }: HeaderProps) {
             </a>
           ))}
           <Link to="/login" onClick={() => setMenuOpen(false)}>{labels.login}</Link>
-          <Link className="mobile-nav__cta" to="/dashboard" onClick={() => setMenuOpen(false)}>
-            {labels.access}
+          <Link className="mobile-nav__cta" to="/cadastro" onClick={() => setMenuOpen(false)}>
+            Criar conta
             <ArrowUpRight size={14} aria-hidden="true" />
           </Link>
         </nav>

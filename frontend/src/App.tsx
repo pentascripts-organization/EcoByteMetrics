@@ -13,7 +13,7 @@ import { SettingsPage } from './pages/SettingsPage';
 const titles: Record<string, string> = {
   '/': 'Entendendo o hoje', '/dashboard': 'Visão geral', '/servicos': 'Serviços',
   '/emissoes': 'Emissões', '/energia': 'Energia', '/comparar': 'Comparar',
-  '/login': 'Entrar', '/configuracoes': 'Configurações',
+  '/login': 'Entrar', '/cadastro': 'Criar conta', '/configuracoes': 'Configurações',
 };
 
 export function App() {
@@ -26,6 +26,7 @@ export function App() {
   return <Routes>
     <Route path="/" element={<HomePage />} />
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/cadastro" element={<LoginPage register />} />
     <Route element={<AppLayout />}>
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/servicos" element={<ServicesPage />} />

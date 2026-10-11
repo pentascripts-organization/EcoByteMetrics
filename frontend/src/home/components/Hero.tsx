@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import luganoImage from '../assets/hero-lugano.jpg';
 import lakesImage from '../assets/hero-lakes.jpg';
@@ -30,7 +30,7 @@ interface HeroProps {
 const slides = [luganoImage, lakesImage, mountainsImage, lagoonImage];
 
 export function Hero({ copy }: HeroProps) {
-  const { index, setIndex, previous, next } = useCarousel(slides.length);
+  const { index } = useCarousel(slides.length);
 
   return (
     <section
@@ -68,7 +68,7 @@ export function Hero({ copy }: HeroProps) {
           </h1>
           <p>{copy.description}</p>
           <div className="hero-copy__actions">
-            <Link className="primary-cta" to="/dashboard">
+            <Link className="primary-cta" to="/cadastro">
               <span>{copy.primary}</span>
               <ArrowRight size={15} strokeWidth={1.65} />
             </Link>
@@ -90,34 +90,6 @@ export function Hero({ copy }: HeroProps) {
         />
       </div>
 
-      <div className="slide-index" data-label={`${index + 1} / ${slides.length}`} aria-label={`Slide ${index + 1} de ${slides.length}`}>
-        <div className="slide-index__rail" aria-hidden="true">
-          <span style={{ height: `${100 / slides.length}%`, transform: `translateY(${index * 100}%)` }} />
-        </div>
-        <div className="slide-index__numbers">
-          {slides.map((_, slideIndex) => (
-            <button
-              key={slideIndex}
-              type="button"
-              className={slideIndex === index ? 'active' : ''}
-              aria-pressed={slideIndex === index}
-              onClick={() => setIndex(slideIndex)}
-              aria-label={`Ir para slide ${slideIndex + 1}`}
-            >
-              {String(slideIndex + 1).padStart(2, '0')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="hero-arrows" aria-label="Controles do carrossel">
-        <button type="button" onClick={previous} aria-label="Slide anterior">
-          <ArrowLeft size={15} />
-        </button>
-        <button type="button" onClick={next} aria-label="Próximo slide">
-          <ArrowRight size={15} />
-        </button>
-      </div>
     </section>
   );
 }

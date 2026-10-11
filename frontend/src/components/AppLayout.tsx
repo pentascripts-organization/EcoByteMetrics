@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, Link } from 'react-router-dom';
-import { ArrowUpRight, ChartNoAxesCombined, ChevronRight, GitCompareArrows, LayoutDashboard, Leaf, Menu, Server, Settings2, X, Zap } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, GitCompareArrows, LayoutDashboard, Leaf, Menu, Server, Settings2, X, Zap } from 'lucide-react';
 import { Brand } from './Brand';
 import { LeafScene } from './LeafScene';
 import { useMonitoring } from '../hooks/useMonitoring';
@@ -26,9 +26,8 @@ export function AppLayout() {
         <button className="mobile-menu-button" aria-label={menuOpen ? 'Fechar navegação' : 'Abrir navegação'} aria-expanded={menuOpen} aria-controls="mobile-nav" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={23} /> : <Menu size={23} />}</button>
       </div>
     </div>{menuOpen && <nav id="mobile-nav" className="mobile-nav" aria-label="Navegação móvel">{links.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setMenuOpen(false)}><Icon size={18} />{label}<ChevronRight size={15} /></NavLink>)}<NavLink to="/configuracoes" onClick={() => setMenuOpen(false)}><Settings2 size={18} />Configurações</NavLink></nav>}</header>
-    <main id="main-content" className="dashboard-main"><div className="connection-strip"><span><span className="neutral-dot" />{snapshot.lastCollectionAt ? 'Última coleta: ' + new Date(snapshot.lastCollectionAt).toLocaleString('pt-BR') : 'Aguardando a primeira coleta'}</span><span className="connection-caption"><ChartNoAxesCombined size={14} />Monitoramento ambiental</span></div>
+    <main id="main-content" className="dashboard-main"><div className="connection-strip"><span><span className="neutral-dot" />{snapshot.lastCollectionAt ? 'Última coleta: ' + new Date(snapshot.lastCollectionAt).toLocaleString('pt-BR') : 'Aguardando a primeira coleta'}</span></div>
       {error && <p className="form-message error-message" role="alert">{error}</p>}<Outlet />
     </main>
-    <footer className="app-footer"><span>EcoByteMetrics<span className="footer-dot">·</span>Cada byte conta.</span><Link to="/">Conheça o projeto<ArrowUpRight size={14} /></Link></footer>
   </div>;
 }
