@@ -214,8 +214,8 @@ docker exec -i greener_postgres psql -U greener_user -d greener_db < database/dm
             <tr>
                <th><a href="https://github.com/Cauaisq"><img src="https://avatars.githubusercontent.com/u/261260702?v=4" width="75px" height="75px"/></a></th>
                <th><a href="https://github.com/ViniciusGuin"><img src="https://avatars.githubusercontent.com/u/260712144?v=4" width="75px" height="75px"/></a></th>
-               <th><a href="https://github.com/VtecturboBr"><img src="github/png" width="75px" height="75px"/></a></th>
-               <th><a href="link github"><img src="https://avatars.githubusercontent.com/u/260575592?v=4" width="75px" height="75px"/></a></th>
+               <th><a href="https://github.com/VtecturboBr"><img src="https://avatars.githubusercontent.com/u/260575592?v=4" width="75px" height="75px"/></a></th>
+               <th><a href="https://avatars.githubusercontent.com/u/47401424?v=4"><img src="https://avatars.githubusercontent.com/u/47401424?v=4" width="75px" height="75px"/></a></th>
               <th><a href="https://github.com/EnzoSuzukiProkopas"><img src="https://avatars.githubusercontent.com/u/261052151?s=400&u=092ffb502d3b489294350ed668d269bd0d0e8460&v=4" width="75px" height="75px"/></a></th>
             </tr>
             <tr>
