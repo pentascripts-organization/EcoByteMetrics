@@ -1,10 +1,10 @@
 import type { CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import luganoImage from '../assets/hero-lugano.jpg';
-import lakesImage from '../assets/hero-lakes.jpg';
-import mountainsImage from '../assets/hero-mountains.jpg';
-import lagoonImage from '../assets/hero-lagoon.jpg';
+import luganoImage from '../assets/hero-lugano.optimized.jpg';
+import lakesImage from '../assets/hero-lakes.optimized.jpg';
+import mountainsImage from '../assets/hero-mountains.optimized.jpg';
+import lagoonImage from '../assets/hero-lagoon.optimized.jpg';
 import { useCarousel } from '../hooks/useCarousel';
 import { MetricOrb } from './MetricOrb';
 
@@ -30,7 +30,7 @@ interface HeroProps {
 const slides = [luganoImage, lakesImage, mountainsImage, lagoonImage];
 
 export function Hero({ copy }: HeroProps) {
-  const { index } = useCarousel(slides.length);
+  const { index, paused, setPaused } = useCarousel(slides.length);
 
   return (
     <section
@@ -41,10 +41,11 @@ export function Hero({ copy }: HeroProps) {
         <div
           key={image}
           className={`hero__background${slideIndex === index ? ' active' : ''}`}
-          style={{ backgroundImage: `url(${image})` } as CSSProperties}
+          style={{ backgroundImage: slideIndex <= index + 1 || slideIndex === (index + slides.length - 1) % slides.length ? `url(${image})` : undefined } as CSSProperties}
           aria-hidden="true"
         />
       ))}
+      <button className="carousel-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? 'Retomar paisagens' : 'Pausar paisagens'}</button>
       <div className="hero__wash" aria-hidden="true">
         <svg viewBox="0 0 1040 445" preserveAspectRatio="none">
           <path d="M0 0H640C632 77 605 159 566 237C528 314 478 388 425 445H0Z" />
@@ -68,7 +69,7 @@ export function Hero({ copy }: HeroProps) {
           </h1>
           <p>{copy.description}</p>
           <div className="hero-copy__actions">
-            <Link className="primary-cta" to="/cadastro">
+            <Link className="primary-cta" to="/dashboard">
               <span>{copy.primary}</span>
               <ArrowRight size={15} strokeWidth={1.65} />
             </Link>

@@ -1,117 +1,108 @@
 # Frontend · EcoByteMetrics
 
-Interface em React com TypeScript, Vite e React Router. A página inicial usa cinco paisagens em carrossel automático. Pesquisa, dashboard e gerenciamento reutilizam a marca, as fontes e a identidade natural, com painéis claros e tons de verde.
+React + TypeScript, Vite e React Router. Pesquisa regional, dashboard, serviços, energia, emissões, comparação e preferências locais.
 
-A home está em `src/home`, com CSS limitado a essa página. A escala desktop aprovada é aplicada apenas enquanto a home está aberta; o dashboard e as demais rotas mantêm seus estilos e tamanhos. O exemplo de 0,072 gCO₂e em 60 segundos é ilustrativo e não representa uma coleta real.
+## Executar
 
-## Executar com Docker
+Use Node.js 24 e npm. O backend foi copiado da develop sem alterações.
 
-Na raiz do repositório, com Docker e Docker Compose instalados:
+Em um terminal na raiz do projeto, inicie o backend para descoberta de serviços:
 
-```sh
-docker compose -f frontend/compose.yaml up --build -d
-```
+~~~powershell
+cd backend
+npm ci
+npm run build
+$env:API_METRIC = 'https://metrics.unilaunch.org'
+$env:PORT = '3000'
+npm start
+~~~
 
-Acesse **http://localhost:5173**. Para encerrar:
+As variáveis acima valem somente para o processo iniciado. As rotas /health e /services não consultam o banco; a rota / depende de PostgreSQL configurado pela equipe.
 
-```sh
-docker compose -f frontend/compose.yaml down
-```
+Em outro terminal, na pasta frontend:
 
-O Dockerfile compila os arquivos e o Nginx serve a aplicação. O fallback para `index.html` permite acessar e recarregar diretamente qualquer rota. Este Compose executa apenas o frontend; a infraestrutura completa será integrada quando o backend estiver implementado.
-
-## Desenvolvimento local
-
-Para trabalhar na interface sem Docker, use Node.js 24 e npm:
-
-```sh
-cd frontend
+~~~powershell
 npm ci
 npm run dev
-```
+~~~
 
-Comandos de verificação:
+Acesse http://localhost:5173. Para outro endereço, copie .env.example para .env.local:
 
-```sh
+~~~dotenv
+VITE_BACKEND_URL=/backend
+BACKEND_PROXY_TARGET=http://localhost:3000
+~~~
+
+O Vite remove /backend antes de encaminhar a requisição. VITE_BACKEND_URL aceita uma URL pública completa. Variáveis VITE_ entram no cliente compilado; segredos JWT e credenciais do banco pertencem ao backend.
+
+## Docker
+
+Na raiz:
+
+~~~powershell
+docker compose -f frontend/compose.yaml up --build -d
+~~~
+
+Serve somente o frontend em http://localhost:5173. Seu Compose compila VITE_BACKEND_URL=http://localhost:3000 por padrão. Defina outro endereço antes do comando, se necessário; alterar essa URL exige nova compilação.
+
+No Compose principal, o Dockerfile usa /backend e o Nginx encaminha chamadas para backend:3000 na rede do Compose. O fallback para index.html permite recarregar rotas diretamente.
+
+## Integração e indicadores
+
+- GET /backend/services usa { services, lastUpdatedAt } do backend do time.
+- lastUpdatedAt: null informa descoberta inicial pendente. Lista vazia com data válida significa registro vazio; descoberta antiga gera aviso.
+- Métricas continuam em https://metrics.unilaunch.org/metrics/{service_id}; carbono em https://carbon.unilaunch.org/regions. Não há fallback automático para descoberta externa.
+- Cálculos provisórios usam CPU máxima de 100 W; memória 0,375 W/GB; disco 0,01 W/GB; rede 0,02 W/GB. Energia = potência × intervalo em horas ÷ 1.000; emissões = energia × intensidade regional.
+- Validação isola dados inválidos por serviço/região. Requisições têm cancelamento, limite de 10 segundos e até seis consultas de métricas simultâneas. Intervalos são inteiros não negativos; resultados não finitos não viram indicadores.
+- Serviços indisponíveis, sem métricas e removidos são diferenciados. Energia continua visível quando faltam fatores de carbono; cobertura das emissões parciais é informada.
+- Falha de descoberta preserva dados anteriores, identificados no cabeçalho como antigos.
+- Polling a cada 30 segundos nas seis telas de monitoramento. Abas ocultas pausam consultas; trocar período apenas filtra o histórico.
+- Histórico permanece na sessão. Recarregar apaga registros. Períodos de 24 h, 7 d e 30 d não recuperam dados de banco.
+- Totais e rankings somam estimativas por coleta no período, com quantidade e cobertura. Intervalos podem se sobrepor; não representam consumo contínuo acumulado.
+- Comparação usa ciclos presentes em todos os serviços selecionados, normalizados pela duração informada. Emissões incompletas não produzem uma taxa completa.
+- Gráfico usa distância real entre horários e oferece tabela acessível.
+- Pesquisa preserva código regional quando cidades coincidem. Mapa da pesquisa mostra referências regionais; dashboard mostra coordenadas dos serviços.
+- Participação renovável não significa participação exclusivamente solar.
+- Preferências ficam em localStorage. Login, cadastro, autorização e administração real dependem do backend; nenhuma senha é enviada ou armazenada.
+- Demonstração é explícita, ativada pelo usuário e limitada à sessão. Rotas futuras não são simuladas como funcionais.
+
+## Telas
+
+| Rota | Conteúdo |
+|---|---|
+| / | Apresentação, carrossel com pausa e movimento reduzido |
+| /pesquisa | País, cidade, região, globo e alertas |
+| /dashboard | Estimativas, cobertura, histórico, estados e mapa |
+| /servicos | Busca, localização, CPU, RAM, disco, rede e fator |
+| /emissoes, /energia | Estimativas e ranking por período |
+| /comparar | Mesma janela, com taxas normalizadas |
+| /configuracoes | Preferências locais |
+| /login, /cadastro | Formulários aguardando autenticação |
+| /gerenciamento | Prévia e usuários demonstrativos |
+
+Rotas desconhecidas exibem 404. Falhas de carregamento oferecem recarregar ou voltar ao início. WebGL indisponível mantém pesquisa pelos campos.
+
+## Verificar
+
+~~~powershell
 npm run lint
 npm run typecheck
 npm run build
+npm run verify:backend
 npx playwright install chromium
 npm run test:e2e
-```
+~~~
 
-Se a porta 5173 já estiver ocupada, defina `PLAYWRIGHT_PORT` com outra porta antes de executar os testes.
+Testes cobrem desktop e celular com respostas controladas. PLAYWRIGHT_PORT permite outra porta; PLAYWRIGHT_CHANNEL=chrome usa Chrome instalado.
 
-Os testes de navegador verificam navegação, estados vazios, persistência de preferências, formulário de login, parallax, movimento reduzido, seleção de país/cidade no globo e layout em desktop e celular. Também verificam a consulta sem WebGL. Para usar um Chrome já instalado, defina `PLAYWRIGHT_CHANNEL=chrome`; por padrão é usado o Chromium do Playwright.
+verify:backend compara os hashes Git dos 39 arquivos versionados fora de frontend/ com [docs/backend-origin.json](docs/backend-origin.json). Arquivos gerados por instalação e compilação ficam fora dessa cópia.
 
-## Telas disponíveis
+[Integração e pendências do backend](docs/integracao-frontend.md). Toda a documentação adicional desta entrega fica dentro de frontend/; README, banco, backend e infraestrutura compartilhada permanecem iguais à develop.
 
-| Rota | Conteúdo |
-| --- | --- |
-| `/` | Apresentação, proposta, funcionamento e propósito |
-| `/pesquisa` | Globo 3D interativo, seleção de país e cidade, consulta de CO₂ e alertas |
-| `/gerenciamento` | Prévia administrativa, filtros, edição de perfil e bloqueio de usuários de demonstração |
-| `/dashboard` | Indicadores, histórico, estado do monitoramento e localização |
-| `/servicos` | Lista, busca, filtro por estado e ordenação |
-| `/emissoes` | Estrutura de análise de emissões e explicação do cálculo |
-| `/energia` | Estrutura de análise de consumo e explicação do cálculo |
-| `/comparar` | Seleção e estrutura de comparação de dois a quatro serviços |
-| `/login` | Formulário visual de acesso com mostrar/ocultar senha |
-| `/configuracoes` | Preferências locais de parallax e período padrão |
+## Organização e desempenho
 
-Rotas inexistentes apresentam uma página 404 com retorno ao início. O menu se adapta a telas menores, e cada página tem título próprio.
+src/components contém layout, gráficos, mapa e alertas; pages contém telas; providers guarda preferências e coletas; services reúne cliente HTTP e demonstração; utils reúne formatação e análise. Home possui CSS próprio; dados geográficos são referências locais.
 
-## Estado dos dados e autenticação
+Quatro paisagens otimizadas em JPEG, até 1.920 px: aproximadamente 2,56 MB no total, com carregamento progressivo. Globo carregado sob demanda; seu módulo ainda concentra Three.js e a biblioteca de visualização.
 
-**O frontend consulta diretamente as APIs públicas do ambiente simulado do desafio. Autenticação e histórico em banco de dados ainda dependem do backend.**
-
-- Ao abrir as telas de monitoramento, o adaptador consulta `https://metrics.unilaunch.org/services`, `https://metrics.unilaunch.org/metrics/{service_id}` e `https://carbon.unilaunch.org/regions`. As APIs permitem CORS e não exigem credenciais nas consultas implementadas. A home e o login não iniciam coletas.
-- Há atualização automática a cada 30 segundos, atualização manual e uma nova consulta ao buscar uma região. Os países e cidades selecionáveis vêm das regiões cadastradas pela API de carbono. Cada serviço é associado ao fator pelo `location.region_code`, e nomes conhecidos são exibidos em português.
-- O cálculo usa o intervalo `collection_interval_seconds` de cada resposta, com CPU máxima de 100 W, memória de 0,375 W/GB, disco de 0,01 W/GB e rede de 0,02 W/GB. Energia = potência × intervalo em horas ÷ 1.000; emissão = energia × fator regional em gCO₂e/kWh.
-- Respostas parciais ou inválidas não geram estimativas inventadas. Serviços com erro de indisponibilidade são marcados como indisponíveis; erros de métricas e campos ausentes são identificados como sem métricas. Serviços removidos do registro mantêm identificação e histórico, com estado removido e métricas atuais vazias. Se o fator de carbono falhar, energia disponível continua visível e emissões sem fator são `—`.
-- O histórico contém as coletas recebidas nesta sessão, com localização e código regional no momento da coleta. Recarregar a página limpa esse histórico. O período filtra os registros disponíveis em relação à última consulta; não recupera dias anteriores de um banco de dados. Totais somam os intervalos coletados, sem interpolar períodos não observados ou tratar dados ausentes como zero. Coletas simultâneas são agrupadas no gráfico e no ranking entre datas. Não há verificação de sobreposição entre intervalos; os totais representam a soma das estimativas coletadas, não uma medição contínua auditada.
-- O controle **Usar dados de demonstração** ativa exemplos fixos e identificados, definidos em `src/services/demo.ts`. Os exemplos não representam respostas reais das APIs. O modo fica ativo apenas nesta sessão da aplicação; recarregar a página desativa a demonstração.
-- No modo de demonstração, **Brasil / São Paulo** abre o dashboard, **França / Paris** mostra indisponibilidade e **Japão / Tóquio** mostra métricas incompletas. Esses exemplos são separados das respostas das APIs. No modo conectado, o comportamento depende dos serviços presentes na região na consulta atual. Uma região cadastrada sem serviços é informada como tal; uma região fora do catálogo mostra o alerta de região desconhecida.
-- O dashboard mantém país e cidade na URL, filtra coletas da região e permite escolher uma data/hora limite. O retorno para agora remove esse limite, mantendo o período selecionado. Os indicadores de estado dos serviços e de participação renovável referem-se à última consulta, não ao histórico.
-- Gerenciamento é uma prévia pública sem autenticação. Usuários são demonstrativos; editar perfis e bloquear/desbloquear não envia requisições nem altera usuários reais. Essas mudanças são descartadas ao sair da tela.
-- A busca e os filtros trabalham sobre a lista de serviços; a seleção de comparação fica desabilitada enquanto ela estiver vazia.
-- O login não autentica nem cria tokens. Ao enviar, informa que a integração ainda está pendente e limpa os campos. A aplicação não envia ou salva as credenciais.
-- As configurações atuais são somente de visualização. Elas ficam no `localStorage` deste navegador e não configuram a coleta. A proteção JWT das configurações de monitoramento será responsabilidade do backend.
-- Falhas de armazenamento das preferências são informadas; falhas de carregamento de indicadores também têm tratamento visual.
-
-## Organização e integração futura
-
-```text
-src/
-  components/  Marca, cenas decorativas, layout e elementos compartilhados
-  contexts/    Contratos de contexto de monitoramento e preferências
-  data/        Países e cidades do catálogo geográfico local
-  hooks/       Acesso aos contextos e comportamento do parallax
-  pages/       Telas acessíveis por rota
-  providers/   Estado compartilhado, preferências e carregamento
-  services/    Adaptador HTTP das APIs do desafio e demonstração explícita
-  types/       Serviços, estados, coletas e configurações tipados
-  utils/       Formatação dos indicadores
-  App.tsx      Rotas, títulos e navegação de página
-  styles.css   Identidade visual, responsividade e animação
-```
-
-O adaptador está em `src/services/monitoring.ts`, com contratos em `src/types/monitoring.ts`. Ele valida as respostas externas, limita o tempo das requisições e permite cancelar coletas ao sair das telas ou trocar de modo. Falhas no agregador preservam o último snapshot e são informadas na interface. A integração pode ser transferida para o backend quando coleta centralizada, persistência e autenticação estiverem disponíveis.
-
-Documentação dos contratos: [Agregador de métricas](https://metrics.unilaunch.org/docs) e [Intensidade de carbono](https://carbon.unilaunch.org/docs). Testes automatizados usam respostas controladas desses contratos para não depender dos estados variáveis do simulador.
-
-Para filtrar histórico por região, cada coleta precisa informar `serviceId`. Coordenadas e `renewablePercent` são opcionais por serviço. Porcentagem renovável não é tratada como porcentagem exclusivamente solar. Autorização administrativa e auditoria de requisições dependem do backend.
-
-## Globo interativo
-
-A pesquisa segue a ordem **país → cidade → Buscar**. Clicar no país destaca seus limites e aproxima a câmera; os marcadores e os botões mostram suas cidades. Trocar o país limpa a cidade anterior. É possível girar e aproximar o globo com mouse, toque ou os controles. O campo de país e a lista de cidades cadastradas permitem selecionar a região por teclado e continuam funcionando quando WebGL não está disponível. A lista de cidades evita sugestões de endereços salvos pelo navegador.
-
-O globo usa [react-globe.gl](https://github.com/vasturiano/react-globe.gl) e Three.js, carregados apenas nas telas com mapa. A referência [cool-globe](https://github.com/RafalUlecki/cool-globe) foi analisada: seu aprofundamento é em estados/províncias, portanto a seleção de cidades foi implementada diretamente sobre a biblioteca utilizada por ele.
-
-Os limites de 177 países são arquivos locais do Natural Earth. O catálogo estático de 243 cidades é usado apenas para traduzir nomes. Os marcadores e botões usam exclusivamente as coordenadas e cidades de referência retornadas por `GET /regions`; países com registros recebem destaque. Países sem registros e indisponibilidade do catálogo têm mensagens distintas. Origem e licença dos limites estão em [src/data/README.md](src/data/README.md). O fator se refere ao código regional, e a emissão calculada se refere aos serviços monitorados, não à emissão total da cidade.
-
-O parallax usa eventos de ponteiro e `requestAnimationFrame`, com profundidade diferente para cada folha, sem renderizações React a cada movimento. Pode ser desativado nas preferências. Telas de toque e a preferência `prefers-reduced-motion` evitam o movimento decorativo.
-
-As fontes estão instaladas no projeto, sem chamadas a Google Fonts. As imagens também são locais; sua origem e os prompts estão em [public/assets/README.md](public/assets/README.md).
-
-Referências de implementação: [React](https://react.dev/learn), [Vite](https://vite.dev/guide/) e [React Router](https://reactrouter.com/start/declarative/installation).
+Contratos externos: [agregador](https://metrics.unilaunch.org/docs) e [carbono](https://carbon.unilaunch.org/docs).

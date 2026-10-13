@@ -6,6 +6,7 @@ import { RegionMap } from '../components/RegionMap';
 import { formatNumber } from '../utils/format';
 import { matchesRegion } from '../utils/region';
 import { useMonitoring } from '../hooks/useMonitoring';
+import { summarizeCollections } from '../utils/history';
 
 export function DashboardPage() {
   const { snapshot, demoMode } = useMonitoring();
@@ -21,6 +22,7 @@ export function DashboardPage() {
   const history = snapshot.history.filter((point) => (!regional || (regionCode ? point.regionCode === regionCode || !point.regionCode && services.some((service) => service.id === point.serviceId) : point.country ? matchesRegion({ country: point.country, city: point.city ?? null }, country, city) : services.some((service) => service.id === point.serviceId))) && (!date || new Date(point.collectedAt).getTime() <= new Date(date).getTime()));
   const energy = regional || date ? history.length ? history.reduce((sum, point) => sum + point.energyKwh, 0) : null : snapshot.totalEnergyKwh;
   const emissions = regional || date ? history.some((point) => point.emissionsG !== null) ? history.reduce((sum, point) => sum + (point.emissionsG ?? 0), 0) : null : snapshot.totalEmissionsG;
+  const coverage = summarizeCollections(history);
   const lastCollection = history.reduce<string | null>((latest, point) => latest === null || Date.parse(point.collectedAt) > Date.parse(latest) ? point.collectedAt : latest, null);
   const active = services.filter((service) => service.status === 'available').length;
   const metricFields = ['cpuPercent', 'memoryGb', 'diskGb', 'networkGb'] as const;
@@ -48,8 +50,8 @@ export function DashboardPage() {
     <PageHeading title="Um olhar para o seu impacto." description={selection || 'Energia, emissões e serviços. Tudo conectado a um futuro mais consciente.'} refresh />
     <div className="history-toolbar"><span><Database size={16} />{date ? 'Exibindo coletas até a data selecionada' : demoMode ? 'Histórico de demonstração' : 'Histórico coletado nesta sessão · atualização a cada 30 s'}</span><div><button className="button button-outline button-small" disabled={!date} onClick={() => setDate('')}>Voltar para agora</button><label className="date-selector"><CalendarDays size={16} /><span>Selecionar data e hora</span><input aria-label="Selecionar data e hora" type="datetime-local" value={date} onChange={(event) => setDate(event.target.value)} /></label></div></div>
     <div className="metrics-grid">
-      <MetricCard label="Emissões estimadas" value={formatNumber(emissions)} unit="gCO₂e" icon={Leaf} note={emissions === null ? 'Nenhuma emissão calculada no período' : 'Soma das coletas com dados disponíveis'} />
-      <MetricCard label="Energia consumida" value={formatNumber(energy)} unit="kWh" icon={Zap} note={energy === null ? 'Nenhuma coleta no período' : 'Consumo no período selecionado'} tone="amber" />
+      <MetricCard label="Estimativas de emissões" value={formatNumber(emissions)} unit="gCO₂e" icon={Leaf} note={emissions === null ? 'Nenhuma emissão calculada no período' : 'Estimativas por coleta · ' + coverage.emissionCount + '/' + coverage.count + ' registros com emissão'} />
+      <MetricCard label="Estimativas de energia" value={formatNumber(energy)} unit="kWh" icon={Zap} note={energy === null ? 'Nenhuma coleta no período' : 'Soma por coleta; intervalos podem se sobrepor'} tone="amber" />
       <MetricCard label="Serviços ativos" value={String(active)} icon={Server} note="Estado da última consulta" tone="blue" />
       <MetricCard label="Última coleta" value={lastCollection ? new Date(lastCollection).toLocaleTimeString('pt-BR') : '—'} icon={Clock3} note={lastCollection ? new Date(lastCollection).toLocaleDateString('pt-BR') : 'Ainda não realizada'} />
     </div>
@@ -64,7 +66,7 @@ export function DashboardPage() {
     </div>
     <Panel className="history-panel" icon={Activity} title="Um histórico de escolhas" eyebrow="EVOLUÇÃO DAS EMISSÕES" link={{ to: '/emissoes', label: 'Explorar' }}><TrendChart points={history} /></Panel>
     <Panel icon={Globe2} title="Fatores de carbono por região" className="region-factor-panel"><div className="table-scroll"><table><thead><tr><th>Região</th><th>Cidade de referência</th><th>Intensidade · gCO₂e/kWh</th><th>Renovável</th></tr></thead><tbody>{regions.map((region) => <tr key={region.code}><td><strong>{region.region}</strong><small>{region.code}</small></td><td>{[region.city, region.country].filter(Boolean).join(', ')}</td><td>{formatNumber(region.carbonIntensity)}</td><td>{formatNumber(region.renewablePercent)}%</td></tr>)}</tbody></table></div>{!regions.length && <p className="city-catalog-note">Nenhum fator disponível para esta seleção.</p>}</Panel>
-    <RegionMap regions={snapshot.regions} catalogUnavailable={Boolean(snapshot.warning)} country={country} city={city} date={lastCollection ?? undefined} onCountrySelect={(name) => navigate(`/pesquisa?${new URLSearchParams({ pais: name })}`)} onCitySelect={(name) => navigate(`/pesquisa?${new URLSearchParams({ pais: country, cidade: name })}`)} />
-    <div className="dashboard-footnote"><Globe2 size={16} /><p>Estimativa dos serviços hospedados na região. Totais somam apenas os intervalos coletados; dados ausentes não são contabilizados. {demoMode ? 'Dados ilustrativos.' : 'Histórico mantido nesta sessão do navegador.'}</p><Link to="/pesquisa">Pesquisar outra região</Link></div>
+    <RegionMap services={services} regions={snapshot.regions} catalogUnavailable={Boolean(snapshot.warning)} country={country} city={city} date={lastCollection ?? undefined} onCountrySelect={(name) => navigate(`/pesquisa?${new URLSearchParams({ pais: name })}`)} onCitySelect={(name) => navigate(`/pesquisa?${new URLSearchParams({ pais: country, cidade: name })}`)} />
+    <div className="dashboard-footnote"><Globe2 size={16} /><p>Estimativa dos serviços hospedados na região. Totais somam estimativas por coleta; intervalos podem se sobrepor. Não representam consumo contínuo acumulado. Emissões disponíveis em {coverage.emissionCount} de {coverage.count} registros. {demoMode ? 'Dados ilustrativos.' : 'Histórico mantido nesta sessão do navegador.'}</p><Link to="/pesquisa">Pesquisar outra região</Link></div>
   </>;
 }

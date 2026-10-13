@@ -10,9 +10,9 @@ const services: MonitoredService[] = [
 export function getDemoSnapshot(period: Period): MonitoringSnapshot {
   const regions: CarbonRegion[] = services.map((service) => ({ code: service.id, country: service.country!, region: service.region!, city: service.city, latitude: service.latitude!, longitude: service.longitude!, carbonIntensity: 85, renewablePercent: service.renewablePercent ?? 0 }));
   const history = [
-    { serviceId: 'demo-br', collectedAt: '2026-10-08T12:00:00-03:00', energyKwh: 0.00061, emissionsG: 0.05185 },
-    { serviceId: 'demo-br', collectedAt: '2026-10-09T12:00:00-03:00', energyKwh: 0.00072, emissionsG: 0.0612 },
-    { serviceId: 'demo-br', collectedAt: '2026-10-10T12:00:00-03:00', energyKwh: 0.0008478333, emissionsG: 0.07206583 },
+    { serviceId: 'demo-br', intervalSeconds: 60, collectedAt: '2026-10-08T12:00:00-03:00', energyKwh: 0.00061, emissionsG: 0.05185 },
+    { serviceId: 'demo-br', intervalSeconds: 60, collectedAt: '2026-10-09T12:00:00-03:00', energyKwh: 0.00072, emissionsG: 0.0612 },
+    { serviceId: 'demo-br', intervalSeconds: 60, collectedAt: '2026-10-10T12:00:00-03:00', energyKwh: 0.0008478333, emissionsG: 0.07206583 },
   ].filter((point) => period !== '24h' || point.collectedAt.startsWith('2026-10-10'));
   return { regions, services: services.map((service) => ({ ...service, regionCode: service.id })), history, totalEnergyKwh: history.reduce((sum, point) => sum + point.energyKwh, 0), totalEmissionsG: history.reduce((sum, point) => sum + point.emissionsG, 0), lastCollectionAt: history.at(-1)?.collectedAt ?? null };
 }

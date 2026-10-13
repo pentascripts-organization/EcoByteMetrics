@@ -1,0 +1,202 @@
+{
+  "repository": "pentascripts-organization/EcoByteMetrics",
+  "branch": "develop",
+  "commit": "219a0ec2df4b2c02bcad002d54fe8822d147b731",
+  "files": [
+    {
+      "path": ".env.example",
+      "sha": "697ba41fc968aa6af5abec2f39ae455521c54e24",
+      "size": 266
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/daily-sync.md",
+      "sha": "29866072c47d61384b681f88bb46b285261abc07",
+      "size": 1080
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/sprint-planning.md",
+      "sha": "8aebd7d2f596484ba13cd8656ccefe5c4bd6576e",
+      "size": 1691
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/task.md",
+      "sha": "4c306038683235774068827a4e33dcdf4c5d5984",
+      "size": 383
+    },
+    {
+      "path": ".gitignore",
+      "sha": "003a2610c968a5847397951a2aa8ac254a9a3514",
+      "size": 2202
+    },
+    {
+      "path": "README.md",
+      "sha": "d3b9f8c1984800ef16d53ae08036926c07972079",
+      "size": 13515
+    },
+    {
+      "path": "backend/Dockerfile",
+      "sha": "005e2c947b8044180b47260e7c894d49428b5dd1",
+      "size": 132
+    },
+    {
+      "path": "backend/README.md",
+      "sha": "5530528df3fb8c65a369a5de3a96c86924a0e142",
+      "size": 145
+    },
+    {
+      "path": "backend/package-lock.json",
+      "sha": "433fafa2ad9be6bbe8d25d49a2ea4a9671195794",
+      "size": 58748
+    },
+    {
+      "path": "backend/package.json",
+      "sha": "e47562cabdd0efb4566bdb8e96bb1f0dd94efd1c",
+      "size": 637
+    },
+    {
+      "path": "backend/src/app.ts",
+      "sha": "c3d8406bd558fc9bcc1eaa7e93c42f1c209de1ea",
+      "size": 1236
+    },
+    {
+      "path": "backend/src/db/connection.ts",
+      "sha": "e8ed02969e9d6fe80aaf737147e42661fb36f5e3",
+      "size": 319
+    },
+    {
+      "path": "backend/src/index.ts",
+      "sha": "fdc0241c6a33279127d192a3c6e7397342e51e3e",
+      "size": 257
+    },
+    {
+      "path": "backend/src/integrations/carbon-api.ts",
+      "sha": "8b137891791fe96927ad78e64b0aad7bded08bdc",
+      "size": 1
+    },
+    {
+      "path": "backend/src/integrations/metrics-api.ts",
+      "sha": "f1d12fd5fe18818fdb063d009280e5720d13488c",
+      "size": 1679
+    },
+    {
+      "path": "backend/src/modules/coletas/coletas.controller.ts",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "backend/src/modules/coletas/coletas.repository.ts",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "backend/src/modules/coletas/coletas.routes.ts",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "backend/src/modules/coletas/coletas.service.ts",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "backend/src/modules/services/services.service.ts",
+      "sha": "3b1b9c99f2eca20e65de21ce87619073f3b8d818",
+      "size": 1096
+    },
+    {
+      "path": "backend/src/server.ts",
+      "sha": "89e5998d5be6b621f0450d048b075731d8983e7a",
+      "size": 1314
+    },
+    {
+      "path": "backend/tests/services.service.test.ts",
+      "sha": "d59018f5acb069af05adf9e028cf546c7d2ce9e2",
+      "size": 2653
+    },
+    {
+      "path": "backend/tsconfig.json",
+      "sha": "1efeff954d65bb81f64f5b1bb9ca6407899d4c63",
+      "size": 325
+    },
+    {
+      "path": "compose.yaml",
+      "sha": "037edc51856f614540cefe69ea614a04a50e9bac",
+      "size": 1682
+    },
+    {
+      "path": "database/DDL.sql",
+      "sha": "95bf930ef6412ab53ae96cfec5159217815c6183",
+      "size": 1581
+    },
+    {
+      "path": "database/Dockerfile",
+      "sha": "74f504dbed80b421a4becaf846e9260911866ee6",
+      "size": 25
+    },
+    {
+      "path": "database/README.md",
+      "sha": "4e74b10c0d5b5f83eff3994f4686d5a12757160f",
+      "size": 126
+    },
+    {
+      "path": "docs/Modelo MER e DER/Modelo Conceitual inicial do banco de dados .jpg",
+      "sha": "011707fdc72c71ef92c289bb67cb8509672845ca",
+      "size": 111159
+    },
+    {
+      "path": "docs/Modelo MER e DER/Modelo Conceitual inicial do banco de dados.brM",
+      "sha": "a79851d804377558012f58233f5614fa5033044a",
+      "size": 21382
+    },
+    {
+      "path": "docs/Modelo MER e DER/Modelo Logico do banco de dados .jpg",
+      "sha": "7456f18045de8c53f47932e3a822d9016d769b89",
+      "size": 195849
+    },
+    {
+      "path": "docs/Modelo MER e DER/Modelo Logico inicial do banco de dados.brM",
+      "sha": "63fa4a4cdf8b8381c53fa402b6f3cf4d4b442ead",
+      "size": 11114
+    },
+    {
+      "path": "docs/api.md",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "docs/arquitetura.md",
+      "sha": "47cecde980b340038759b455905971bb175efe17",
+      "size": 114
+    },
+    {
+      "path": "docs/calculos.md",
+      "sha": "90139ef85a415b09eb8da759928281dafd09f3ef",
+      "size": 110
+    },
+    {
+      "path": "docs/plano-de-entregas.md",
+      "sha": "6f59b7d1b1eeee80a93d9f9801b4396ff165062e",
+      "size": 149
+    },
+    {
+      "path": "docs/sprints/sprint-1.md",
+      "sha": "bd3762850ba38d1faac4196e05db78abe96d7a46",
+      "size": 120
+    },
+    {
+      "path": "docs/sprints/sprint-2.md",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "docs/sprints/sprint-3.md",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "size": 0
+    },
+    {
+      "path": "package-lock.json",
+      "sha": "3134645aa64b136f31ee0c24bba8f173921e40e0",
+      "size": 93
+    }
+  ]
+}

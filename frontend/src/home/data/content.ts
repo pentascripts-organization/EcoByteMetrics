@@ -1,4 +1,4 @@
-export type Locale = 'pt' | 'en';
+
 
 export const content = {
   pt: {
@@ -57,64 +57,6 @@ export const content = {
     footer: {
       phrase: 'JUNTOS POR UM PLANETA MAIS VERDE',
       linkLabel: 'Acompanhe o projeto no GitHub',
-    },
-  },
-  en: {
-    nav: {
-      home: 'Home',
-      solutions: 'Features',
-      data: 'Calculation model',
-      about: 'Project',
-      access: 'Access platform',
-      login: 'Sign in',
-      language: 'Language',
-      menu: 'Open menu',
-    },
-    hero: {
-      eyebrow: 'SUSTAINABILITY IN SOFTWARE',
-      line1: 'Understanding today',
-      line2: 'for a cleaner',
-      line3: 'tomorrow.',
-      description:
-        'CPU, memory, disk and network tell a story. EcoByteMetrics turns these metrics into estimates of energy use and carbon emissions for each service.',
-      primary: 'Open dashboard',
-      secondary: 'Understand the calculation',
-      metricLabel: 'CO₂e',
-      metricValue: '0.072',
-      metricUnit: 'g / 60 seconds',
-      change: 'Calculation example',
-      changeCaption: 'Energy × carbon intensity',
-      metricFormula: '0.000848 kWh × 85 gCO₂e/kWh',
-      metricNote:
-        'Assignment example: 50.87 W over 60 seconds. This is not a live measurement.',
-    },
-    solutions: {
-      eyebrow: 'FROM RESOURCE TO IMPACT',
-      title1: 'Technology and data',
-      title2: 'to measure the impact.',
-      description: 'Understand service energy use and how the hosting region affects emissions.',
-      cards: [
-        {
-          title: 'Service metrics',
-          body: 'CPU, RAM, disk and network as the starting point for estimating energy.',
-        },
-        {
-          title: 'History and comparison',
-          body: 'Compare services and track changes in energy use across collections.',
-        },
-        {
-          title: 'Carbon emissions',
-          body: 'Combine estimated energy with the carbon intensity of each region.',
-        },
-        {
-          title: 'Dynamic monitoring',
-          body: 'Identify new, removed or unavailable services during execution.',
-        },
-      ],
-    },
-    footer: {
-      phrase: 'TOGETHER FOR A GREENER PLANET',
-      linkLabel: 'Follow the project on GitHub',
     },
   },
 } as const;

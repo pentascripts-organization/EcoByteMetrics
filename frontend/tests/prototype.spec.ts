@@ -19,7 +19,7 @@ test('regional matching and alerts respect accents, removed services and partial
 });
 
 test('research distinguishes disconnected monitoring from unknown regions', async ({ page }) => {
-  await page.route('https://metrics.unilaunch.org/services', route => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
+  await page.route('**/backend/services', route => route.fulfill({ status: 503, json: { error: 'unavailable' } }));
   await page.goto('/pesquisa');
   await page.getByLabel('País', { exact: true }).fill('Brasil');
   await expect(page.getByRole('alert')).toContainText('Não foi possível consultar o agregador');

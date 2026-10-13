@@ -1,4 +1,4 @@
-import { test, expect, apiMetrics, apiRegions } from './fixtures';
+import { test, expect, apiMetrics, apiRegions, backendServices } from './fixtures';
 import { getRegionIssues } from '../src/utils/region';
 import { getDemoSnapshot } from '../src/services/demo';
 
@@ -13,7 +13,7 @@ test('alert reasons identify missing fields and ignore healthy or removed servic
 });
 
 test('Tokyo demonstration alert offers a direct switch to real APIs', async ({ page }) => {
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? [japan] : apiMetrics }));
+  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([japan]) : apiMetrics }));
   await page.goto('/pesquisa');
   await page.getByLabel('Usar dados de demonstração').check();
   await page.getByLabel('País', { exact: true }).fill('Japão');
@@ -35,7 +35,7 @@ test('Tokyo demonstration alert offers a direct switch to real APIs', async ({ p
 
 test('real partial metrics show the failing field and can be retried', async ({ page }, testInfo) => {
   let missing = true;
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? [japan] : { ...apiMetrics, metrics: { ...apiMetrics.metrics, memory_gb: missing ? null : 2 } } }));
+  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([japan]) : { ...apiMetrics, metrics: { ...apiMetrics.metrics, memory_gb: missing ? null : 2 } } }));
   await page.goto('/pesquisa');
   await page.getByLabel('País', { exact: true }).fill('Japão');
   await page.getByLabel('Cidade', { exact: true }).selectOption('jp-east');

@@ -11,9 +11,14 @@ export const apiRegions = [
 export const apiService = { id: 'billing-api', name: 'Billing API', location: { ...apiRegions[0], region_code: 'br-sudeste' }, metrics_path: '/metrics/billing-api' };
 export const apiMetrics = { collection_interval_seconds: 60, metrics: { cpu_percent: 50, memory_gb: 2, disk_gb: 10, network_gb: 1 } };
 
+export function backendServices(services: unknown[]) {
+  return { services, lastUpdatedAt: new Date().toISOString() };
+}
+
 // Browser checks use controlled responses; live endpoints change during the challenge.
 export const test = base.extend({
   page: async ({ page }, use) => {
+    await page.route('**/backend/services', (route) => route.fulfill({ json: backendServices([]) }));
     await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: [], headers: { 'access-control-allow-origin': '*' } }));
     await page.route('https://carbon.unilaunch.org/**', (route) => route.fulfill({ json: { regions: apiRegions, total: apiRegions.length }, headers: { 'access-control-allow-origin': '*' } }));
     await use(page);

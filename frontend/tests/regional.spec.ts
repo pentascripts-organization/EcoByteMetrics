@@ -1,4 +1,4 @@
-import { test, expect, apiMetrics, apiRegions } from './fixtures';
+import { test, expect, apiMetrics, apiRegions, backendServices } from './fixtures';
 import { matchesRegion } from '../src/utils/region';
 import { findCountry, localizeCity } from '../src/data/geography';
 
@@ -18,7 +18,7 @@ test('regional matching accepts API names, translations and country aliases', ()
 test('every API country and city opens its own regional dashboard', async ({ page }) => {
   test.slow();
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } })) : apiMetrics }));
+  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices(apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } }))) : apiMetrics }));
   for (const region of apiRegions) {
     await page.goto('/pesquisa');
     await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toBeEnabled();
@@ -35,19 +35,19 @@ test('every API country and city opens its own regional dashboard', async ({ pag
     await expect(page.locator('.region-factor-panel tbody')).toContainText(region.code);
     await expect(page.locator('.renewable-summary')).toContainText(`${region.renewable_share_percent}%`);
     await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');
-    await expect(page.locator('.globe-cities button.active')).toHaveCount(1);
+    await expect(page.getByLabel('Servi\u00e7os no mapa').getByRole('button')).toHaveCount(1);
   }
 });
 
 test('direct dashboard links keep translated regional selections without a region code', async ({ page }) => {
   test.slow();
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } })) : apiMetrics }));
+  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices(apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } }))) : apiMetrics }));
   for (const region of apiRegions.slice(1)) {
     const country = region.code === 'eu-west' ? 'Irlanda' : region.code === 'us-east' ? 'EUA' : region.country;
     await page.goto(`/dashboard?${new URLSearchParams({ pais: country, cidade: region.city })}`);
     await expect(page.locator('.region-factor-panel tbody')).toContainText(region.code);
     await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');
-    await expect(page.locator('.globe-cities button.active')).toHaveCount(1);
+    await expect(page.getByLabel('Servi\u00e7os no mapa').getByRole('button')).toHaveCount(1);
     await expect(page.locator('.region-factor-panel tbody tr')).toHaveCount(1);
   }
 });

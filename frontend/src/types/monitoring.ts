@@ -35,13 +35,14 @@ export interface MonitoredService {
 }
 
 export interface CollectionPoint {
-  serviceId?: string;
+  serviceId: string;
   regionCode?: string;
   country?: string | null;
   city?: string | null;
   collectedAt: string;
   energyKwh: number;
   emissionsG: number | null;
+  intervalSeconds?: number;
 }
 
 export interface MonitoringSnapshot {
@@ -51,6 +52,8 @@ export interface MonitoringSnapshot {
   totalEnergyKwh: number | null;
   totalEmissionsG: number | null;
   lastCollectionAt: string | null;
+  discoveryUpdatedAt?: string | null;
+  discoveryComplete?: boolean;
   warning?: string;
 }
 

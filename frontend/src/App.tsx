@@ -9,6 +9,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
+import { PageBoundary } from './components/PageBoundary';
 
 const ResearchPage = lazy(() => import('./pages/ResearchPage').then((module) => ({ default: module.ResearchPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
@@ -27,7 +28,7 @@ export function App() {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
     else window.scrollTo({ top: 0, behavior: 'instant' });
   }, [pathname, hash]);
-  return <Suspense fallback={<p className="globe-fallback" role="status">Carregando a página…</p>}><Routes>
+  return <PageBoundary key={pathname}><Suspense fallback={<p className="globe-fallback" role="status">Carregando a página…</p>}><Routes>
     <Route path="/" element={<HomePage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/cadastro" element={<LoginPage register />} />
@@ -42,5 +43,5 @@ export function App() {
       <Route path="/configuracoes" element={<SettingsPage />} />
     </Route>
     <Route path="*" element={<NotFoundPage />} />
-  </Routes></Suspense>;
+  </Routes></Suspense></PageBoundary>;
 }

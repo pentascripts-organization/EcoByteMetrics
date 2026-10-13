@@ -5,6 +5,8 @@
 
 ## Página inicial atual
 
+As quatro paisagens usam versões `*.optimized.jpg` em `src/home/assets`, redimensionadas até 1.920 px, JPEG com qualidade 82. Os nomes originais abaixo registram a origem das imagens fornecidas pelo usuário. A marca permanece em PNG.
+
 Os arquivos locais em `src/home/assets` foram fornecidos pelo usuário:
 
 - `ecobyte-logo.png`: marca usada na home aprovada.

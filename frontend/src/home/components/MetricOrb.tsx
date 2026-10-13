@@ -18,7 +18,7 @@ export function MetricOrb({
   formula,
 }: MetricOrbProps) {
   return (
-    <div className="metric-layout" id="dados">
+    <div className="metric-layout">
       <div className="metric-orb" aria-label={`${label} ${value} ${unit}`}>
         <svg className="metric-orb__rings" viewBox="0 0 210 210" aria-hidden="true">
           <circle className="metric-orb__outer" cx="105" cy="105" r="91" />

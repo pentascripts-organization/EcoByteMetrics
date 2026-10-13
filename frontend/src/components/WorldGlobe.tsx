@@ -16,9 +16,10 @@ interface WorldGlobeProps {
   city?: GlobeCity;
   onCountrySelect: (name: string) => void;
   onCitySelect: (name: string) => void;
+  onPointSelect?: (id: string, name: string) => void;
 }
 
-export default function WorldGlobe({ supportedCountries, country, cities, city, onCountrySelect, onCitySelect }: WorldGlobeProps) {
+export default function WorldGlobe({ supportedCountries, country, cities, city, onCountrySelect, onCitySelect, onPointSelect }: WorldGlobeProps) {
   const host = useRef<HTMLDivElement>(null);
   const globe = useRef<GlobeMethods | undefined>(undefined);
   const cameraInitialized = useRef(false);
@@ -90,7 +91,7 @@ export default function WorldGlobe({ supportedCountries, country, cities, city, 
     const marker = points.map((entry) => ({ entry, screen: globe.current!.getScreenCoords(entry.latitude!, entry.longitude!, 0.025) }))
       .filter(({ entry }) => geoDistance([entry.longitude!, entry.latitude!], [location.lng, location.lat]) < 0.2)
       .sort((a, b) => Math.hypot(a.screen.x - x, a.screen.y - y) - Math.hypot(b.screen.x - x, b.screen.y - y))[0];
-    if (marker && Math.hypot(marker.screen.x - x, marker.screen.y - y) < 20) { onCitySelect(marker.entry.name); return; }
+    if (marker && Math.hypot(marker.screen.x - x, marker.screen.y - y) < 20) { if (onPointSelect) onPointSelect(marker.entry.id, marker.entry.name); else onCitySelect(marker.entry.name); return; }
     const selected = countries.find((feature) => geoContains(feature, [location.lng, location.lat]));
     if (selected) onCountrySelect(selected.properties.name);
   }
@@ -110,10 +111,10 @@ export default function WorldGlobe({ supportedCountries, country, cities, city, 
       pointsData={points} pointLat="latitude" pointLng="longitude" pointAltitude={0.025} pointRadius={(point) => (point as GlobeCity).id === city?.id ? 1.4 : 0.7}
       pointColor={(point) => (point as GlobeCity).id === city?.id ? '#ffcc70' : '#f8fffb'} pointsTransitionDuration={0}
       onPointHover={(point) => setHover(point ? (point as GlobeCity).name : '')}
-      onPointClick={(point, event) => { if (!('pointerType' in event) || event.pointerType !== 'touch') onCitySelect((point as GlobeCity).name); }}
+      onPointClick={(point, event) => { if (!('pointerType' in event) || event.pointerType !== 'touch') { const entry = point as GlobeCity; if (onPointSelect) onPointSelect(entry.id, entry.name); else onCitySelect(entry.name); } }}
       labelsData={labelledCity ? [labelledCity] : []} labelLat="latitude" labelLng="longitude" labelText={(point) => (point as GlobeCity).name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')} labelSize={1} labelAltitude={0.04}
       labelColor={() => '#f3fff9'} labelDotRadius={0} labelResolution={3}
-      onLabelClick={(point, event) => { if (!('pointerType' in event) || event.pointerType !== 'touch') onCitySelect((point as GlobeCity).name); }}
+      onLabelClick={(point, event) => { if (!('pointerType' in event) || event.pointerType !== 'touch') { const entry = point as GlobeCity; if (onPointSelect) onPointSelect(entry.id, entry.name); else onCitySelect(entry.name); } }}
     />}
     {ready && !lost && <div className="globe-controls" aria-label="Controles do globo"><button aria-label="Girar globo à esquerda" onClick={() => moveView(1, -25)}><ChevronLeft size={18} /></button><button aria-label="Girar globo à direita" onClick={() => moveView(1, 25)}><ChevronRight size={18} /></button><button aria-label="Aproximar globo" onClick={() => moveView(0.8)}><Plus size={18} /></button><button aria-label="Afastar globo" onClick={() => moveView(1.25)}><Minus size={18} /></button></div>}
     {hover && <span className="globe-hover" role="status">{hover}</span>}

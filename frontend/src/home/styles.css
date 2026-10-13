@@ -4,6 +4,7 @@ html:has(.ecobyte-home) { font-size: 16px; }
 }
 
 @scope (.ecobyte-home) {
+  .carousel-pause { position: absolute; right: 20px; bottom: 20px; z-index: 6; padding: 10px 14px; border: 1px solid #b9cebe; border-radius: 8px; background: #f5f7f2ee; color: #173b31; font-size: 12px; cursor: pointer; }
 :scope {
   font-family: 'Manrope Variable', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #0f2927;

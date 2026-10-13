@@ -5,6 +5,7 @@ import { SettingsContext } from '../contexts/SettingsContext';
 import { useLocation } from 'react-router-dom';
 import { getDemoSnapshot } from '../services/demo';
 import type { MonitoringSettings, MonitoringSnapshot, Period } from '../types/monitoring';
+import { summarizeCollections } from '../utils/history';
 
 const SETTINGS_KEY = 'ecobytemetrics.preferences.v1';
 const DEFAULT_SETTINGS: MonitoringSettings = { parallaxEnabled: true, defaultPeriod: '7d' };
@@ -32,10 +33,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [demoMode, setDemoMode] = useState(false);
   const pending = useRef<AbortController | null>(null);
   const { pathname } = useLocation();
-  const monitoringActive = !['/', '/login', '/cadastro'].includes(pathname);
+  const monitoringActive = ['/pesquisa', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar'].includes(pathname);
 
   const refresh = useCallback(async () => {
-    if (demoMode) return getDemoSnapshot(period);
+    if (demoMode) return getDemoSnapshot('30d');
     if (pending.current) return null;
     const controller = new AbortController();
     pending.current = controller;
@@ -46,32 +47,34 @@ export function AppProviders({ children }: { children: ReactNode }) {
       const next = await getMonitoringSnapshot(controller.signal);
       if (controller.signal.aborted) return null;
       setLiveSnapshot((previous) => ({ ...next,
-        services: [...next.services, ...previous.services.filter((service) => !next.services.some((current) => current.id === service.id)).map((service) => ({ ...service, status: 'removed' as const, cpuPercent: null, memoryGb: null, diskGb: null, networkGb: null, energyKwh: null, emissionsG: null, statusMessage: 'Serviço ausente do registro atual.' }))],
+        services: [...next.services, ...previous.services.filter((service) => !next.services.some((current) => current.id === service.id)).map((service) => next.discoveryComplete === false ? service : ({ ...service, status: 'removed' as const, cpuPercent: null, memoryGb: null, diskGb: null, networkGb: null, energyKwh: null, emissionsG: null, collectionIntervalSeconds: null, carbonIntensity: null, renewablePercent: null, statusMessage: 'Serviço ausente do registro atual.' }))],
         // shortcut: collection intervals may overlap; deduplicate before reporting continuous consumption.
         history: [...previous.history, ...next.history].filter((point) => Date.parse(point.collectedAt) >= Date.parse(next.lastCollectionAt!) - 30 * 86400_000),
       }));
       return next;
-    } catch {
-      if (!controller.signal.aborted) setError('Não foi possível consultar o agregador. Os últimos dados recebidos foram preservados. Tente atualizar novamente.');
+    } catch (cause) {
+      if (!controller.signal.aborted) setError('Não foi possível consultar o agregador pelo backend. Os últimos dados recebidos foram preservados. Verifique a conexão e tente atualizar novamente. ' + (cause instanceof Error ? cause.message : ''));
       return null;
     } finally {
-      if (pending.current === controller) pending.current = null;
-      if (!controller.signal.aborted) setLoading(false);
+      if (pending.current === controller) { pending.current = null; setLoading(false); }
     }
-  }, [demoMode, period]);
+  }, [demoMode]);
 
   useEffect(() => {
     if (!monitoringActive || demoMode) return;
-    const initial = window.setTimeout(() => void refresh(), 0);
-    const timer = window.setInterval(() => void refresh(), 30_000);
-    return () => { window.clearTimeout(initial); window.clearInterval(timer); pending.current?.abort(); pending.current = null; };
+    const updateIfVisible = () => { if (!document.hidden) void refresh(); };
+    const initial = window.setTimeout(updateIfVisible, 0);
+    const timer = window.setInterval(updateIfVisible, 30_000);
+    document.addEventListener('visibilitychange', updateIfVisible);
+    return () => { window.clearTimeout(initial); window.clearInterval(timer); document.removeEventListener('visibilitychange', updateIfVisible); pending.current?.abort(); pending.current = null; };
   }, [monitoringActive, demoMode, refresh]);
 
   const snapshot = useMemo(() => {
     if (demoMode) return getDemoSnapshot(period);
     const days = period === '24h' ? 1 : period === '7d' ? 7 : 30;
     const history = liveSnapshot.history.filter((point) => Date.parse(point.collectedAt) >= Date.parse(liveSnapshot.lastCollectionAt ?? '') - days * 86400_000);
-    return { ...liveSnapshot, history, totalEnergyKwh: history.length ? history.reduce((sum, point) => sum + point.energyKwh, 0) : null, totalEmissionsG: history.some((point) => point.emissionsG !== null) ? history.reduce((sum, point) => sum + (point.emissionsG ?? 0), 0) : null };
+    const totals = summarizeCollections(history);
+    return { ...liveSnapshot, history, totalEnergyKwh: totals.energyKwh, totalEmissionsG: totals.emissionsG };
   }, [liveSnapshot, demoMode, period]);
 
   const saveSettings = useCallback((next: MonitoringSettings) => {
@@ -82,8 +85,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, []);
 
   const preferences = useMemo(() => ({ settings, saveSettings }), [settings, saveSettings]);
-  const monitoring = useMemo(() => ({ snapshot, period, setPeriod, refresh, loading: !demoMode && loading, error: demoMode ? null : error, demoMode, setDemoMode }),
-    [snapshot, period, refresh, loading, error, demoMode]);
+  const monitoring = useMemo(() => ({ snapshot, period, setPeriod, refresh, loading: monitoringActive && !demoMode && loading, error: demoMode ? null : error, demoMode, setDemoMode }),
+    [snapshot, period, refresh, loading, error, demoMode, monitoringActive]);
 
   return <SettingsContext.Provider value={preferences}>
     <MonitoringContext.Provider value={monitoring}>{children}</MonitoringContext.Provider>

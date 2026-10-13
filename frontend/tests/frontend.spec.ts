@@ -58,7 +58,7 @@ test('login shows its pending state without storing or sending credentials', asy
 test('navigation works on desktop and mobile', async ({ page }, testInfo) => {
   await page.goto('/');
   await page.getByRole('link', { name: 'Explorar dashboard', exact: true }).click();
-  await expect(page).toHaveURL(/\/cadastro$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto('/dashboard');
   if (testInfo.project.name === 'mobile') {
     await page.getByRole('button', { name: 'Abrir navegação' }).click();
@@ -85,7 +85,7 @@ test('leaf parallax responds to the pointer and respects reduced motion', async 
   await expect.poll(async () => layer.evaluate((element) => Math.abs(parseFloat(element.style.getPropertyValue('--pointer-x'))))).toBeLessThan(0.1);
 });
 
-test('home changes landscapes automatically and directs visitors to registration', async ({ page }, testInfo) => {
+test('home changes landscapes automatically and opens dashboard', async ({ page }, testInfo) => {
   await page.clock.install();
   await page.goto('/');
   await expect(page.locator('.hero__background')).toHaveCount(4);
@@ -111,8 +111,8 @@ test('home changes landscapes automatically and directs visitors to registration
     await expect(page.locator('#mobile-navigation')).toHaveCount(0);
   }
   await page.getByRole('link', { name: 'Explorar dashboard', exact: true }).click();
-  await expect(page).toHaveURL(/\/cadastro$/);
-  await expect(page.getByRole('heading', { name: 'Crie sua conta.' })).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('heading', { name: 'Um olhar para o seu impacto.' })).toBeVisible();
   await expect(page.locator('html')).toHaveCSS('font-size', '16px');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
 });

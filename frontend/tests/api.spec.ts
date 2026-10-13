@@ -1,4 +1,4 @@
-import { test, expect, apiMetrics, apiRegions, apiService } from './fixtures';
+import { test, expect, apiMetrics, apiRegions, apiService, backendServices } from './fixtures';
 import { estimateEnergy, getMonitoringSnapshot } from '../src/services/monitoring';
 import { findCountry, getCities } from '../src/data/geography';
 
@@ -7,10 +7,12 @@ test('adapter uses regional codes, actual intervals and localized API locations'
   const requested: string[] = [];
   globalThis.fetch = async (input) => {
     const url = String(input); requested.push(url);
-    return Response.json(url.endsWith('/regions') ? { regions: apiRegions } : url.endsWith('/services') ? [apiService] : apiMetrics);
+    return Response.json(url.endsWith('/regions') ? { regions: apiRegions } : url.endsWith('/services') ? backendServices([apiService]) : apiMetrics);
   };
   try {
     const snapshot = await getMonitoringSnapshot();
+    expect(requested).toContain('/backend/services');
+    expect(requested).not.toContain('https://metrics.unilaunch.org/services');
     expect(requested).toContain('https://metrics.unilaunch.org/metrics/billing-api');
     expect(snapshot.regions).toHaveLength(5);
     expect(snapshot.regions[4].city).toBe('Tóquio');
@@ -35,7 +37,7 @@ test('adapter distinguishes unavailable, missing, removed and valid zero metrics
   const ids = ['zero', 'unavailable', 'missing', 'removed', 'partial'];
   globalThis.fetch = async (input) => {
     const url = String(input);
-    if (url.endsWith('/services')) return Response.json(ids.map((id) => ({ ...apiService, id })));
+    if (url.endsWith('/services')) return Response.json(backendServices(ids.map((id) => ({ ...apiService, id }))));
     if (url.endsWith('/regions')) return Response.json({ regions: apiRegions });
     const id = url.split('/').at(-1);
     if (id === 'unavailable') return Response.json({ error: 'service_unavailable' }, { status: 500 });
@@ -58,7 +60,7 @@ test('carbon failure preserves energy without inventing an emission factor', asy
   const original = globalThis.fetch;
   globalThis.fetch = async (input) => {
     const url = String(input);
-    return url.endsWith('/regions') ? Response.json({ error: 'unavailable' }, { status: 503 }) : Response.json(url.endsWith('/services') ? [apiService] : apiMetrics);
+    return url.endsWith('/regions') ? Response.json({ error: 'unavailable' }, { status: 503 }) : Response.json(url.endsWith('/services') ? backendServices([apiService]) : apiMetrics);
   };
   try {
     const snapshot = await getMonitoringSnapshot();
@@ -73,7 +75,7 @@ test('carbon failure preserves energy without inventing an emission factor', asy
 
 test('live mode offers only registered cities and shows the selected regional factor', async ({ page }, testInfo) => {
   test.slow();
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? [apiService] : apiMetrics }));
+  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([apiService]) : apiMetrics }));
   await page.goto('/pesquisa');
   await expect(page.getByLabel('Usar dados de demonstração')).not.toBeChecked({ timeout: 15_000 });
   await page.getByLabel('País', { exact: true }).fill('Brasil');
@@ -102,8 +104,8 @@ test('polling discovers removals and new services and preserves data during an o
   await page.clock.install();
   let summaries = [apiService];
   let outage = false;
-  await page.route('https://metrics.unilaunch.org/**', (route) => {
-    if (route.request().url().endsWith('/services')) return route.fulfill({ status: outage ? 503 : 200, json: outage ? { error: 'unavailable' } : summaries });
+  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => {
+    if (route.request().url().endsWith('/services')) return route.fulfill({ status: outage ? 503 : 200, json: outage ? { error: 'unavailable' } : backendServices(summaries) });
     return route.fulfill({ json: apiMetrics });
   });
   await page.goto('/servicos');
