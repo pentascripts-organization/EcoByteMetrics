@@ -34,7 +34,7 @@
 
 ---
 
-## 📊 3. Resumo Enxuto de Entregas (US00, US01, US02)
+## 📊 3. Resumo de Entregas (US00, US01, US02)
 
 | User Story | Sub-issues Concluídas | Requisitos Cobertos |
 | :--- | :--- | :--- |
