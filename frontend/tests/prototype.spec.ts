@@ -35,8 +35,10 @@ test('login demonstration starts research and unknown pages offer recovery', asy
   await expect(page.getByLabel('Usar dados de demonstração')).toBeChecked();
   await page.goto('/endereco-inexistente');
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
-  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
-  await expect(page).toHaveURL(/\/endereco-inexistente$/);
+  await page.screenshot({ path: testInfo.outputPath('not-found.png'), fullPage: true, animations: 'disabled' });
+  await page.getByRole('button', { name: 'Voltar à página anterior', exact: true }).click();
+  await expect(page).toHaveURL(/\/pesquisa$/);
+  await page.goto('/endereco-inexistente');
   await page.screenshot({ path: testInfo.outputPath('not-found.png'), fullPage: true, animations: 'disabled' });
   await page.getByRole('link', { name: 'Voltar ao início', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);

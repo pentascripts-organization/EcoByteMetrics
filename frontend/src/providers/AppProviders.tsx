@@ -4,8 +4,9 @@ import { MonitoringContext } from '../contexts/MonitoringContext';
 import { SettingsContext } from '../contexts/SettingsContext';
 import { useLocation } from 'react-router-dom';
 import { getDemoSnapshot } from '../services/demo';
-import type { MonitoringSettings, MonitoringSnapshot, Period } from '../types/monitoring';
+import type { MonitoringSettings, MonitoringSnapshot, Period, RequestRecord } from '../types/monitoring';
 import { summarizeCollections } from '../utils/history';
+import { isPeriod } from '../utils/analysis';
 
 const SETTINGS_KEY = 'ecobytemetrics.preferences.v1';
 const DEFAULT_SETTINGS: MonitoringSettings = { parallaxEnabled: true, defaultPeriod: '7d' };
@@ -24,16 +25,19 @@ function readSettings(): MonitoringSettings {
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState(readSettings);
-  const [period, setPeriod] = useState<Period>(settings.defaultPeriod);
+  const [selectedPeriod, setPeriod] = useState<Period>(settings.defaultPeriod);
   const [liveSnapshot, setLiveSnapshot] = useState<MonitoringSnapshot>({
     regions: [], services: [], history: [], totalEnergyKwh: null, totalEmissionsG: null, lastCollectionAt: null,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [requests, setRequests] = useState<RequestRecord[]>([]);
   const pending = useRef<AbortController | null>(null);
-  const { pathname } = useLocation();
-  const monitoringActive = ['/pesquisa', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar'].includes(pathname);
+  const { pathname, search } = useLocation();
+  const queryPeriod = new URLSearchParams(search).get('periodo');
+  const period = isPeriod(queryPeriod) ? queryPeriod : selectedPeriod;
+  const monitoringActive = ['/pesquisa', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar'].includes(pathname) || pathname.startsWith('/servicos/');
 
   const refresh = useCallback(async () => {
     if (demoMode) return getDemoSnapshot('30d');
@@ -44,11 +48,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const { getMonitoringSnapshot } = await import('../services/monitoring');
-      const next = await getMonitoringSnapshot(controller.signal);
+      const next = await getMonitoringSnapshot(controller.signal, (record) => setRequests((previous) => [record, ...previous].slice(0, 50)));
       if (controller.signal.aborted) return null;
       setLiveSnapshot((previous) => ({ ...next,
         services: [...next.services, ...previous.services.filter((service) => !next.services.some((current) => current.id === service.id)).map((service) => next.discoveryComplete === false ? service : ({ ...service, status: 'removed' as const, cpuPercent: null, memoryGb: null, diskGb: null, networkGb: null, energyKwh: null, emissionsG: null, collectionIntervalSeconds: null, carbonIntensity: null, renewablePercent: null, statusMessage: 'Serviço ausente do registro atual.' }))],
-        // shortcut: collection intervals may overlap; deduplicate before reporting continuous consumption.
+        // Keep observations; totals describe estimates per collection, not continuous consumption.
         history: [...previous.history, ...next.history].filter((point) => Date.parse(point.collectedAt) >= Date.parse(next.lastCollectionAt!) - 30 * 86400_000),
       }));
       return next;
@@ -56,7 +60,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
       if (!controller.signal.aborted) setError('Não foi possível consultar o agregador pelo backend. Os últimos dados recebidos foram preservados. Verifique a conexão e tente atualizar novamente. ' + (cause instanceof Error ? cause.message : ''));
       return null;
     } finally {
-      if (pending.current === controller) { pending.current = null; setLoading(false); }
+      if (pending.current === controller) pending.current = null;
+      if (!pending.current) setLoading(false);
     }
   }, [demoMode]);
 
@@ -70,12 +75,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [monitoringActive, demoMode, refresh]);
 
   const snapshot = useMemo(() => {
-    if (demoMode) return getDemoSnapshot(period);
-    const days = period === '24h' ? 1 : period === '7d' ? 7 : 30;
-    const history = liveSnapshot.history.filter((point) => Date.parse(point.collectedAt) >= Date.parse(liveSnapshot.lastCollectionAt ?? '') - days * 86400_000);
+    if (demoMode) return getDemoSnapshot('30d');
+    const history = liveSnapshot.history;
     const totals = summarizeCollections(history);
     return { ...liveSnapshot, history, totalEnergyKwh: totals.energyKwh, totalEmissionsG: totals.emissionsG };
-  }, [liveSnapshot, demoMode, period]);
+  }, [liveSnapshot, demoMode]);
 
   const saveSettings = useCallback((next: MonitoringSettings) => {
     setSettings(next);
@@ -85,8 +89,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, []);
 
   const preferences = useMemo(() => ({ settings, saveSettings }), [settings, saveSettings]);
-  const monitoring = useMemo(() => ({ snapshot, period, setPeriod, refresh, loading: monitoringActive && !demoMode && loading, error: demoMode ? null : error, demoMode, setDemoMode }),
-    [snapshot, period, refresh, loading, error, demoMode, monitoringActive]);
+  const monitoring = useMemo(() => ({ snapshot, period, setPeriod, refresh, loading: !demoMode && loading, error: demoMode ? null : error, demoMode, setDemoMode, requests, clearRequests: () => setRequests([]) }),
+    [snapshot, period, refresh, loading, error, demoMode, requests]);
 
   return <SettingsContext.Provider value={preferences}>
     <MonitoringContext.Provider value={monitoring}>{children}</MonitoringContext.Provider>

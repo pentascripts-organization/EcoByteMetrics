@@ -56,11 +56,13 @@ No Compose principal, o Dockerfile usa /backend e o Nginx encaminha chamadas par
 - Validação isola dados inválidos por serviço/região. Requisições têm cancelamento, limite de 10 segundos e até seis consultas de métricas simultâneas. Intervalos são inteiros não negativos; resultados não finitos não viram indicadores.
 - Serviços indisponíveis, sem métricas e removidos são diferenciados. Energia continua visível quando faltam fatores de carbono; cobertura das emissões parciais é informada.
 - Falha de descoberta preserva dados anteriores, identificados no cabeçalho como antigos.
-- Polling a cada 30 segundos nas seis telas de monitoramento. Abas ocultas pausam consultas; trocar período apenas filtra o histórico.
+- Polling a cada 30 segundos nas telas de monitoramento, incluindo detalhes de serviço. Abas ocultas pausam consultas; trocar período apenas filtra o histórico.
 - Histórico permanece na sessão. Recarregar apaga registros. Períodos de 24 h, 7 d e 30 d não recuperam dados de banco.
 - Totais e rankings somam estimativas por coleta no período, com quantidade e cobertura. Intervalos podem se sobrepor; não representam consumo contínuo acumulado.
 - Comparação usa ciclos presentes em todos os serviços selecionados, normalizados pela duração informada. Emissões incompletas não produzem uma taxa completa.
 - Gráfico usa distância real entre horários e oferece tabela acessível.
+- Região, período e data permanecem na URL ao navegar. Busca, estado e ordenação da tabela sobrevivem à ida aos detalhes.
+- Detalhes permitem simular CO₂e em outra região mantendo a energia da última coleta, sem alterar serviços.
 - Pesquisa preserva código regional quando cidades coincidem. Mapa da pesquisa mostra referências regionais; dashboard mostra coordenadas dos serviços.
 - Participação renovável não significa participação exclusivamente solar.
 - Preferências ficam em localStorage. Login, cadastro, autorização e administração real dependem do backend; nenhuma senha é enviada ou armazenada.
@@ -73,14 +75,15 @@ No Compose principal, o Dockerfile usa /backend e o Nginx encaminha chamadas par
 | / | Apresentação, carrossel com pausa e movimento reduzido |
 | /pesquisa | País, cidade, região, globo e alertas |
 | /dashboard | Estimativas, cobertura, histórico, estados e mapa |
+| /servicos/:id | Estado, recursos, histórico individual e simulação de região |
 | /servicos | Busca, localização, CPU, RAM, disco, rede e fator |
 | /emissoes, /energia | Estimativas e ranking por período |
 | /comparar | Mesma janela, com taxas normalizadas |
 | /configuracoes | Preferências locais |
-| /login, /cadastro | Formulários aguardando autenticação |
-| /gerenciamento | Prévia e usuários demonstrativos |
+| /login, /cadastro | Prévias desabilitadas; acesso público e demonstração |
+| /gerenciamento | Usuários demonstrativos e diagnóstico local de requisições |
 
-Rotas desconhecidas exibem 404. Falhas de carregamento oferecem recarregar ou voltar ao início. WebGL indisponível mantém pesquisa pelos campos.
+Rotas desconhecidas exibem 404 com retorno útil à navegação. Falhas de carregamento oferecem recarregar ou voltar ao início. WebGL indisponível mantém pesquisa pelos campos.
 
 ## Verificar
 
@@ -96,6 +99,8 @@ npm run test:e2e
 Testes cobrem desktop e celular com respostas controladas. PLAYWRIGHT_PORT permite outra porta; PLAYWRIGHT_CHANNEL=chrome usa Chrome instalado.
 
 verify:backend compara os hashes Git dos 39 arquivos versionados fora de frontend/ com [docs/backend-origin.json](docs/backend-origin.json). Arquivos gerados por instalação e compilação ficam fora dessa cópia.
+
+[Tour completo do site](docs/tour-do-site.md) · [Revisão de navegação e requisitos](docs/revisao-frontend.md).
 
 [Integração e pendências do backend](docs/integracao-frontend.md). Toda a documentação adicional desta entrega fica dentro de frontend/; README, banco, backend e infraestrutura compartilhada permanecem iguais à develop.
 

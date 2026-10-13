@@ -74,8 +74,8 @@ export function Header({ labels }: HeaderProps) {
             </a>
           ))}
           <Link to="/login" onClick={() => setMenuOpen(false)}>{labels.login}</Link>
-          <Link className="mobile-nav__cta" to="/cadastro" onClick={() => setMenuOpen(false)}>
-            Criar conta
+          <Link className="mobile-nav__cta" to="/pesquisa" onClick={() => setMenuOpen(false)}>
+            Pesquisar uma região
             <ArrowUpRight size={14} aria-hidden="true" />
           </Link>
         </nav>

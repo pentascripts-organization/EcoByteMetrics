@@ -1,6 +1,14 @@
 export type ServiceStatus = 'available' | 'unavailable' | 'no-metrics' | 'removed';
 export type Period = '24h' | '7d' | '30d';
 
+export interface RequestRecord {
+  url: string;
+  status: number | null;
+  outcome: 'response' | 'timeout' | 'cancelled' | 'network-error';
+  durationMs: number;
+  completedAt: string;
+}
+
 export interface CarbonRegion {
   code: string;
   country: string;

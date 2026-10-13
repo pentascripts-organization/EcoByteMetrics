@@ -19,6 +19,8 @@ Descoberta consome GET /services com { services, lastUpdatedAt }. Proxy /backend
 
 Foram corrigidos isolamento de dados inválidos, cobertura parcial, ranking por período, comparação normalizada, precisão numérica, seleção por código regional, mapa de serviços, distâncias temporais do gráfico, acessibilidade, carregamento de imagens e polling.
 
+Nesta revisão, o contexto de região/período/data acompanha a navegação. A página de detalhes reúne recursos, histórico individual e uma simulação ambiental sem alteração de serviços. A pesquisa invalida respostas atrasadas; comparação descarta IDs incompatíveis; login/cadastro são prévias desabilitadas; a aba de requisições mostra somente chamadas reais desta sessão. [Revisão](revisao-frontend.md) e [tour](tour-do-site.md).
+
 Totais são soma de estimativas por coleta, com aviso de possível sobreposição. Histórico permanece em memória.
 
 ## Partes que faltam no backend
@@ -52,7 +54,7 @@ A proposta não foi aplicada. Variáveis e credenciais PostgreSQL também precis
 
 ## Limites
 
-Verificações realizadas: build e lint do frontend; 71 testes Playwright aprovados em desktop/celular, com um teste de parallax ignorado no celular; build e três testes originais do backend aprovados; hashes dos 39 arquivos fora de frontend/ conferidos. Integração HTTP real validada em /health, /services e no proxy /backend/services.
+A entrega anterior verificou build e testes originais do backend e integração HTTP real em /health, /services e no proxy /backend/services. A revisão atual mantém o backend e amplia os testes de navegação, filtros, cancelamento, detalhes, simulação e diagnósticos em desktop e celular. Os resultados atuais estão registrados em revisao-frontend.md.
 
 - O agregador informa duração, sem início/fim do intervalo ou ID de amostra. Não permite comprovar cobertura contínua sem sobreposição.
 - Ranking por soma depende da quantidade e duração das observações. Taxas normalizadas não medem eficiência por transação.

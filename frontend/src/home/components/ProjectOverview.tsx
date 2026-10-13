@@ -49,7 +49,7 @@ export function ProjectOverview() {
         <h3>O que você poderá analisar</h3>
         <p>Consumo de energia, emissões por serviço, evolução entre coletas e diferenças entre regiões de execução. Essas perspectivas ajudam a formular perguntas e a avaliar mudanças no software.</p>
         <div className="project-status"><span className="project-eyebrow">EM DESENVOLVIMENTO</span><p>As telas de análise já estão disponíveis. A descoberta de serviços já usa o backend. O histórico persistente e a autenticação continuam em desenvolvimento; as coletas atuais ficam nesta sessão do navegador.</p></div>
-        <Link className="primary-cta" to="/cadastro"><span>Conhecer o cadastro</span><ArrowRight size={18} aria-hidden="true" /></Link>
+        <Link className="primary-cta" to="/pesquisa"><span>Pesquisar uma região</span><ArrowRight size={18} aria-hidden="true" /></Link>
       </div>
     </section>
   </>;

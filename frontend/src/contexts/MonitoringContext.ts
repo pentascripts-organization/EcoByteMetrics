@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { MonitoringSnapshot, Period } from '../types/monitoring';
+import type { MonitoringSnapshot, Period, RequestRecord } from '../types/monitoring';
 
 export interface MonitoringContextValue {
   snapshot: MonitoringSnapshot;
@@ -10,6 +10,8 @@ export interface MonitoringContextValue {
   error: string | null;
   demoMode: boolean;
   setDemoMode: (enabled: boolean) => void;
+  requests: RequestRecord[];
+  clearRequests: () => void;
 }
 
 export const MonitoringContext = createContext<MonitoringContextValue | null>(null);

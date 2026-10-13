@@ -25,9 +25,10 @@ interface RegionMapProps {
   onCountrySelect: (country: string) => void;
   onCitySelect: (city: string) => void;
   onRegionSelect?: (code: string, city: string) => void;
+  onServiceSelect?: (id: string) => void;
 }
 
-export function RegionMap({ regions, services, regionCode, catalogUnavailable = false, country = '', city = '', date, onCountrySelect, onCitySelect, onRegionSelect }: RegionMapProps) {
+export function RegionMap({ regions, services, regionCode, catalogUnavailable = false, country = '', city = '', date, onCountrySelect, onCitySelect, onRegionSelect, onServiceSelect }: RegionMapProps) {
   const selectedCountry = findCountry(country);
   const cities = useMemo(() => services ? services.filter((service) => service.status !== 'removed' && service.latitude !== undefined && service.longitude !== undefined && (!selectedCountry || findCountry(service.country ?? '')?.properties.code === selectedCountry.properties.code))
     .map((service) => ({ id: service.id, countryCode: findCountry(service.country ?? '')?.properties.code ?? '', name: service.name, latitude: service.latitude!, longitude: service.longitude! }))
@@ -35,7 +36,7 @@ export function RegionMap({ regions, services, regionCode, catalogUnavailable = 
   const supportedCountries = useMemo(() => new Set((services ?? regions).map((place) => findCountry(place.country ?? '')?.properties.code ?? '')), [regions, services]);
   const selectedCity = cities.find((entry) => regionCode ? entry.id === regionCode : entry.name.localeCompare(localizeCity(country, city)?.trim() ?? '', 'pt-BR', { sensitivity: 'base' }) === 0);
   const selectPoint = (id: string, name: string) => {
-    if (services) { const service = services.find((entry) => entry.id === id); if (service) { onCountrySelect(service.country ?? ''); } }
+    if (services) { const service = services.find((entry) => entry.id === id); if (service) { if (onServiceSelect) onServiceSelect(id); else onCountrySelect(service.country ?? ''); } }
     else if (onRegionSelect) onRegionSelect(id, name);
     else onCitySelect(name);
   };
@@ -43,7 +44,7 @@ export function RegionMap({ regions, services, regionCode, catalogUnavailable = 
     <div className="globe-heading"><span className="map-label"><Globe2 size={15} />Explore o mundo em 3D</span><button className="button button-outline button-small" onClick={() => onCountrySelect('')}><RotateCcw size={14} />Ver o mundo</button></div>
     <p className="globe-instruction">{services ? 'Localização dos serviços monitorados' : selectedCountry ? `2. Escolha uma cidade · ${selectedCountry.properties.name}` : '1. Clique em um país para começar'}<span>Arraste para girar. Use o scroll ou dois dedos para aproximar.</span></p>
     <GlobeBoundary><Suspense fallback={<p className="globe-fallback" role="status">Carregando o globo 3D…</p>}><WorldGlobe supportedCountries={supportedCountries} country={selectedCountry} city={selectedCity} cities={cities} onCountrySelect={onCountrySelect} onCitySelect={onCitySelect} onPointSelect={selectPoint} /></Suspense></GlobeBoundary>
-    {(selectedCountry || services) && <div className="globe-cities" aria-label={services ? 'Serviços no mapa' : 'Cidades do país selecionado'}>{cities.length ? cities.map((entry) => <button key={entry.id} className={entry.id === selectedCity?.id ? 'active' : ''} aria-pressed={entry.id === selectedCity?.id} onClick={() => selectPoint(entry.id, entry.name)}>{entry.name}</button>) : <p>{services ? 'Nenhum serviço com coordenadas disponíveis.' : catalogUnavailable ? 'Catálogo de regiões temporariamente indisponível. Tente atualizar.' : 'Nenhuma região cadastrada para este país na consulta atual.'}</p>}</div>}
+    {(selectedCountry || services) && <div className="globe-cities" aria-label={services ? 'Serviços no mapa' : 'Cidades do país selecionado'}>{cities.length ? cities.map((entry) => <button key={entry.id} className={entry.id === selectedCity?.id ? 'active' : ''} aria-pressed={entry.id === selectedCity?.id} onClick={() => selectPoint(entry.id, entry.name)}>{entry.name}{!services && cities.filter((candidate) => candidate.name === entry.name).length > 1 ? ' · ' + entry.id : ''}</button>) : <p>{services ? 'Nenhum serviço com coordenadas disponíveis.' : catalogUnavailable ? 'Catálogo de regiões temporariamente indisponível. Tente atualizar.' : 'Nenhuma região cadastrada para este país na consulta atual.'}</p>}</div>}
     <div className="globe-selection"><span>REGIÃO SELECIONADA<strong>{[selectedCountry?.properties.name, selectedCity?.name ?? city].filter(Boolean).join(' — ') || 'Escolha um país'}</strong></span>{date && <span>COLETA<strong>{new Date(date).toLocaleString('pt-BR')}</strong></span>}</div>
   </section>;
 }

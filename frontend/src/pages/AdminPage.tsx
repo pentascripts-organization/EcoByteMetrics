@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, Ban, Pencil, Search, Server, Settings2, UsersRound } from 'lucide-react';
+import { Activity, Ban, Pencil, Search, Server, Settings2, UsersRound, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Brand } from '../components/Brand';
 import { EmptyState, MetricCard, Panel } from '../components/UI';
@@ -24,7 +24,7 @@ const tabs = [
 ] as const;
 
 export function AdminPage() {
-  const { demoMode, snapshot } = useMonitoring();
+  const { demoMode, snapshot, requests, clearRequests, refresh, loading } = useMonitoring();
   const [tab, setTab] = useState<string>('users');
   const [users, setUsers] = useState(exampleUsers);
   const [search, setSearch] = useState('');
@@ -40,7 +40,7 @@ export function AdminPage() {
         {!visibleUsers.length && <EmptyState icon={UsersRound} title={demoMode ? 'Nenhum usuário encontrado' : 'Controle de usuários em breve'} description={demoMode ? 'Ajuste a busca ou o filtro de status.' : 'Ative os dados de demonstração para explorar esta tela.'} />}{message && demoMode && <p className="form-message" role="status">{message}</p>}
       </section>}
       {tab === 'system' && <Panel icon={Server} title="Sistema"><dl className="api-details"><div><dt>Monitoramento</dt><dd>{demoMode ? 'Demonstração' : snapshot.lastCollectionAt ? 'APIs do desafio' : 'Aguardando conexão'}</dd></div><div><dt>Serviços exibidos</dt><dd>{snapshot.services.length}</dd></div><div><dt>Autenticação</dt><dd>Não disponível</dd></div></dl></Panel>}
-      {tab === 'requests' && <Panel icon={Activity} title="Requisições da API"><EmptyState icon={Activity} title="Nenhuma requisição registrada" description="O registro detalhado de requisições ainda não está disponível." /></Panel>}
+      {tab === 'requests' && <Panel icon={Activity} title="Requisições da API"><p className="analysis-notice">Últimas 50 requisições reais feitas por este navegador nesta sessão. Sem persistência ou registros de outros usuários. Demonstração não gera requisições.</p><div className="diagnostic-actions"><button className="button button-outline button-small" disabled={demoMode || loading} onClick={() => void refresh()}><RefreshCw size={15} />Consultar agora</button><button className="button button-outline button-small" disabled={!requests.length} onClick={clearRequests}>Limpar registros locais</button></div>{requests.length ? <div className="table-scroll"><table><thead><tr><th>Consulta</th><th>Resultado</th><th>Duração</th><th>Horário</th></tr></thead><tbody>{requests.map((request, index) => <tr key={request.completedAt + request.url + index}><td><strong>{request.url.includes('/metrics/') ? 'Métricas de serviço' : request.url.endsWith('/regions') ? 'Fatores de carbono' : 'Descoberta de serviços'}</strong><small>GET {request.url}</small></td><td>{request.status !== null ? 'HTTP ' + request.status : request.outcome === 'cancelled' ? 'Cancelada' : request.outcome === 'timeout' ? 'Tempo esgotado' : 'Falha de conexão'}</td><td>{request.durationMs} ms</td><td><time dateTime={request.completedAt}>{new Date(request.completedAt).toLocaleString('pt-BR')}</time></td></tr>)}</tbody></table></div> : <EmptyState icon={Activity} title="Nenhuma requisição registrada" description="Faça uma consulta nas telas de monitoramento ou use Consultar agora." />}</Panel>}
       {tab === 'settings' && <Panel icon={Settings2} title="Configurações"><p className="admin-note">Personalize o movimento das folhas e o período padrão de visualização.</p><Link className="button button-outline" to="/configuracoes">Abrir preferências</Link></Panel>}
     </section>
   </div>;

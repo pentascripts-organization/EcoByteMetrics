@@ -1,10 +1,12 @@
 import { ArrowUpRight, CalendarDays, CircleDashed, RefreshCw } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMonitoring } from '../hooks/useMonitoring';
 import type { CollectionPoint, Period } from '../types/monitoring';
 import { formatNumber } from '../utils/format';
+import { useAnalysis } from '../hooks/useAnalysis';
+import { analysisLink } from '../utils/analysis';
 
 export function IconTile({ icon: Icon, tone = 'green' }: { icon: LucideIcon; tone?: 'green' | 'blue' | 'amber' }) {
   return <span className={`icon-tile icon-tile-${tone}`}><Icon size={21} strokeWidth={1.65} /></span>;
@@ -22,18 +24,20 @@ export function EmptyState({ icon: Icon = CircleDashed, title, description, comp
 export function Panel({ title, eyebrow, icon: Icon, link, children, className = '' }: {
   title: string; eyebrow?: string; icon?: LucideIcon; link?: { to: string; label: string }; children: ReactNode; className?: string;
 }) {
+  const { search } = useLocation();
   return <section className={`panel ${className}`}>
     <div className="panel-heading"><div className="panel-title-group">
       {Icon && <IconTile icon={Icon} />}<div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h2>{title}</h2></div>
-    </div>{link && <Link className="text-link" to={link.to}>{link.label}<ArrowUpRight size={16} /></Link>}</div>
+    </div>{link && <Link className="text-link" to={analysisLink(link.to, search)}>{link.label}<ArrowUpRight size={16} /></Link>}</div>
     {children}
   </section>;
 }
 
 export function PeriodSelect() {
   const { period, setPeriod } = useMonitoring();
+  const [params, setParams] = useSearchParams();
   return <label className="period-select"><CalendarDays size={17} /><span className="sr-only">Período de análise</span>
-    <select value={period} onChange={(event) => setPeriod(event.target.value as Period)}>
+    <select value={period} onChange={(event) => { const next = new URLSearchParams(params); next.set('periodo', event.target.value); setPeriod(event.target.value as Period); setParams(next, { replace: true }); }}>
       <option value="24h">Últimas 24 horas</option><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option>
     </select>
   </label>;
@@ -57,9 +61,9 @@ export function MetricCard({ label, value, unit, icon, note, tone = 'green' }: {
 }
 
 export function TrendChart({ metric = 'emissions', points: selectedPoints }: { metric?: 'emissions' | 'energy'; points?: CollectionPoint[] }) {
-  const { snapshot } = useMonitoring();
+  const analysis = useAnalysis();
   const grouped = new Map<string, number>();
-  for (const point of selectedPoints ?? snapshot.history) {
+  for (const point of selectedPoints ?? analysis.history) {
     const value = metric === 'emissions' ? point.emissionsG : point.energyKwh;
     if (value !== null) grouped.set(point.collectedAt, (grouped.get(point.collectedAt) ?? 0) + value);
   }

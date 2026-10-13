@@ -1,4 +1,4 @@
-import type { CarbonRegion, MonitoringSnapshot, MonitoredService } from '../types/monitoring';
+import type { CarbonRegion, MonitoringSnapshot, MonitoredService, RequestRecord } from '../types/monitoring';
 import { findCountry, localizeCity } from '../data/geography';
 import { summarizeCollections } from '../utils/history';
 
@@ -9,8 +9,20 @@ const object = (value: unknown): Record<string, unknown> => typeof value === 'ob
 const number = (value: unknown, max = Infinity): number | null => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max ? value : null;
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : '';
 
-async function request(url: string, signal: AbortSignal) {
-  return fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]), cache: 'no-store' });
+async function request(url: string, signal: AbortSignal, onRequest?: (record: RequestRecord) => void) {
+  const started = performance.now();
+  let status: number | null = null;
+  let outcome: RequestRecord['outcome'] = 'network-error';
+  try {
+    const response = await fetch(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]), cache: 'no-store' });
+    status = response.status;
+    outcome = 'response';
+    return response;
+  } catch (cause) {
+    if (signal.aborted) outcome = 'cancelled';
+    else if (cause instanceof Error && cause.name === 'TimeoutError') outcome = 'timeout';
+    throw cause;
+  } finally { onRequest?.({ url, status, outcome, durationMs: Math.round(performance.now() - started), completedAt: new Date().toISOString() }); }
 }
 
 function location(value: unknown) {
@@ -45,10 +57,10 @@ export function estimateEnergy(cpu: number, memory: number, disk: number, networ
   return (cpu / 100 * 100 + memory * 0.375 + disk * 0.01 + network * 0.02) * (seconds / 3600) / 1000;
 }
 
-export async function getMonitoringSnapshot(signal = new AbortController().signal): Promise<MonitoringSnapshot> {
+export async function getMonitoringSnapshot(signal = new AbortController().signal, onRequest?: (record: RequestRecord) => void): Promise<MonitoringSnapshot> {
   const [servicesResponse, regionsResponse] = await Promise.all([
-    request(BACKEND_API + '/services', signal),
-    request(CARBON_API + '/regions', signal).catch(() => null),
+    request(BACKEND_API + '/services', signal, onRequest),
+    request(CARBON_API + '/regions', signal, onRequest).catch(() => null),
   ]);
   if (!servicesResponse.ok) throw new Error('Backend indisponível (HTTP ' + servicesResponse.status + ').');
   const discovery = object(await servicesResponse.json());
@@ -100,7 +112,7 @@ export async function getMonitoringSnapshot(signal = new AbortController().signa
   async function collect(service: MonitoredService) {
     service.status = 'unavailable';
     try {
-      const response = await request(METRICS_API + '/metrics/' + encodeURIComponent(service.id), signal);
+      const response = await request(METRICS_API + '/metrics/' + encodeURIComponent(service.id), signal, onRequest);
       const data = object(await response.json().catch(() => null));
       if (!response.ok) {
         service.status = response.status === 404 ? 'removed' : text(data.error) === 'metrics_missing' ? 'no-metrics' : 'unavailable';

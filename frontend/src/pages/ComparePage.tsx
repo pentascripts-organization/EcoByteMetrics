@@ -1,16 +1,26 @@
-import { useState } from 'react';
 import { ArrowLeftRight, GitCompareArrows, Plus, Server, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { analysisLink } from '../utils/analysis';
 import { EmptyState, PageHeading, Panel } from '../components/UI';
 import { formatNumber } from '../utils/format';
 import { commonCollectionPoints, summarizeCollections } from '../utils/history';
-import { useMonitoring } from '../hooks/useMonitoring';
+import { useAnalysis } from '../hooks/useAnalysis';
 
 export function ComparePage() {
-  const { snapshot } = useMonitoring();
-  const [selected, setSelected] = useState<string[]>([]);
-  const services = snapshot.services.filter((service) => selected.includes(service.id));
-  const common = commonCollectionPoints(snapshot.history, services.map((service) => service.id));
+  const { services: availableServices, history } = useAnalysis();
+  const [params, setParams] = useSearchParams();
+  const selected = [...new Set(params.getAll('servico'))].filter((id) => availableServices.some((service) => service.id === id)).slice(0, 4);
+  const updateSelection = (id: string, remove = false) => {
+    // Use the committed URL so fast selections do not overwrite a pending router render.
+    const next = new URLSearchParams(window.location.search);
+    const current = [...new Set(next.getAll('servico'))].filter((value) => availableServices.some((service) => service.id === value)).slice(0, 4);
+    const ids = remove ? current.filter((value) => value !== id) : current.includes(id) || current.length >= 4 ? current : [...current, id];
+    next.delete('servico');
+    for (const id of ids) next.append('servico', id);
+    setParams(next, { replace: true });
+  };
+  const services = selected.flatMap((id) => availableServices.filter((service) => service.id === id));
+  const common = commonCollectionPoints(history, services.map((service) => service.id));
   const summaries = services.map((service) => summarizeCollections(common.filter((point) => point.serviceId === service.id)));
   const rows = [
     { label: 'Energia estimada · kWh/h', values: summaries.map((summary) => summary.energyPerHourKwh) },
@@ -30,13 +40,13 @@ export function ComparePage() {
     <Panel icon={GitCompareArrows} title="Uma comparação, muitos caminhos">
       <div className="comparison-selector"><div><h3>Quais serviços vamos comparar?</h3><p>Selecione entre dois e quatro serviços para analisar lado a lado.</p></div>
         <label className="comparison-add"><Plus size={17} /><span className="sr-only">Adicionar serviço à comparação</span>
-          <select value="" disabled={snapshot.services.length === 0 || selected.length >= 4} onChange={(event) => { if (event.target.value) setSelected([...selected, event.target.value]); }}>
-            <option value="">Adicionar serviço</option>{snapshot.services.filter((service) => !selected.includes(service.id)).map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
+          <select value="" disabled={availableServices.length === 0 || selected.length >= 4} onChange={(event) => { if (event.target.value) updateSelection(event.target.value); }}>
+            <option value="">Adicionar serviço</option>{availableServices.filter((service) => !selected.includes(service.id)).map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
           </select>
         </label>
       </div>
-      {services.length > 0 && <div className="selected-services">{services.map((service) => <span key={service.id}><Server size={14} />{service.name}<button aria-label={'Remover ' + service.name + ' da comparação'} onClick={() => setSelected(selected.filter((id) => id !== service.id))}><X size={14} /></button></span>)}</div>}
-      {services.length < 2 ? <EmptyState icon={ArrowLeftRight} title={snapshot.services.length ? 'Escolha pelo menos dois serviços.' : 'Perspectivas que se complementam.'} description={snapshot.services.length ? 'Adicione serviços para comparar recursos, energia e emissões.' : 'Quando seus serviços estiverem disponíveis, você poderá comparar o impacto de cada um.'} action={<Link className="button button-outline button-small" to="/servicos">Ver serviços<ArrowLeftRight size={15} /></Link>} /> :
+      {services.length > 0 && <div className="selected-services">{services.map((service) => <span key={service.id}><Server size={14} />{service.name}<button aria-label={'Remover ' + service.name + ' da comparação'} onClick={() => updateSelection(service.id, true)}><X size={14} /></button></span>)}</div>}
+      {services.length < 2 ? <EmptyState icon={ArrowLeftRight} title={availableServices.length ? 'Escolha pelo menos dois serviços.' : 'Perspectivas que se complementam.'} description={availableServices.length ? 'Adicione serviços para comparar recursos, energia e emissões.' : 'Quando seus serviços estiverem disponíveis, você poderá comparar o impacto de cada um.'} action={<Link className="button button-outline button-small" to={analysisLink('/servicos', params.toString())}>Ver serviços<ArrowLeftRight size={15} /></Link>} /> :
         <>
           {common.length ? <div className="table-scroll"><table className="comparison-table"><caption>Estimativas das coletas em comum no período selecionado</caption><thead><tr><th>Indicador</th>{services.map((service) => <th key={service.id}>{service.name}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.label}><th scope="row">{row.label}</th>{row.values.map((value, index) => <td key={services[index]!.id}>{formatNumber(value)}</td>)}</tr>)}</tbody></table></div> :
             <EmptyState compact icon={GitCompareArrows} title="Nenhuma coleta em comum no período." description="Aguarde uma coleta válida para todos os serviços selecionados ou escolha outro período." />}

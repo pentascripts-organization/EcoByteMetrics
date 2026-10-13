@@ -1,9 +1,10 @@
 import { expect, test } from './fixtures';
 
 test('all screens load directly without JS errors or horizontal overflow', async ({ page }, testInfo) => {
+  test.slow(); // Twelve complete page loads, including both lazy WebGL routes.
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
-  for (const path of ['/', '/pesquisa', '/gerenciamento', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar', '/login', '/cadastro', '/configuracoes']) {
+  for (const path of ['/', '/pesquisa', '/gerenciamento', '/dashboard', '/servicos', '/servicos/unknown-id', '/emissoes', '/energia', '/comparar', '/login', '/cadastro', '/configuracoes']) {
     await page.goto(path);
     await expect(page.locator('h1')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
@@ -44,15 +45,17 @@ test('login shows its pending state without storing or sending credentials', asy
   const requests: string[] = [];
   page.on('request', (request) => { if (request.method() === 'POST') requests.push(request.url()); });
   await page.goto('/login');
-  await page.getByLabel('E-mail', { exact: true }).fill('test@example.com');
-  await page.getByLabel('Senha', { exact: true }).fill('test-password');
+  await expect(page.getByLabel('E-mail', { exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Senha', { exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Mostrar senha' }).click();
   await expect(page.getByLabel('Senha', { exact: true })).toHaveAttribute('type', 'text');
-  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('O acesso estará disponível');
+  await expect(page.getByRole('button', { name: 'Login indisponível', exact: true })).toBeDisabled();
+  await expect(page.getByRole('status')).toContainText('não estão disponíveis');
   await expect(page.getByLabel('Senha', { exact: true })).toHaveValue('');
   expect(requests).toEqual([]);
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain('test-password');
+  await page.getByRole('link', { name: 'Consultar sem conta', exact: true }).click();
+  await expect(page).toHaveURL(/\/pesquisa$/);
 });
 
 test('navigation works on desktop and mobile', async ({ page }, testInfo) => {
@@ -106,7 +109,7 @@ test('home changes landscapes automatically and opens dashboard', async ({ page 
     await page.getByRole('button', { name: 'Abrir menu' }).click();
     await expect(page.locator('#mobile-navigation')).toBeVisible();
     await expect(page.locator('#mobile-navigation a[href="/login"]')).toBeVisible();
-    await expect(page.locator('#mobile-navigation a[href="/pesquisa"]')).toBeVisible();
+    await expect(page.locator('#mobile-navigation').getByRole('link', { name: 'Pesquisa', exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('#mobile-navigation')).toHaveCount(0);
   }
