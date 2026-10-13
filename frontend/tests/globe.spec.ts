@@ -1,6 +1,6 @@
-import { expect, test } from './fixtures';
+import { expect, test, mockRegionalScenario } from './fixtures';
 import { countries, findCountry, getCities } from '../src/data/geography';
-import { getDemoSnapshot } from '../src/services/demo';
+import { getTestSnapshot } from './data/monitoring';
 
 test('geographic catalogue matches names and uses registered regions only', () => {
   expect(countries).toHaveLength(177);
@@ -10,7 +10,7 @@ test('geographic catalogue matches names and uses registered regions only', () =
   expect(findCountry('United States')?.properties.code).toBe('US');
   expect(findCountry('Irlanda')?.properties.code).toBe('IE');
   expect(findCountry('País inexistente')).toBeUndefined();
-  const demo = getDemoSnapshot('7d');
+  const demo = getTestSnapshot('7d');
   const cities = getCities('BR', demo.regions);
   expect(cities.map(city => city.name)).toEqual(['São Paulo']);
   expect(cities[0].latitude).toBe(demo.regions[0].latitude);
@@ -21,10 +21,10 @@ test('geographic catalogue matches names and uses registered regions only', () =
 test('globe country and city selection drives the CO2 query and resets in order', async ({ page }, testInfo) => {
   test.slow();
   if (testInfo.project.name === 'mobile') await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mockRegionalScenario(page);
   await page.goto('/pesquisa');
   await expect(page.getByLabel('Cidade', { exact: true })).toBeDisabled();
   await page.locator('.globe-stage[data-ready="true"]').waitFor();
-  await page.getByLabel('Usar dados de demonstração').check();
   const canvas = page.locator('.globe-stage canvas');
   await canvas.scrollIntoViewIfNeeded();
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -83,9 +83,9 @@ test('country and city fields remain usable when WebGL is unavailable', async ({
       return Reflect.apply(original, this, [type, ...args]);
     } as typeof original;
   });
+  await mockRegionalScenario(page);
   await page.goto('/pesquisa');
   await expect(page.getByText('A visualização 3D não está disponível neste navegador. Continue pelos campos de país e cidade.')).toBeVisible({ timeout: 15_000 });
-  await page.getByLabel('Usar dados de demonstração').check();
   await page.getByLabel('País', { exact: true }).fill('Brasil');
   await page.getByRole('button', { name: 'São Paulo', exact: true }).click();
   await page.getByRole('button', { name: 'Buscar', exact: true }).click();

@@ -2,34 +2,26 @@
 
 Abra http://localhost:5173 com o frontend e o backend local em execução. Esta versão muda somente frontend/. As páginas consultam serviços e mostram estimativas; o navegador não controla os serviços monitorados.
 
-## Comece por uma visita reproduzível
+## Comece pela pesquisa
 
-1. Abra /login e clique em **Entrar em modo demonstração**. Não precisa preencher uma conta.
-2. Em **Pesquisa**, selecione **Brasil** e **São Paulo**, depois clique em **Buscar**.
-3. No dashboard, confira os indicadores, as três coletas ilustrativas, os fatores regionais e o mapa.
-4. Troque para **Últimas 24 horas**: ficará a coleta mais recente do exemplo. Selecione **08/10/2026, 23:59**: a janela será as 24 horas anteriores a essa data, recuperando a coleta daquele dia.
-5. Visite **Emissões** e **Energia**. A região, o período e a data seguem na URL e no aviso acima da página.
-6. Em **Serviços**, clique em **Aplicação Brasil** para abrir seus detalhes.
-7. Nos detalhes, selecione uma **Região de destino** para testar outra intensidade de carbono. Os fatores desta demonstração são ilustrativos e iguais; use dados reais para explorar fatores diferentes.
-8. Clique em **Ver todas as regiões**, abra **Comparar** e adicione duas aplicações. O exemplo tem somente um serviço com energia válida: a ausência de coletas em comum é esperada. Com dois serviços reais válidos, aparecem as taxas comparáveis.
-9. Volte à Pesquisa e teste **França / Paris** e **Japão / Tóquio** para conhecer indisponibilidade e métricas incompletas.
-10. Desmarque **Usar dados de demonstração** para consultar as APIs reais. A seleção é revalidada; a disponibilidade muda durante o desafio.
+1. Abra /pesquisa. Escolha um país e uma cidade cadastrados nas APIs.
+2. Clique em Buscar para abrir o dashboard da região.
+3. Percorra Serviços, os detalhes de um serviço, Emissões e Energia. Os filtros acompanham a navegação.
+4. Observe uma nova coleta após 30 segundos. A atualização dispensa cliques.
+5. Use o período e a data para analisar os registros já coletados nesta sessão.
+6. Em Comparar, selecione dois a quatro serviços disponíveis na região escolhida.
 
-A demonstração não gera requisições, contas ou alterações no servidor. Ela termina ao recarregar a aplicação. Suas datas são fixas para permitir repetir esta apresentação.
+A disponibilidade muda durante o desafio. Nenhum dado demonstrativo é exibido.
 
 ## Controles compartilhados
 
 **Navegação:** no computador, fica no cabeçalho; no celular, em Abrir navegação. Há entradas para pesquisa, visão geral, serviços, emissões, energia, comparação e gerenciamento. A engrenagem abre preferências. Entrar abre a prévia de autenticação. A marca volta à apresentação.
 
-**Contexto da análise:** a faixa acima das páginas informa a região escolhida ou Todas as regiões. Ver todas as regiões remove país, cidade e código regional; mantém período e data. Navegar pelas telas de análise preserva esses filtros. Uma URL pode ser compartilhada, mas o histórico real depende das coletas existentes em cada sessão.
+**Contexto da análise:** a faixa acima das páginas informa a região escolhida ou Todas as regiões. Navegar pelas telas de análise preserva esses filtros. Uma URL pode ser compartilhada, mas o histórico real depende das coletas existentes em cada sessão.
 
-**Período:** 24 horas, 7 dias ou 30 dias. Filtra os registros já coletados e não busca um histórico no banco. Quando há uma data final selecionada, a janela termina nessa data; caso contrário, termina na última consulta válida.
+**Período:** 24 horas, 7 dias ou 30 dias. Ao mudar, filtra os registros coletados e consulta os dados atuais imediatamente. A faixa de cobertura mostra as datas da janela e desde quando há coletas. Diferentes períodos podem conter os mesmos registros quando o histórico disponível é recente; não há busca de histórico antigo no banco. Quando há uma data final selecionada, a janela termina nessa data; caso contrário, termina na última consulta válida.
 
-**Atualizar indicadores:** solicita nova descoberta, catálogo de carbono e métricas. Fica desabilitado enquanto existe uma consulta pendente. Atualizar um período não dispara outra coleta.
-
-**Atualização automática:** a cada 30 segundos nas páginas de monitoramento, incluindo detalhes de serviço. Abas ocultas pausam as consultas. Preferências, apresentação, login e prévia administrativa não iniciam polling.
-
-**Dados reais / demonstração:** o checkbox troca a fonte explicitamente. A troca remove identificadores regionais, data e serviços da comparação que poderiam pertencer à fonte anterior. País e cidade podem permanecer para uma nova busca.
+**Atualização automática:** sem botão de atualizar, na entrada da página e a cada 30 segundos nas páginas de monitoramento, incluindo detalhes de serviço. Abas ocultas pausam as consultas. Preferências, apresentação, login e prévia administrativa não iniciam polling.
 
 **Estados de conexão:** a faixa mostra consulta em andamento, última consulta válida ou dados antigos após falha. Dados ausentes aparecem como —; zero é uma medida válida. Avisos explicam cobertura parcial e fatores indisponíveis.
 
@@ -41,7 +33,6 @@ Explorar dashboard abre a visão geral. Pesquisa abre o fluxo por região. Os li
 
 ## Pesquisa — /pesquisa
 
-![Pesquisa em demonstração, Brasil e São Paulo](tour/pesquisa.png)
 
 É o caminho para descobrir o impacto de uma localização.
 
@@ -49,7 +40,7 @@ Explorar dashboard abre a visão geral. Pesquisa abre o fluxo por região. Os li
 - **Cidade:** escolha uma referência regional cadastrada. Quando duas regiões possuem a mesma cidade, o código distingue as opções. Não representa qualquer município do mundo.
 - **Globo:** arraste para girar, use scroll ou dois dedos para aproximar, clique no país e depois no marcador ou no botão da cidade.
 - **Ver o mundo:** limpa a seleção geográfica.
-- **Atualizar regiões:** consulta novamente o catálogo e os serviços.
+- O catálogo e os serviços são atualizados automaticamente.
 - **Buscar:** atualiza os dados, verifica a região e seus serviços e abre o dashboard quando há dados completos.
 - **Ir para o Dashboard:** permite inspecionar a seleção diretamente, incluindo estados parciais.
 
@@ -71,7 +62,6 @@ Alterar a seleção ou sair da página invalida uma busca anterior. A resposta a
 
 ## Visão geral — /dashboard
 
-![Dashboard regional em demonstração](tour/dashboard.png)
 
 Reúne:
 
@@ -100,24 +90,12 @@ Clique no nome para abrir um serviço. Falta de resultado na busca não equivale
 
 ## Detalhes — /servicos/:id
 
-![Detalhes e simulação da Aplicação Brasil em demonstração](tour/servico.png)
 
 Reúne identificador, estado, localização atual, região elétrica, coordenadas e motivo de erro, quando houver. Os cartões mostram somas históricas, número de coletas e intervalo atual. Recursos da última consulta e Fator ambiental atual deixam clara a diferença entre dados atuais e históricos.
 
 O gráfico contém apenas as coletas daquele serviço dentro dos filtros. Voltar aos serviços recupera o contexto e os filtros da tabela.
 
-**Simular outra região** mantém a energia da última coleta e calcula:
-
-~~~text
-CO₂e simulado = energia da última coleta × fator da região de destino
-Diferença = CO₂e simulado − CO₂e atual
-~~~
-
-Exibe valor atual, valor simulado, diferença absoluta e percentual quando o valor atual é positivo. Sem energia válida não há simulação; sem emissão atual, a estimativa de destino ainda pode aparecer, mas a diferença permanece —.
-
-A hipótese não considera diferenças de desempenho entre máquinas, preço, latência ou efeitos de uma migração real. Ela não envia operações de alteração para nenhuma API.
-
-Serviço desconhecido apresenta um estado vazio com caminho de volta. Durante falha de conexão, a tela informa que não conseguiu confirmar o identificador.
+**Serviço desconhecido apresenta um estado vazio com caminho de volta. Durante falha de conexão, a tela informa que não conseguiu confirmar o identificador.
 
 ## Emissões e energia — /emissoes e /energia
 
@@ -133,7 +111,7 @@ A primeira tabela usa somente ciclos com coleta para todos os serviços selecion
 
 A segunda tabela mostra CPU, RAM, disco e rede da última consulta, mesmo sem histórico em comum. Sem dados suficientes, a interface explica o motivo em vez de inventar números.
 
-Para comparar regiões diferentes, use Ver todas as regiões antes de escolher serviços. Um filtro regional limita as opções àquela seleção.
+Um filtro regional limita as opções àquela seleção.
 
 ## Preferências — /configuracoes
 
@@ -145,13 +123,13 @@ São preferências locais, não configurações de monitoramento do servidor. A 
 
 São prévias. Os campos e o envio permanecem desabilitados porque não existe contrato de autenticação no backend atual.
 
-Consultar sem conta abre a pesquisa com a fonte atualmente selecionada. Entrar em modo demonstração ativa explicitamente os exemplos e abre a pesquisa. Nenhuma senha é enviada ou armazenada.
+Consultar sem conta abre a pesquisa usando as APIs. Nenhuma senha é enviada ou armazenada.
 
 Não há proteção real por perfil nem sessão autenticada. A prévia não comprova segurança administrativa.
 
 ## Gerenciamento — /gerenciamento
 
-**Usuários:** no modo real, informa a integração pendente. No modo demonstração, permite buscar usuários de exemplo, filtrar estado, editar perfil, bloquear e desbloquear. As mudanças valem somente durante aquela visita.
+**Usuários:** informa que a gestão real aguarda integração com a autenticação. Não há usuários fictícios.
 
 **Sistema:** mostra o modo, a quantidade de serviços já observados e a ausência de autenticação.
 

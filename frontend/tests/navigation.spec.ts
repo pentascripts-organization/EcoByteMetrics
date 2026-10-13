@@ -1,6 +1,6 @@
-import { test, expect, apiService, apiRegions, apiMetrics, backendServices } from './fixtures';
+import { test, expect, apiService, apiMetrics, backendServices } from './fixtures';
 import { getAnalysis, analysisLink } from '../src/utils/analysis';
-import { getDemoSnapshot } from '../src/services/demo';
+import { getTestSnapshot } from './data/monitoring';
 
 async function mockServices(page: import('@playwright/test').Page, count = 1) {
   const services = Array.from({ length: count }, (_, index) => ({ ...apiService, id: 'service-' + index, name: 'Service ' + index }));
@@ -9,7 +9,7 @@ async function mockServices(page: import('@playwright/test').Page, count = 1) {
 }
 
 test('historical dates anchor the entire period and use the location recorded at collection time', () => {
-  const snapshot = getDemoSnapshot('30d');
+  const snapshot = getTestSnapshot('30d');
   const oldPoint = { ...snapshot.history[0]!, serviceId: 'moved-service', regionCode: 'old-region', country: 'Brasil', city: 'São Paulo' };
   snapshot.history = [oldPoint, ...snapshot.history.slice(1)];
   expect(getAnalysis(snapshot, '24h', '?ate=2026-10-08T23:59&regiao=old-region').history).toEqual([oldPoint]);
@@ -56,23 +56,22 @@ test('region, period and date survive navigation; services and map open the same
   await expect(page).toHaveURL(/\/servicos\/service-0\?/);
 });
 
-test('switching the data source clears stale comparison selections and allows new ones', async ({ page }) => {
-  await mockServices(page, 4);
-  await page.goto('/comparar');
-  const add = page.getByLabel('Adicionar serviço à comparação');
-  for (let index = 0; index < 4; index++) await add.selectOption('service-' + index);
-  await expect(add).toBeDisabled();
-  await page.getByLabel('Usar dados de demonstração').check();
-  await expect(page.locator('.selected-services')).toHaveCount(0);
-  await expect(add).toBeEnabled();
-  await add.selectOption('demo-br');
-  await add.selectOption('demo-jp');
-  await expect(page.locator('.selected-services')).toContainText('Aplicação Brasil');
-  await page.reload();
-  // Demonstration is session-only; its IDs never block the live selection.
-  await expect(add).toBeEnabled();
-  await add.selectOption('service-0');
-  await expect(page.locator('.selected-services')).toContainText('Service 0');
+test('indicators update automatically and removed controls stay absent', async ({ page }) => {
+  await page.clock.install();
+  let cpu = 50;
+  let calls = 0;
+  await page.route('**/backend/services', route => { calls++; return route.fulfill({ json: backendServices([apiService]) }); });
+  await page.route('https://metrics.unilaunch.org/**', route => route.fulfill({ json: { ...apiMetrics, metrics: { ...apiMetrics.metrics, cpu_percent: cpu } } }));
+  await page.goto('/dashboard?regiao=br-sudeste');
+  await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');
+  const initial = await page.locator('.metric-value').first().innerText();
+  await expect(page.getByLabel('Usar dados de demonstração')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ver todas as regiões', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Atualizar indicadores', exact: true })).toHaveCount(0);
+  cpu = 80;
+  await page.clock.fastForward(30_001);
+  await expect.poll(() => calls).toBe(2);
+  await expect(page.locator('.metric-value').first()).not.toHaveText(initial);
 });
 
 test('leaving a pending regional search cannot navigate away from the next page', async ({ page }, testInfo) => {
@@ -95,10 +94,10 @@ test('leaving a pending regional search cannot navigate away from the next page'
   release();
   await expect(page.locator('h1')).toHaveText('Pequenos ajustes. Mais conforto.');
   await expect(page.getByRole('button', { name: 'Salvar preferências', exact: true })).toBeDisabled();
-  // Re-enter monitoring: a cancelled request must not leave refresh permanently disabled.
+  // Re-enter monitoring: automatic collection must recover after cancellation.
   if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Abrir navegação' }).click();
   await page.getByRole('navigation', { name: testInfo.project.name === 'mobile' ? 'Navegação móvel' : 'Navegação principal' }).getByRole('link', { name: 'Visão geral', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Atualizar indicadores', exact: true })).toBeEnabled();
+  await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');
 });
 
 test('administration records actual requests and can clear the local diagnostic list', async ({ page }) => {
@@ -114,18 +113,13 @@ test('administration records actual requests and can clear the local diagnostic 
   await expect(page.getByText('Nenhuma requisição registrada')).toBeVisible();
 });
 
-test('a service detail simulates emissions in another region without making a mutation request', async ({ page }) => {
+test('service details show observed data without a region simulator', async ({ page }) => {
   await mockServices(page);
-  const mutations: string[] = [];
-  page.on('request', request => { if (!['GET', 'HEAD'].includes(request.method())) mutations.push(request.url()); });
   await page.goto('/servicos/service-0');
   await expect(page.locator('h1')).toHaveText('Service 0');
-  await page.getByLabel('Região de destino', { exact: true }).selectOption('us-east');
-  const energy = (50 + 2 * .375 + 10 * .01 + 1 * .02) / 60 / 1000;
-  const projected = await page.locator('.simulation-results div').filter({ hasText: 'Emissões simuladas por coleta' }).locator('dd').innerText();
-  const { formatNumber } = await import('../src/utils/format');
-  expect(projected).toBe(formatNumber(energy * apiRegions[1]!.carbon_intensity_gco2e_per_kwh) + ' gCO₂e');
-  expect(mutations).toEqual([]);
+  await expect(page.getByText('Recursos da última consulta', { exact: true })).toBeVisible();
+  await expect(page.getByText('Simular outra região', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Região de destino', { exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

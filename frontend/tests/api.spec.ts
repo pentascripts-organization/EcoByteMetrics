@@ -77,7 +77,7 @@ test('live mode offers only registered cities and shows the selected regional fa
   test.slow();
   await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([apiService]) : apiMetrics }));
   await page.goto('/pesquisa');
-  await expect(page.getByLabel('Usar dados de demonstração')).not.toBeChecked({ timeout: 15_000 });
+  await expect(page.getByLabel('Usar dados de demonstração')).toHaveCount(0);
   await page.getByLabel('País', { exact: true }).fill('Brasil');
   await expect(page.getByRole('button', { name: 'São Paulo', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Rio de Janeiro', exact: true })).toHaveCount(0);
@@ -116,10 +116,10 @@ test('polling discovers removals and new services and preserves data during an o
   await expect(page.getByText('New Worker', { exact: true })).toBeVisible();
   await expect(page.locator('tbody tr').filter({ hasText: 'Billing API' })).toContainText('Removido');
   outage = true;
-  await page.getByRole('button', { name: 'Atualizar indicadores', exact: true }).click();
+  await page.clock.fastForward(30_001);
   await expect(page.getByRole('alert')).toContainText('últimos dados recebidos foram preservados');
   await expect(page.getByText('New Worker', { exact: true })).toBeVisible();
   outage = false;
-  await page.getByRole('button', { name: 'Atualizar indicadores', exact: true }).click();
+  await page.clock.fastForward(30_001);
   await expect(page.getByRole('alert')).toHaveCount(0);
 });

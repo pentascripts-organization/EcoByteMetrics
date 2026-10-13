@@ -34,21 +34,20 @@ export function Panel({ title, eyebrow, icon: Icon, link, children, className = 
 }
 
 export function PeriodSelect() {
-  const { period, setPeriod } = useMonitoring();
-  const [params, setParams] = useSearchParams();
+  const { period, setPeriod, refresh } = useMonitoring();
+  const [, setParams] = useSearchParams();
   return <label className="period-select"><CalendarDays size={17} /><span className="sr-only">Período de análise</span>
-    <select value={period} onChange={(event) => { const next = new URLSearchParams(params); next.set('periodo', event.target.value); setPeriod(event.target.value as Period); setParams(next, { replace: true }); }}>
+    <select value={period} onChange={(event) => { const next = new URLSearchParams(window.location.search); const value = event.target.value as Period; next.set('periodo', value); setPeriod(value); setParams(next, { replace: true }); if (value !== period) void refresh(); }}>
       <option value="24h">Últimas 24 horas</option><option value="7d">Últimos 7 dias</option><option value="30d">Últimos 30 dias</option>
     </select>
   </label>;
 }
 
-export function PageHeading({ eyebrow, title, description, refresh = false }: {
-  eyebrow?: string; title: string; description: string; refresh?: boolean;
+export function PageHeading({ eyebrow, title, description }: {
+  eyebrow?: string; title: string; description: string;
 }) {
-  const { refresh: refreshData, loading } = useMonitoring();
   return <div className="page-heading"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1><p>{description}</p></div>
-    <div className="page-actions"><PeriodSelect />{refresh && <button className="button button-icon" title="Atualizar indicadores" aria-label="Atualizar indicadores" disabled={loading} onClick={() => void refreshData()}><RefreshCw size={18} className={loading ? 'spin' : ''} /></button>}</div>
+    <div className="page-actions"><PeriodSelect /></div>
   </div>;
 }
 

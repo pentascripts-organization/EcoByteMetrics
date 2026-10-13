@@ -19,7 +19,7 @@ Descoberta consome GET /services com { services, lastUpdatedAt }. Proxy /backend
 
 Foram corrigidos isolamento de dados inválidos, cobertura parcial, ranking por período, comparação normalizada, precisão numérica, seleção por código regional, mapa de serviços, distâncias temporais do gráfico, acessibilidade, carregamento de imagens e polling.
 
-Nesta revisão, o contexto de região/período/data acompanha a navegação. A página de detalhes reúne recursos, histórico individual e uma simulação ambiental sem alteração de serviços. A pesquisa invalida respostas atrasadas; comparação descarta IDs incompatíveis; login/cadastro são prévias desabilitadas; a aba de requisições mostra somente chamadas reais desta sessão. [Revisão](revisao-frontend.md) e [tour](tour-do-site.md).
+Nesta revisão, o contexto de região/período/data acompanha a navegação. A página de detalhes reúne recursos e histórico individual. A pesquisa invalida respostas atrasadas; comparação usa serviços válidos; login/cadastro são prévias desabilitadas; a aba de requisições mostra somente chamadas reais desta sessão. [Revisão](revisao-frontend.md) e [tour](tour-do-site.md).
 
 Totais são soma de estimativas por coleta, com aviso de possível sobreposição. Histórico permanece em memória.
 
@@ -61,3 +61,7 @@ A entrega anterior verificou build e testes originais do backend e integração 
 - Histórico e filtros abrangem somente esta sessão. Estados e renováveis permanecem referentes à última consulta.
 - O mapa da pesquisa mostra referências do carbono; dashboard usa coordenadas dos serviços.
 - Docker e PostgreSQL não foram executados nesta máquina, que não dispõe de Docker.
+
+## Interface simplificada
+
+Modo de demonstração, controle Ver todas as regiões e simulação de destino removidos. Indicadores consultam automaticamente as APIs a cada 30 segundos e ao retomar uma aba visível, sem botão de atualização no cabeçalho. Nenhuma alteração no backend.

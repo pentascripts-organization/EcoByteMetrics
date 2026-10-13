@@ -42,15 +42,24 @@ export function getAnalysis(snapshot: MonitoringSnapshot, period: Period, search
   const end = Date.parse(date || snapshot.lastCollectionAt || '');
   const days = period === '24h' ? 1 : period === '7d' ? 7 : 30;
   const start = end - days * 86400_000;
-  const history = snapshot.history.filter((point) => {
-    const timestamp = Date.parse(point.collectedAt);
-    if (invalidDate || !Number.isFinite(end) || timestamp <= start || timestamp > end) return false;
+  const recordedHistory = snapshot.history.filter((point) => {
     if (!regional) return true;
     if (regionCode) return point.regionCode ? point.regionCode === regionCode : services.some((service) => service.id === point.serviceId);
     return point.country ? matchesRegion({ country: point.country, city: point.city ?? null }, country, city) : services.some((service) => service.id === point.serviceId);
   });
+  const history = recordedHistory.filter((point) => {
+    const timestamp = Date.parse(point.collectedAt);
+    return !invalidDate && Number.isFinite(end) && timestamp > start && timestamp <= end;
+  });
+  const availableSince = recordedHistory.reduce<number | null>((first, point) => {
+    const timestamp = Date.parse(point.collectedAt);
+    return Number.isFinite(timestamp) && timestamp <= end && (first === null || timestamp < first) ? timestamp : first;
+  }, null);
+  const periodLabel = period === '24h' ? 'Últimas 24 horas' : period === '7d' ? 'Últimos 7 dias' : 'Últimos 30 dias';
   const regions = snapshot.regions.filter((region) => regionCode ? region.code === regionCode : regional ? matchesRegion(region, country, city) : services.some((service) => service.status !== 'removed' && service.regionCode === region.code));
   return { services, history, regions, country, city, regionCode, date, regional, invalidDate,
+    periodLabel, windowStart: Number.isFinite(start) && !invalidDate ? start : null, windowEnd: Number.isFinite(end) && !invalidDate ? end : null,
+    availableSince, shortHistory: availableSince !== null && availableSince > start,
     selection: [country, city].filter(Boolean).join(' — ') || (regionCode ? 'Região ' + regionCode : ''),
     totals: summarizeCollections(history) };
 }

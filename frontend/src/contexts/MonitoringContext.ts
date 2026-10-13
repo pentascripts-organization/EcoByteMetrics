@@ -8,8 +8,6 @@ export interface MonitoringContextValue {
   refresh: () => Promise<MonitoringSnapshot | null>;
   loading: boolean;
   error: string | null;
-  demoMode: boolean;
-  setDemoMode: (enabled: boolean) => void;
   requests: RequestRecord[];
   clearRequests: () => void;
 }

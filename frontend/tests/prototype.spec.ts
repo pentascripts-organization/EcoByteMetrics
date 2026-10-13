@@ -1,9 +1,9 @@
-import { expect, test } from './fixtures';
-import { getDemoSnapshot } from '../src/services/demo';
+import { expect, test, mockRegionalScenario } from './fixtures';
+import { getTestSnapshot } from './data/monitoring';
 import { getRegionAlert, matchesRegion } from '../src/utils/region';
 
 test('regional matching and alerts respect accents, removed services and partial metrics', () => {
-  const snapshot = getDemoSnapshot('7d');
+  const snapshot = getTestSnapshot('7d');
   const brazil = snapshot.services[0];
   expect(matchesRegion(brazil, ' brasil ', 'sao paulo')).toBe(true);
   expect(matchesRegion(brazil, 'Brasil', 'Santos')).toBe(false);
@@ -14,7 +14,7 @@ test('regional matching and alerts respect accents, removed services and partial
   expect(getRegionAlert([snapshot.services[2]])).toBe('incomplete');
   expect(getRegionAlert([{ ...brazil, cpuPercent: null }])).toBe('incomplete');
   expect(getRegionAlert([{ ...brazil, cpuPercent: 0 }])).toBeNull();
-  expect(getDemoSnapshot('24h').history).toHaveLength(1);
+  expect(getTestSnapshot('24h').history).toHaveLength(1);
   expect(snapshot.totalEnergyKwh).toBeCloseTo(snapshot.history.reduce((sum, point) => sum + point.energyKwh, 0), 10);
 });
 
@@ -28,11 +28,11 @@ test('research distinguishes disconnected monitoring from unknown regions', asyn
   await expect(page.getByRole('dialog')).not.toBeVisible();
 });
 
-test('login demonstration starts research and unknown pages offer recovery', async ({ page }, testInfo) => {
+test('public login entry starts research and unknown pages offer recovery', async ({ page }, testInfo) => {
   await page.goto('/login');
-  await page.getByRole('link', { name: 'Entrar em modo demonstração', exact: true }).click();
+  await page.getByRole('link', { name: 'Consultar sem conta', exact: true }).click();
   await expect(page).toHaveURL(/\/pesquisa$/);
-  await expect(page.getByLabel('Usar dados de demonstração')).toBeChecked();
+  await expect(page.getByLabel('Usar dados de demonstração')).toHaveCount(0);
   await page.goto('/endereco-inexistente');
   await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('not-found.png'), fullPage: true, animations: 'disabled' });
@@ -46,8 +46,9 @@ test('login demonstration starts research and unknown pages offer recovery', asy
 
 test('research opens each alert and carries the selected region into the dashboard', async ({ page }, testInfo) => {
   test.slow();
+  await mockRegionalScenario(page);
   await page.goto('/pesquisa');
-  await page.getByLabel('Usar dados de demonstração').check();
+
   await page.getByLabel('País', { exact: true }).fill('Portugal');
   await expect(page.getByLabel('Cidade', { exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
@@ -76,38 +77,19 @@ test('research opens each alert and carries the selected region into the dashboa
   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard\?/);
   await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');
-  await expect(page.locator('.collection-ranking li')).toHaveCount(3);
+  await expect(page.locator('.collection-ranking li').first()).toBeVisible();
   await page.getByLabel('Selecionar data e hora', { exact: true }).fill('2026-10-09T23:59');
-  await expect(page.locator('.collection-ranking li')).toHaveCount(2);
+  await expect(page.locator('.collection-ranking li')).toHaveCount(0);
   await page.getByRole('button', { name: 'Voltar para agora', exact: true }).click();
-  await expect(page.locator('.collection-ranking li')).toHaveCount(3);
+  await expect(page.locator('.collection-ranking li').first()).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('regional-dashboard.png'), fullPage: true, animations: 'disabled' });
-  await page.getByLabel('Usar dados de demonstração').uncheck();
-  await expect(page.locator('.metric-value').first()).toHaveText('—gCO₂e');
+
 });
 
-test('administration filters and edits only demonstration users', async ({ page }, testInfo) => {
+test('administration exposes pending integration without fictional users', async ({ page }) => {
   await page.goto('/gerenciamento');
   await expect(page.getByText('Controle de usuários em breve')).toBeVisible();
-  await page.getByLabel('Usar dados de demonstração').check();
-  await expect(page.locator('.admin-users tbody tr')).toHaveCount(6);
-  await page.getByRole('button', { name: 'Editar Usuário 02', exact: true }).click();
-  await page.getByLabel('Perfil de Usuário 02').selectOption('visitante');
-  await page.getByRole('button', { name: 'Salvar', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('Perfil de Usuário 02 atualizado');
-  await expect(page.locator('.admin-users tbody tr').nth(1)).toContainText('visitante');
-  await page.getByRole('button', { name: 'Bloquear Usuário 02', exact: true }).click();
-  await expect(page.locator('.admin-users tbody tr').nth(1)).toContainText('Bloqueado');
-  await page.getByLabel('Filtrar status de usuário').selectOption('blocked');
-  await expect(page.locator('.admin-users tbody tr')).toHaveCount(2);
-  await page.getByRole('searchbox', { name: 'Buscar usuário' }).fill('usuario02');
-  await expect(page.locator('.admin-users tbody tr')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Desbloquear Usuário 02', exact: true }).click();
-  await expect(page.getByText('Nenhum usuário encontrado')).toBeVisible();
-  await page.getByRole('searchbox', { name: 'Buscar usuário' }).fill('');
-  await page.getByLabel('Filtrar status de usuário').selectOption('all');
-  await page.locator('.admin-users .table-scroll').evaluate((element) => { element.scrollLeft = 0; });
-  await page.screenshot({ path: testInfo.outputPath('administration.png'), fullPage: true, animations: 'disabled' });
+  await expect(page.getByRole('button', { name: /Editar Usuário|Bloquear Usuário/ })).toHaveCount(0);
   await page.getByRole('button', { name: 'Sistema', exact: true }).click();
   await expect(page.getByText('Não disponível', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Requisições da API', exact: true }).click();

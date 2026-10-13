@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { ArrowRight, RefreshCw, Search } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { RegionMap } from '../components/RegionMap';
 import { RegionAlertDialog } from '../components/RegionAlertDialog';
@@ -12,7 +12,7 @@ import { formatNumber } from '../utils/format';
 import { analysisQuery } from '../utils/analysis';
 
 export function ResearchPage() {
-  const { snapshot, demoMode, setDemoMode, loading, refresh } = useMonitoring();
+  const { snapshot, loading, refresh } = useMonitoring();
   const [params, setParams] = useSearchParams();
   const regionCode = params.get('regiao') ?? '';
   const registeredRegion = snapshot.regions.find((entry) => entry.code === regionCode);
@@ -24,7 +24,7 @@ export function ResearchPage() {
   const countryInput = useRef<HTMLInputElement>(null);
   const searchToken = useRef(0);
   const selectionKey = JSON.stringify([country, city, regionCode]);
-  useEffect(() => () => { searchToken.current++; }, [selectionKey, demoMode]);
+  useEffect(() => () => { searchToken.current++; }, [selectionKey]);
   const closeAlert = () => { searchToken.current++; setAlert(null); };
   const navigate = useNavigate();
   const selectedCountry = findCountry(country);
@@ -95,13 +95,11 @@ export function ResearchPage() {
         <button className="button button-dark" type="submit" disabled={loading}><Search size={17} />{loading ? 'Consultando APIs…' : 'Buscar'}<ArrowRight size={17} /></button>
       </form><Link className="button button-outline" to={region ? dashboardUrl : '/dashboard'}>Ir para o Dashboard<ArrowRight size={17} /></Link>
       <div className="research-status"><span>Status da consulta</span><strong role="status">{status}</strong></div>
-      {demoMode && <p className="demo-help">Exemplos: Brasil / São Paulo, França / Paris e Japão / Tóquio.</p>}
       {region && <dl className="api-details region-facts"><div><dt>Região elétrica</dt><dd>{region.region} · {region.code}</dd></div><div><dt>Intensidade de carbono</dt><dd>{formatNumber(region.carbonIntensity)} gCO₂e/kWh</dd></div><div><dt>Energia renovável</dt><dd>{formatNumber(region.renewablePercent)}%</dd></div></dl>}
-      <p className="city-catalog-note">{snapshot.regions.length} regiões cadastradas {demoMode ? 'na demonstração' : 'na API'}. Países em verde têm registros; os marcadores mostram as cidades de referência de cada região.</p>
-      <button className="button button-outline button-small" disabled={loading} onClick={() => void refresh()}><RefreshCw size={14} />Atualizar regiões</button>
+      <p className="city-catalog-note">{snapshot.regions.length} regiões cadastradas na API. Países em verde têm registros; os marcadores mostram as cidades de referência de cada região.</p>
     </section>
     <RegionMap regionCode={region?.code} onRegionSelect={(code, name) => chooseCity(name, code)} regions={snapshot.regions} catalogUnavailable={Boolean(snapshot.warning)} country={country} city={city} onCountrySelect={chooseCountry} onCitySelect={chooseCity} />
-    <RegionAlertDialog kind={alert} issues={issues} demoMode={demoMode} busy={loading} onClose={closeAlert} onRetry={() => { setAlert(null); void search(); }} onUseLive={() => { setAlert(null); setDemoMode(false); const next = new URLSearchParams(params); next.delete('regiao'); next.delete('ate'); setParams(next, { replace: true }); setStatus('Modo real ativado. Aguarde os dados e clique em Buscar.'); }} onAction={() => {
+    <RegionAlertDialog kind={alert} issues={issues} busy={loading} onClose={closeAlert} onRetry={() => { setAlert(null); void search(); }} onAction={() => {
       if (alert === 'incomplete') navigate(dashboardUrl);
       else if (alert === 'unavailable') void search();
       else { setAlert(null); countryInput.current?.focus(); }

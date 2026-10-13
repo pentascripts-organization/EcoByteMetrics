@@ -23,7 +23,7 @@ test('dashboard does not invent measurements or collection timestamps', async ({
   await expect(page.locator('.metric-value').nth(2)).toHaveText('0');
   await expect(page.locator('.metric-value').nth(3)).toHaveText('—');
   await page.getByRole('combobox', { name: 'Período de análise' }).selectOption('30d');
-  await page.getByRole('button', { name: 'Atualizar indicadores' }).click();
+  await expect(page.getByRole('button', { name: 'Atualizar indicadores' })).toHaveCount(0);
   await expect(page.locator('.metric-value').first()).toHaveText('—gCO₂e');
   await expect(page.getByText('Seu histórico começa aqui')).toBeVisible();
 });

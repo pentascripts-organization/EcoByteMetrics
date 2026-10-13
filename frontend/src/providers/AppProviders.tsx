@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { MonitoringContext } from '../contexts/MonitoringContext';
 import { SettingsContext } from '../contexts/SettingsContext';
 import { useLocation } from 'react-router-dom';
-import { getDemoSnapshot } from '../services/demo';
 import type { MonitoringSettings, MonitoringSnapshot, Period, RequestRecord } from '../types/monitoring';
 import { summarizeCollections } from '../utils/history';
 import { isPeriod } from '../utils/analysis';
@@ -31,7 +30,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [demoMode, setDemoMode] = useState(false);
   const [requests, setRequests] = useState<RequestRecord[]>([]);
   const pending = useRef<AbortController | null>(null);
   const { pathname, search } = useLocation();
@@ -40,7 +38,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const monitoringActive = ['/pesquisa', '/dashboard', '/servicos', '/emissoes', '/energia', '/comparar'].includes(pathname) || pathname.startsWith('/servicos/');
 
   const refresh = useCallback(async () => {
-    if (demoMode) return getDemoSnapshot('30d');
     if (pending.current) return null;
     const controller = new AbortController();
     pending.current = controller;
@@ -63,23 +60,22 @@ export function AppProviders({ children }: { children: ReactNode }) {
       if (pending.current === controller) pending.current = null;
       if (!pending.current) setLoading(false);
     }
-  }, [demoMode]);
+  }, []);
 
   useEffect(() => {
-    if (!monitoringActive || demoMode) return;
+    if (!monitoringActive) return;
     const updateIfVisible = () => { if (!document.hidden) void refresh(); };
     const initial = window.setTimeout(updateIfVisible, 0);
     const timer = window.setInterval(updateIfVisible, 30_000);
     document.addEventListener('visibilitychange', updateIfVisible);
     return () => { window.clearTimeout(initial); window.clearInterval(timer); document.removeEventListener('visibilitychange', updateIfVisible); pending.current?.abort(); pending.current = null; };
-  }, [monitoringActive, demoMode, refresh]);
+  }, [monitoringActive, refresh]);
 
   const snapshot = useMemo(() => {
-    if (demoMode) return getDemoSnapshot('30d');
     const history = liveSnapshot.history;
     const totals = summarizeCollections(history);
     return { ...liveSnapshot, history, totalEnergyKwh: totals.energyKwh, totalEmissionsG: totals.emissionsG };
-  }, [liveSnapshot, demoMode]);
+  }, [liveSnapshot]);
 
   const saveSettings = useCallback((next: MonitoringSettings) => {
     setSettings(next);
@@ -89,8 +85,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, []);
 
   const preferences = useMemo(() => ({ settings, saveSettings }), [settings, saveSettings]);
-  const monitoring = useMemo(() => ({ snapshot, period, setPeriod, refresh, loading: !demoMode && loading, error: demoMode ? null : error, demoMode, setDemoMode, requests, clearRequests: () => setRequests([]) }),
-    [snapshot, period, refresh, loading, error, demoMode, requests]);
+  const monitoring = useMemo(() => ({ snapshot, period, setPeriod, refresh, loading, error, requests, clearRequests: () => setRequests([]) }),
+    [snapshot, period, refresh, loading, error, requests]);
 
   return <SettingsContext.Provider value={preferences}>
     <MonitoringContext.Provider value={monitoring}>{children}</MonitoringContext.Provider>

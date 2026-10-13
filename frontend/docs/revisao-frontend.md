@@ -10,7 +10,7 @@ Revisão baseada nas imagens do desafio GreenER e no código integrado ao backen
 | Período e data sem continuidade entre telas | Filtros na URL; todas as telas usam a mesma seleção |
 | Data antiga filtrada dentro da janela atual, deixando registros corretos de fora | A janela histórica termina na data escolhida |
 | Localização atual substituindo a localização de uma coleta anterior | Filtragem pelo código e pela localização registrados na coleta |
-| Quatro IDs antigos travando a comparação ao mudar de fonte | Seleção considera somente IDs válidos; alternância limpa IDs incompatíveis |
+| IDs fora do catálogo bloqueando comparação | Seleção considera somente IDs válidos |
 | Seleções rápidas substituindo o primeiro serviço da comparação | Atualização considera a URL já gravada antes de acrescentar ou remover IDs |
 | Resposta atrasada da busca regional podendo redirecionar o usuário | Busca invalidada ao trocar seleção, fonte ou página |
 | Consulta cancelada deixando atualização ocupada | Recuperação do estado de carregamento após cancelamento |
@@ -21,7 +21,7 @@ Revisão baseada nas imagens do desafio GreenER e no código integrado ao backen
 | Aba de requisições sem informação real | Diagnóstico das últimas 50 requisições reais feitas pelo navegador |
 | Preferências sem clareza sobre alterações pendentes | Aviso, salvar somente quando mudou e descartar |
 | Foco insuficiente após navegação e páginas carregadas sob demanda | Foco no título disponível e títulos de documento por rota |
-| Falta de uma comparação hipotética entre matrizes elétricas | Simulação de destino nos detalhes, sem operação no servidor |
+| Controles dispensáveis | Modo de demonstração, expansão para todas as regiões, simulação de destino e botão de atualizar removidos conforme solicitado |
 | Valores extensos em cartões no celular | Quebra de texto e largura mínima corrigidas |
 
 Foram preservados os tratamentos existentes de APIs indisponíveis, descoberta dinâmica, ausência de métricas, fatores parciais, dados antigos, precisão numérica, movimento reduzido e fallback de WebGL.
@@ -46,7 +46,7 @@ Foram preservados os tratamentos existentes de APIs indisponíveis, descoberta d
 | RF14 — Ranking | Energia e emissões por serviço e ranking de datas por coleta |
 | RF15 — Comparação | Dois a quatro serviços, ciclos em comum e normalização por duração |
 
-A pergunta sobre mudança para matriz elétrica mais limpa pode ser explorada pela simulação por serviço. “Mais eficiente” continua exigindo contexto: sem quantidade de transações ou trabalho realizado, consumo menor não demonstra melhor eficiência.
+“Mais eficiente” continua exigindo contexto: sem quantidade de transações ou trabalho realizado, consumo menor não demonstra melhor eficiência.
 
 ## Fluxo das imagens e responsabilidade por camada
 
@@ -62,9 +62,9 @@ As rotas de métricas, carbono, cálculo, histórico, autenticação, administra
 
 Nenhuma dessas pendências foi resolvida alterando o backend. A verificação de hashes permanece disponível em npm run verify:backend, comparando os 39 arquivos versionados fora de frontend/ ao manifesto da develop.
 
-Consulte o [tour](tour-do-site.md) para apresentação página por página e roteiro de demonstração.
+Consulte o [tour](tour-do-site.md) para apresentação página por página.
 
-## Validação
+## Validação da revisão anterior
 
 Build com TypeScript/Vite e lint aprovados. Os 39 hashes fora de frontend/ conferem com o manifesto da develop.
 
@@ -75,3 +75,9 @@ A visita no navegador usada para as capturas do tour não apresentou erros JavaS
 Consulta real verificada em 13/10/2026: oito serviços exibidos no celular (390 px), respostas HTTP 200 na descoberta pelo backend, catálogo de carbono e oito consultas de métricas; nenhum aviso, erro JavaScript ou transbordamento horizontal nessa consulta.
 
 Uma melhoria de desempenho permanece: o módulo do globo tem aproximadamente 1,77 MB minificado, apesar do carregamento sob demanda. O build informa esse tamanho; pesquisa pelos campos continua disponível sem WebGL.
+
+## Simplificação atual
+
+Somente dados das APIs. Recursos demonstrativos e simulação de outra região removidos. A atualização dos indicadores é automática, a cada 30 segundos, na entrada das páginas de monitoramento e ao retomar uma aba visível. O tour foi atualizado para esse fluxo.
+
+Validação desta simplificação: build e lint aprovados; coleta automática e ausência dos controles verificadas em desktop/celular. Dos 86 cenários, 85 passaram após atualizar e reexecutar os quatro testes ligados aos recursos removidos; um teste de parallax é ignorado no celular. Os 39 arquivos do time fora de frontend/ permanecem preservados.

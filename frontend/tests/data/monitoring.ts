@@ -1,6 +1,6 @@
-import type { CarbonRegion, MonitoringSnapshot, MonitoredService, Period } from '../types/monitoring';
+import type { CarbonRegion, MonitoringSnapshot, MonitoredService, Period } from '../../src/types/monitoring';
 
-// Fixed examples for the prototype; never presented as API measurements.
+// Controlled samples used only by tests; not included in the application.
 const exampleEnergy = 50.87 / 60 / 1000;
 const services: MonitoredService[] = [
   { id: 'demo-br', name: 'Aplicação Brasil', status: 'available', country: 'Brasil', region: 'Sudeste', city: 'São Paulo', latitude: -23.55, longitude: -46.63, cpuPercent: 50, memoryGb: 2, diskGb: 10, networkGb: 1, energyKwh: exampleEnergy, emissionsG: exampleEnergy * 85, renewablePercent: 85, carbonIntensity: 85, collectionIntervalSeconds: 60 },
@@ -8,7 +8,7 @@ const services: MonitoredService[] = [
   { id: 'demo-jp', name: 'Aplicação Japão', status: 'no-metrics', country: 'Japão', region: 'Kantō', city: 'Tóquio', latitude: 35.68, longitude: 139.69, cpuPercent: 20, memoryGb: null, diskGb: null, networkGb: null, energyKwh: null, emissionsG: null, renewablePercent: null },
 ];
 
-export function getDemoSnapshot(period: Period): MonitoringSnapshot {
+export function getTestSnapshot(period: Period): MonitoringSnapshot {
   const regions: CarbonRegion[] = services.map((service) => ({ code: service.id, country: service.country!, region: service.region!, city: service.city, latitude: service.latitude!, longitude: service.longitude!, carbonIntensity: 85, renewablePercent: service.renewablePercent ?? 0 }));
   const history = [
     { serviceId: 'demo-br', intervalSeconds: 60, collectedAt: '2026-10-08T12:00:00-03:00', energyKwh: 0.00061, emissionsG: 0.05185 },

@@ -73,7 +73,7 @@ test('common collection cycles normalize different intervals and preserve missin
   expect(formatNumber(Infinity)).toBe('—');
 });
 
-test('only monitoring routes collect data and changing period does not trigger another collection', async ({ page }) => {
+test('only monitoring routes collect data and changing period requests fresh data', async ({ page }) => {
   let calls = 0;
   await page.route('**/backend/services', (route) => { calls++; return route.fulfill({ json: backendServices([]) }); });
   for (const path of ['/', '/login', '/cadastro', '/configuracoes', '/gerenciamento', '/unknown']) {
@@ -85,7 +85,7 @@ test('only monitoring routes collect data and changing period does not trigger a
   await expect.poll(() => calls).toBe(1);
   await page.getByLabel('Período de análise').selectOption('30d');
   await expect(page.getByLabel('Período de análise')).toHaveValue('30d');
-  expect(calls).toBe(1);
+  await expect.poll(() => calls).toBe(2);
 });
 
 test('comparison displays equal hourly estimates for unequal collection intervals', async ({ page }) => {

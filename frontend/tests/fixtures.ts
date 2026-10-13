@@ -1,3 +1,5 @@
+import { getTestSnapshot } from './data/monitoring';
+import type { Page } from '@playwright/test';
 import { test as base, expect } from '@playwright/test';
 
 export const apiRegions = [
@@ -26,3 +28,20 @@ export const test = base.extend({
 });
 
 export { expect };
+export async function mockRegionalScenario(page: Page) {
+  const snapshot = getTestSnapshot('7d');
+  const regions = snapshot.regions.map(region => ({
+    code: region.code, country: region.country, region: region.region, city: region.city,
+    latitude: region.latitude, longitude: region.longitude,
+    carbon_intensity_gco2e_per_kwh: region.carbonIntensity, renewable_share_percent: region.renewablePercent,
+  }));
+  await page.route('https://carbon.unilaunch.org/**', route => route.fulfill({ json: { regions } }));
+  await page.route('**/backend/services', route => route.fulfill({ json: backendServices(snapshot.services.map(service => ({
+    id: service.id, name: service.name, location: { ...service, region_code: service.regionCode },
+  }))) }));
+  await page.route('https://metrics.unilaunch.org/**', route => {
+    const id = route.request().url().split('/').at(-1);
+    return route.fulfill(id === 'demo-fr' ? { status: 500, json: { error: 'service_unavailable' } } :
+      { json: id === 'demo-jp' ? { ...apiMetrics, metrics: { ...apiMetrics.metrics, memory_gb: null, disk_gb: null, network_gb: null } } : apiMetrics });
+  });
+}
