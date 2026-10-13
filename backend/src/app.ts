@@ -6,6 +6,8 @@ import pool from "./db/connection.js";
 import {
   getDiscoveredServices,
   getServicesLastUpdatedAt,
+  getCollectedServiceMetrics,
+  getCollectedMetricsByServiceId,
 } from "./modules/services/services.service.js";
 
 const app = express();
@@ -25,6 +27,40 @@ app.get("/services", (_req: Request, res: Response) => {
     lastUpdatedAt: getServicesLastUpdatedAt(),
   });
 });
+
+// Retorna as métricas coletadas de todos os serviços.
+app.get("/metrics", (_req: Request, res: Response) => {
+  res.json({
+    metrics: getCollectedServiceMetrics(),
+  });
+});
+
+// Retorna as métricas coletadas de um serviço específico.
+app.get(
+  "/metrics/:serviceId",
+  (req: Request, res: Response) => {
+    const serviceId = req.params.serviceId;
+
+if (typeof serviceId !== "string") {
+  res.status(400).json({
+    error: "Identificador de serviço inválido.",
+  });
+  return;
+}
+
+const serviceMetrics = getCollectedMetricsByServiceId(serviceId);
+
+    if (!serviceMetrics) {
+      res.status(404).json({
+        error: "Métricas não encontradas para este serviço.",
+        serviceId,
+      });
+      return;
+    }
+
+    res.json(serviceMetrics);
+  }
+);
 
 // Rotas existentes da API.
 app.use("/api", routes);
