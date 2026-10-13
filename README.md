@@ -34,22 +34,113 @@ graph LR
 
 ```
 
-#### ⚙️ Matriz de Diretrizes Técnicas
+<details>
+<summary><b>🛠️ Clique aqui para expandir a Matriz de Diretrizes Técnicas (RP01 a RP07)</b></summary>
+
+<br>
+
 | Camada / Frente | Tecnologia Utilizada | Regra de Engenharia | Restrição Aplicada |
 | :--- | :--- | :--- | :--- |
-| **Interface Web** | React + TypeScript | Design responsivo para desktop e mobile | **[RP01]** |
-| **API Backend** | Node.js + TypeScript | Arquitetura modular (Controllers, Services, Modules) | **[RP02]** |
-| **Persistência** | PostgreSQL Nativo | Manipulação estrita via DDL e DML (**Proibido uso de ORM**) | **[RP03]** |
-| **Infraestrutura** | Docker / Docker Compose | Orquestração e execução 100% containerizada | **[RP04]** |
-| **Entregável** | MVP Semestral | Solução funcional focada nas entregas do semestre | **[RP05]** |
-| **Segurança** | Autenticação JWT | Proteção da área de configuração via token no backend | **[RP06]** |
-| **Metodologia** | Scrum / Gestão Ágil | Evolução via Sprints, Backlog priorizado e Reviews | **[RP07]** |
+| **Interface Web** | React + TypeScript | Design responsivo para desktop e mobile | **RP01** |
+| **API Backend** | Node.js + TypeScript | Arquitetura modular (Controllers, Services, Modules) | **RP02** |
+| **Persistência** | PostgreSQL Nativo | Manipulação estrita via DDL e DML (**Proibido uso de ORM**) | **RP03** |
+| **Infraestrutura** | Docker / Docker Compose | Orquestração e execução 100% containerizada | **RP04** |
+| **Entregável** | MVP Semestral | Solução funcional focada nas entregas do semestre | **RP05** |
+| **Segurança** | Autenticação JWT | Proteção da área de configuração via token no backend | **RP06** |
+| **Metodologia** | Scrum / Gestão Ágil | Evolução via Sprints, Backlog priorizado e Reviews | **RP07** |
+
+</details>
 
 ---
 
+### 🔌 Configuração das APIs Auxiliares
+
+A plataforma consome duas APIs externas para realizar a amostragem de infraestrutura e o cálculo ambiental:
+
+1. **Agregador de Métricas:**
+   * **Variável `.env`:** `METRICS_AGGREGATOR_URL=http://agregador-metricas.local:8080`
+   * **Endpoints Consumidos:** `GET /services` (descoberta de aplicações) e `GET /metrics/{id_servico}` (amostragem de consumo de hardware).
+2. **Serviço de Intensidade de Carbono:**
+   * **Variável `.env`:** `CARBON_INTENSITY_URL=http://carbon-intensity.local:8081`
+   * **Endpoint Consumido:** `GET /carbon-intensity/{code}` (obtenção de fatores regionais de emissão).
+
+---
+
+### 🗄️ Modelo de Dados Relacional (PostgreSQL Nativo)
+
+Conforme a restrição **RP03**, a persistência é feita exclusivamente em SQL nativo sem ORM:
+
+<details>
+<summary><b>🗃️ Clique aqui para expandir os Scripts SQL DDL de Criação de Tabelas</b></summary>
+
+<br>
+
+```sql
+create table Users(
+	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	name_user varchar(50) not null,
+	email_user varchar(50) not null,
+	password_user varchar(25)not null,
+	token_user varchar(255)not null
+);
+create table Locations(
+	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	name_location varchar(50)not null,
+	county_location varchar(50),
+	region_location varchar(50),
+	city_location varchar(50),
+	latitude_location double precision not null,
+	logitude_location double precision not null
+);
+
+create table Services(
+	id_service int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_location int,
+	name_service varchar(50),
+	constraint fk_service 
+	foreign key (id_location)
+	references locations(id_location)
+);
+
+create table Metrics (
+	id_metric int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_service int,
+	date_houry TIMESTAMP NOT NULL,
+	path_metric varchar(50) not null,
+	colletion_interval_metric int not null,
+	cpu_metric numeric not null,
+	ram_metric numeric not null,
+	hd_metric numeric not null,
+	network_metric numeric not null,
+	constraint fk_service
+	foreign key (id_service)
+	references services(id_service)
+);
+
+create table Cabons(
+	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_location int,
+	date_houry TIMESTAMP not null,
+	intesity_co2e_kwh_carbon int not null,
+	renewable_percent_carbon int not null,
+	constraint fk_service
+	foreign key(id_location)
+	references locations(id_location)
+);
+```
+
+</details>
+
+---
+
+
 ### 📑 Catálogo de Requisitos
 
-#### Requisitos Funcionais (RF)
+<details>
+<summary><b>📑 Clique aqui para ver a Tabela de Requisitos Funcionais (RF01 a RF15)</b></summary>
+
+<br>
+
 | ID | Requisito | Descrição Curta |
 | :--- | :--- | :--- |
 | **RF01** | **Descoberta de Serviços** | Identificar automaticamente os serviços disponíveis no Agregador de Métricas. |
@@ -68,14 +159,22 @@ graph LR
 | **RF14** | **Ranking de Impacto** | Ordenar serviços por maior consumo energético ou emissão de CO₂e em determinado período. |
 | **RF15** | **Comparação de Serviços** | Comparar indicadores ambientais entre múltiplos serviços no mesmo intervalo de tempo. |
 
-#### Requisitos Não Funcionais (RNF)
+</details>
+
+<details>
+<summary><b>⚡ Clique aqui para ver a Tabela de Requisitos Não Funcionais (RNF01 a RNF05)</b></summary>
+
+<br>
+
 | ID | Requisito | Diretriz de Qualidade |
 | :--- | :--- | :--- |
 | **RNF01** | **Usabilidade & Responsividade** | Layout responsivo e amigável para navegação em dispositivos móveis e desktop. |
 | **RNF02** | **Atualização em Tempo Real** | Intervalos definidos de amostragem com exibição da data/hora da última leitura. |
 | **RNF03** | **Desempenho** | Resposta rápida e fluida para o acompanhamento contínuo da infraestrutura. |
-| **RNF04** | **Tolerância a Falhas** | Garantir funcionamento contínuo do sistema mesmo com a queda de serviços ou APIs auxiliares. |
-| **RNF05** | **Documentação Técnica** | Manual completo com arquitetura, modelo de dados, rotas e instruções de execução. |
+| **RNF04** | **Tolerância a Falhas** | Garantir funcionamento contínuo do sistema mesmo com a queda de serviços. |
+| **RNF05** | **Documentação Técnica** | Manual completo com arquitetura, modelo de dados, rotas e instruções. |
+
+</details>
 
 ---
 
