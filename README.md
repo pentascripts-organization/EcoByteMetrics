@@ -22,15 +22,16 @@ graph LR
     end
 
     subgraph "Core GreenER (Containerized)"
+        FE[Frontend React + TS]
         BE[Backend Node.js + TS]
         DB[(PostgreSQL Nativo)]
-        FE[Frontend React + TS]
     end
 
-    AM -->|Polling /metrics| BE
+    AM -->|Polling /services e /metrics| BE
     SC -->|Fatores CO₂e| BE
-    BE -->|SQL DDL| DB
-    BE -->|API REST / JWT| FE
+    FE <-->|API REST / Auth JWT| BE
+    BE <-->|Consultas SQL DDL / DML| DB
+
 ```
 
 #### ⚙️ Matriz de Diretrizes Técnicas
@@ -113,9 +114,9 @@ graph TD
 
 | Período | Documentação da Sprint | Vídeo |
 | :--- | :--- | :--- |
-| **Sprint 1:** 13/04 a 30/04/2026 | [Sprint Review](./docs/sprint-1/sprint-1.md) | [▶ YouTube](Link) |
-| **Sprint 2:** 04/05 a 21/05/2026 | [Sprint Review](./docs/sprint-2/sprint-2.md) | [▶ YouTube](Link) |
-| **Sprint 3:** 25/05 a 11/06/2026 | [Sprint Review](./docs/sprint-3/sprint-3.md) | [▶ YouTube](Link) |
+| **Sprint 1:** 13/04 a 30/04/2026 | [Sprint Review](./docs/sprints/sprint-1.md) | [▶ YouTube](Link) |
+| **Sprint 2:** 04/05 a 21/05/2026 | [Sprint Review](./docs/sprints/sprint-2.md) | [▶ YouTube](Link) |
+| **Sprint 3:** 25/05 a 11/06/2026 | [Sprint Review](./docs/sprints/sprint-3.md) | [▶ YouTube](Link) |
 
 ---
 
@@ -227,4 +228,4 @@ As mensagens devem conter o ID da Issue vinculada:
 
 ### 🔗 Documentos de Apoio
 * [Pasta de Documentação Técnica](./docs)
-* [Documentação dos Endpoints da API](./docs/docApi.md)
+* [Documentação dos Endpoints da API](./docs/api.md)
