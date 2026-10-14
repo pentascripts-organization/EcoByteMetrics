@@ -77,7 +77,7 @@ button.text-link { background: transparent; padding: 5px 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 
-.landscape-background { position: absolute; inset: 0; z-index: -2; background: #d6e8df  center center / cover no-repeat; }
+.landscape-background { position: absolute; inset: 0; z-index: -2; background: #d6e8df url('./home/assets/hero-lugano.optimized.jpg') center center / cover no-repeat; }
 
 .source-note, .analysis-notice { margin: 12px 0 20px; color: #41685b; font-size: 12px; line-height: 1.7; }
 .analysis-context { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 16px; padding: 12px 16px; background: #ffffffd9; border: 1px solid #d3e8dc; border-radius: 12px; color: #173b31; font-size: 13px; }
@@ -103,7 +103,7 @@ caption { text-align: left; padding: 16px 12px; font-size: 12px; color: #41685b;
 
 /* Monitoring workspace */
 .app-shell { position: relative; isolation: isolate; min-height: 100svh; display: flex; flex-direction: column; background: #e9f6fd; }
-.sky-background { position: fixed; inset: 0; z-index: -2; background: linear-gradient(#ddf3fc72, #f4fafedb), #dceefa  center / cover no-repeat; }
+.sky-background { position: fixed; inset: 0; z-index: -2; background: linear-gradient(180deg, #dceefa, #f4fafe); }
 .app-header { position: relative; z-index: 10; background: #ffffffe0; border-bottom: 1px solid #fff; backdrop-filter: blur(24px); }
 .app-header-inner { width: min(1336px, calc(100% - 96px)); height: 83px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .app-header .brand > span { font-size: 20px; }
@@ -448,7 +448,7 @@ td { padding: 16px 22px; border-bottom: 1px solid var(--line); color: #527680; }
 
 /* Regional research and administration share the existing nature palette. */
 .app-shell { background: #e7f2ec; color: #173b31; }
-.sky-background { background: linear-gradient(180deg, #e1f0e7e8, #f4f8f2f5),  center / cover; }
+.sky-background { background: radial-gradient(ellipse at top left, #cce5d9 0%, transparent 60%), linear-gradient(180deg, #e1f0e7, #f4f8f2); }
 .app-header { background: #ffffffc9; }
 .desktop-nav { gap: 20px; }
 .page-heading h1 { color: #173b31; }

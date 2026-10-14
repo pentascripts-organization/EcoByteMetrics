@@ -1,16 +1,18 @@
 # Recursos visuais
 
-- `logo.png`: logo original fornecida pelo usuário, copiada de `21 Sem Título_20260930202926 1 (1).png`, preservando a transparência.
-- As folhas animadas são elementos SVG definidos em `src/components/LeafScene.tsx`, separados do fundo para permitir o parallax.
+- `public/assets/logo.png`: marca do projeto, preservando a transparência.
+- `src/home/assets/ecobyte-logo.png`: marca usada na página inicial.
+- `src/home/assets/hero-lugano.optimized.jpg`: fotografia usada também no fundo da tela de acesso.
+- O fundo da área de monitoramento usa gradientes definidos em `src/styles.css`.
+- As folhas animadas são elementos SVG definidos em `src/components/LeafScene.tsx`.
 
-## Página inicial atual
+## Fotografias da página inicial
 
-As quatro paisagens usam versões `*.optimized.jpg` em `src/home/assets`, redimensionadas até 1.920 px, JPEG com qualidade 82. Os nomes originais abaixo registram a origem das imagens fornecidas pelo usuário. A marca permanece em PNG.
+As paisagens usam versões `*.optimized.jpg` em `src/home/assets`, redimensionadas até 1.920 px. Os nomes dos arquivos de origem são mantidos abaixo para referência.
 
-Os arquivos locais em `src/home/assets` foram fornecidos pelo usuário:
-
-- `ecobyte-logo.png`: marca usada na home aprovada.
-- `hero-lugano.jpg`: `xiaozhe-yao-UnpbQF0H5dA-unsplash.jpg`.
-- `hero-lakes.jpg`: `omri-d-cohen-ISdle_qVhnM-unsplash.jpg`.
-- `hero-mountains.jpg`: `omri-d-cohen-Ur-5Qiq4oFY-unsplash.jpg`.
-- `hero-lagoon.jpg`: `pexels-marcelo-mora-203572590-37544007.jpg`.
+| Arquivo utilizado | Arquivo de origem |
+|---|---|
+| `hero-lugano.optimized.jpg` | `xiaozhe-yao-UnpbQF0H5dA-unsplash.jpg` |
+| `hero-lakes.optimized.jpg` | `omri-d-cohen-ISdle_qVhnM-unsplash.jpg` |
+| `hero-mountains.optimized.jpg` | `omri-d-cohen-Ur-5Qiq4oFY-unsplash.jpg` |
+| `hero-lagoon.optimized.jpg` | `pexels-marcelo-mora-203572590-37544007.jpg` |
