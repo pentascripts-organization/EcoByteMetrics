@@ -20,7 +20,7 @@ test('period changes refresh resources, preserve location and explain limited hi
   let calls = 0;
   let cpu = 50;
   await page.route('**/backend/services', route => { calls++; return route.fulfill({ json: backendServices([apiService]) }); });
-  await page.route('https://metrics.unilaunch.org/**', route => route.fulfill({ json: { ...apiMetrics, metrics: { ...apiMetrics.metrics, cpu_percent: cpu } } }));
+  await page.route('**/backend/metrics/**', route => route.fulfill({ json: { ...apiMetrics, metrics: { ...apiMetrics.metrics, cpu_percent: cpu } } }));
   await page.goto('/servicos?regiao=br-sudeste');
   await expect(page.locator('tbody tr').first()).toContainText('50%');
   const select = page.getByLabel('Período de análise');

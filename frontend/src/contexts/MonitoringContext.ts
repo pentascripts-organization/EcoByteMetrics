@@ -1,5 +1,5 @@
-import { createContext } from 'react';
-import type { MonitoringSnapshot, Period, RequestRecord } from '../types/monitoring';
+import { createContext } from "react";
+import type { MonitoringSnapshot, Period } from "../types/monitoring";
 
 export interface MonitoringContextValue {
   snapshot: MonitoringSnapshot;
@@ -8,8 +8,8 @@ export interface MonitoringContextValue {
   refresh: () => Promise<MonitoringSnapshot | null>;
   loading: boolean;
   error: string | null;
-  requests: RequestRecord[];
-  clearRequests: () => void;
 }
 
-export const MonitoringContext = createContext<MonitoringContextValue | null>(null);
+export const MonitoringContext = createContext<MonitoringContextValue | null>(
+  null,
+);

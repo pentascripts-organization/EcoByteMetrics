@@ -24,6 +24,7 @@ test('globe country and city selection drives the CO2 query and resets in order'
   await mockRegionalScenario(page);
   await page.goto('/pesquisa');
   await expect(page.getByLabel('Cidade', { exact: true })).toBeDisabled();
+  await page.locator('.region-map').scrollIntoViewIfNeeded();
   await page.locator('.globe-stage[data-ready="true"]').waitFor();
   const canvas = page.locator('.globe-stage canvas');
   await canvas.scrollIntoViewIfNeeded();
@@ -85,6 +86,7 @@ test('country and city fields remain usable when WebGL is unavailable', async ({
   });
   await mockRegionalScenario(page);
   await page.goto('/pesquisa');
+  await page.locator('.region-map').scrollIntoViewIfNeeded();
   await expect(page.getByText('A visualização 3D não está disponível neste navegador. Continue pelos campos de país e cidade.')).toBeVisible({ timeout: 15_000 });
   await page.getByLabel('País', { exact: true }).fill('Brasil');
   await page.getByRole('button', { name: 'São Paulo', exact: true }).click();

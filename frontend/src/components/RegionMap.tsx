@@ -1,16 +1,36 @@
-import { Component, lazy, Suspense, useMemo } from 'react';
-import type { ReactNode } from 'react';
-import { Globe2, RotateCcw } from 'lucide-react';
-import type { CarbonRegion, MonitoredService } from '../types/monitoring';
-import { findCountry, getCities, localizeCity } from '../data/geography';
+import {
+  Component,
+  lazy,
+  Suspense,
+  useMemo,
+  useRef,
+  useEffect,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
+import { Globe2, RotateCcw } from "lucide-react";
+import type { CarbonRegion, MonitoredService } from "../types/monitoring";
+import { findCountry, getCities, localizeCity } from "../data/geography";
 
-const WorldGlobe = lazy(() => import('./WorldGlobe'));
+const WorldGlobe = lazy(() => import("./WorldGlobe"));
 
-class GlobeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+class GlobeBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
   state = { failed: false };
-  static getDerivedStateFromError() { return { failed: true }; }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
   render() {
-    return this.state.failed ? <p className="globe-fallback" role="status">A visualização 3D não está disponível neste navegador. Continue pelos campos de país e cidade.</p> : this.props.children;
+    return this.state.failed ? (
+      <p className="globe-fallback" role="status">
+        A visualização 3D não está disponível neste navegador. Continue pelos
+        campos de país e cidade.
+      </p>
+    ) : (
+      this.props.children
+    );
   }
 }
 
@@ -28,23 +48,194 @@ interface RegionMapProps {
   onServiceSelect?: (id: string) => void;
 }
 
-export function RegionMap({ regions, services, regionCode, catalogUnavailable = false, country = '', city = '', date, onCountrySelect, onCitySelect, onRegionSelect, onServiceSelect }: RegionMapProps) {
+export function RegionMap({
+  regions,
+  services,
+  regionCode,
+  catalogUnavailable = false,
+  country = "",
+  city = "",
+  date,
+  onCountrySelect,
+  onCitySelect,
+  onRegionSelect,
+  onServiceSelect,
+}: RegionMapProps) {
+  const host = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    if (host.current) observer.observe(host.current);
+    return () => observer.disconnect();
+  }, []);
   const selectedCountry = findCountry(country);
-  const cities = useMemo(() => services ? services.filter((service) => service.status !== 'removed' && service.latitude !== undefined && service.longitude !== undefined && (!selectedCountry || findCountry(service.country ?? '')?.properties.code === selectedCountry.properties.code))
-    .map((service) => ({ id: service.id, countryCode: findCountry(service.country ?? '')?.properties.code ?? '', name: service.name, latitude: service.latitude!, longitude: service.longitude! }))
-    : selectedCountry ? getCities(selectedCountry.properties.code, regions) : [], [selectedCountry, regions, services]);
-  const supportedCountries = useMemo(() => new Set((services ?? regions).map((place) => findCountry(place.country ?? '')?.properties.code ?? '')), [regions, services]);
-  const selectedCity = cities.find((entry) => regionCode ? entry.id === regionCode : entry.name.localeCompare(localizeCity(country, city)?.trim() ?? '', 'pt-BR', { sensitivity: 'base' }) === 0);
+  const cities = useMemo(
+    () =>
+      services
+        ? services
+            .filter(
+              (service) =>
+                service.status !== "removed" &&
+                service.latitude !== undefined &&
+                service.longitude !== undefined &&
+                (!selectedCountry ||
+                  findCountry(service.country ?? "")?.properties.code ===
+                    selectedCountry.properties.code),
+            )
+            .map((service) => ({
+              id: service.id,
+              countryCode:
+                findCountry(service.country ?? "")?.properties.code ?? "",
+              name: service.name,
+              latitude: service.latitude!,
+              longitude: service.longitude!,
+            }))
+        : selectedCountry
+          ? getCities(selectedCountry.properties.code, regions)
+          : [],
+    [selectedCountry, regions, services],
+  );
+  const supportedCountries = useMemo(
+    () =>
+      new Set(
+        (services ?? regions).map(
+          (place) => findCountry(place.country ?? "")?.properties.code ?? "",
+        ),
+      ),
+    [regions, services],
+  );
+  const selectedCity = cities.find((entry) =>
+    regionCode
+      ? entry.id === regionCode
+      : entry.name.localeCompare(
+          localizeCity(country, city)?.trim() ?? "",
+          "pt-BR",
+          { sensitivity: "base" },
+        ) === 0,
+  );
   const selectPoint = (id: string, name: string) => {
-    if (services) { const service = services.find((entry) => entry.id === id); if (service) { if (onServiceSelect) onServiceSelect(id); else onCountrySelect(service.country ?? ''); } }
-    else if (onRegionSelect) onRegionSelect(id, name);
+    if (services) {
+      const service = services.find((entry) => entry.id === id);
+      if (service) {
+        if (onServiceSelect) onServiceSelect(id);
+        else onCountrySelect(service.country ?? "");
+      }
+    } else if (onRegionSelect) onRegionSelect(id, name);
     else onCitySelect(name);
   };
-  return <section className="region-map globe-map" aria-label="Mapa-múndi 3D" data-country={selectedCountry?.properties.code ?? ''} data-city={city}>
-    <div className="globe-heading"><span className="map-label"><Globe2 size={15} />Explore o mundo em 3D</span><button className="button button-outline button-small" onClick={() => onCountrySelect('')}><RotateCcw size={14} />Ver o mundo</button></div>
-    <p className="globe-instruction">{services ? 'Localização dos serviços monitorados' : selectedCountry ? `2. Escolha uma cidade · ${selectedCountry.properties.name}` : '1. Clique em um país para começar'}<span>Arraste para girar. Use o scroll ou dois dedos para aproximar.</span></p>
-    <GlobeBoundary><Suspense fallback={<p className="globe-fallback" role="status">Carregando o globo 3D…</p>}><WorldGlobe supportedCountries={supportedCountries} country={selectedCountry} city={selectedCity} cities={cities} onCountrySelect={onCountrySelect} onCitySelect={onCitySelect} onPointSelect={selectPoint} /></Suspense></GlobeBoundary>
-    {(selectedCountry || services) && <div className="globe-cities" aria-label={services ? 'Serviços no mapa' : 'Cidades do país selecionado'}>{cities.length ? cities.map((entry) => <button key={entry.id} className={entry.id === selectedCity?.id ? 'active' : ''} aria-pressed={entry.id === selectedCity?.id} onClick={() => selectPoint(entry.id, entry.name)}>{entry.name}{!services && cities.filter((candidate) => candidate.name === entry.name).length > 1 ? ' · ' + entry.id : ''}</button>) : <p>{services ? 'Nenhum serviço com coordenadas disponíveis.' : catalogUnavailable ? 'Catálogo de regiões temporariamente indisponível. Tente atualizar.' : 'Nenhuma região cadastrada para este país na consulta atual.'}</p>}</div>}
-    <div className="globe-selection"><span>REGIÃO SELECIONADA<strong>{[selectedCountry?.properties.name, selectedCity?.name ?? city].filter(Boolean).join(' — ') || 'Escolha um país'}</strong></span>{date && <span>COLETA<strong>{new Date(date).toLocaleString('pt-BR')}</strong></span>}</div>
-  </section>;
+  return (
+    <section
+      ref={host}
+      className="region-map globe-map"
+      aria-label="Mapa-múndi 3D"
+      data-country={selectedCountry?.properties.code ?? ""}
+      data-city={city}
+    >
+      <div className="globe-heading">
+        <span className="map-label">
+          <Globe2 size={15} />
+          Explore o mundo em 3D
+        </span>
+        <button
+          className="button button-outline button-small"
+          onClick={() => onCountrySelect("")}
+        >
+          <RotateCcw size={14} />
+          Ver o mundo
+        </button>
+      </div>
+      <p className="globe-instruction">
+        {services
+          ? "Localização dos serviços monitorados"
+          : selectedCountry
+            ? `2. Escolha uma cidade · ${selectedCountry.properties.name}`
+            : "1. Clique em um país para começar"}
+        <span>
+          Arraste para girar. Use o scroll ou dois dedos para aproximar.
+        </span>
+      </p>
+      {visible ? (
+        <GlobeBoundary>
+          <Suspense
+            fallback={
+              <p className="globe-fallback" role="status">
+                Carregando o globo 3D…
+              </p>
+            }
+          >
+            <WorldGlobe
+              supportedCountries={supportedCountries}
+              country={selectedCountry}
+              city={selectedCity}
+              cities={cities}
+              onCountrySelect={onCountrySelect}
+              onCitySelect={onCitySelect}
+              onPointSelect={selectPoint}
+            />
+          </Suspense>
+        </GlobeBoundary>
+      ) : (
+        <div className="globe-stage globe-fallback" role="status">
+          Carregando o mapa…
+        </div>
+      )}
+      {(selectedCountry || services) && (
+        <div
+          className="globe-cities"
+          aria-label={
+            services ? "Serviços no mapa" : "Cidades do país selecionado"
+          }
+        >
+          {cities.length ? (
+            cities.map((entry) => (
+              <button
+                key={entry.id}
+                className={entry.id === selectedCity?.id ? "active" : ""}
+                aria-pressed={entry.id === selectedCity?.id}
+                onClick={() => selectPoint(entry.id, entry.name)}
+              >
+                {entry.name}
+                {!services &&
+                cities.filter((candidate) => candidate.name === entry.name)
+                  .length > 1
+                  ? " · " + entry.id
+                  : ""}
+              </button>
+            ))
+          ) : (
+            <p>
+              {services
+                ? "Nenhum serviço com coordenadas disponíveis."
+                : catalogUnavailable
+                  ? "Catálogo de regiões temporariamente indisponível. Tente atualizar."
+                  : "Nenhuma região cadastrada para este país na consulta atual."}
+            </p>
+          )}
+        </div>
+      )}
+      <div className="globe-selection">
+        <span>
+          REGIÃO SELECIONADA
+          <strong>
+            {[selectedCountry?.properties.name, selectedCity?.name ?? city]
+              .filter(Boolean)
+              .join(" — ") || "Escolha um país"}
+          </strong>
+        </span>
+        {date && (
+          <span>
+            COLETA<strong>{new Date(date).toLocaleString("pt-BR")}</strong>
+          </span>
+        )}
+      </div>
+    </section>
+  );
 }

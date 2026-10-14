@@ -1,12 +1,16 @@
-import type { CSSProperties } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import luganoImage from '../assets/hero-lugano.optimized.jpg';
-import lakesImage from '../assets/hero-lakes.optimized.jpg';
-import mountainsImage from '../assets/hero-mountains.optimized.jpg';
-import lagoonImage from '../assets/hero-lagoon.optimized.jpg';
-import { useCarousel } from '../hooks/useCarousel';
-import { MetricOrb } from './MetricOrb';
+import type { CSSProperties } from "react";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import luganoMobile from "../assets/hero-lugano.mobile.jpg";
+import luganoImage from "../assets/hero-lugano.optimized.jpg";
+import lakesMobile from "../assets/hero-lakes.mobile.jpg";
+import lakesImage from "../assets/hero-lakes.optimized.jpg";
+import mountainsMobile from "../assets/hero-mountains.mobile.jpg";
+import mountainsImage from "../assets/hero-mountains.optimized.jpg";
+import lagoonMobile from "../assets/hero-lagoon.mobile.jpg";
+import lagoonImage from "../assets/hero-lagoon.optimized.jpg";
+import { useCarousel } from "../hooks/useCarousel";
+import { MetricOrb } from "./MetricOrb";
 
 interface HeroProps {
   copy: {
@@ -27,25 +31,46 @@ interface HeroProps {
   };
 }
 
-const slides = [luganoImage, lakesImage, mountainsImage, lagoonImage];
+const slides = [
+  [luganoImage, luganoMobile],
+  [lakesImage, lakesMobile],
+  [mountainsImage, mountainsMobile],
+  [lagoonImage, lagoonMobile],
+] as const;
 
 export function Hero({ copy }: HeroProps) {
   const { index, paused, setPaused } = useCarousel(slides.length);
 
   return (
-    <section
-      className="hero"
-      id="inicio"
-    >
-      {slides.map((image, slideIndex) => (
+    <section className="hero" id="inicio">
+      {slides.map(([image, mobileImage], slideIndex) => (
         <div
           key={image}
-          className={`hero__background${slideIndex === index ? ' active' : ''}`}
-          style={{ backgroundImage: slideIndex <= index + 1 || slideIndex === (index + slides.length - 1) % slides.length ? `url(${image})` : undefined } as CSSProperties}
+          className={`hero__background${slideIndex === index ? " active" : ""}`}
+          style={
+            {
+              "--hero-image":
+                slideIndex <= index + 1 ||
+                slideIndex === (index + slides.length - 1) % slides.length
+                  ? "url(" + image + ")"
+                  : undefined,
+              "--hero-mobile":
+                slideIndex <= index + 1 ||
+                slideIndex === (index + slides.length - 1) % slides.length
+                  ? "url(" + mobileImage + ")"
+                  : undefined,
+            } as CSSProperties
+          }
           aria-hidden="true"
         />
       ))}
-      <button className="carousel-pause" aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? 'Retomar paisagens' : 'Pausar paisagens'}</button>
+      <button
+        className="carousel-pause"
+        aria-pressed={paused}
+        onClick={() => setPaused(!paused)}
+      >
+        {paused ? "Retomar paisagens" : "Pausar paisagens"}
+      </button>
       <div className="hero__wash" aria-hidden="true">
         <svg viewBox="0 0 1040 445" preserveAspectRatio="none">
           <path d="M0 0H640C632 77 605 159 566 237C528 314 478 388 425 445H0Z" />
@@ -90,7 +115,6 @@ export function Hero({ copy }: HeroProps) {
           formula={copy.metricFormula}
         />
       </div>
-
     </section>
   );
 }

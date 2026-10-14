@@ -92,3 +92,65 @@ describe("Serviço de descoberta de serviços", () => {
         );
     });
 });
+
+describe("Contrato de coleta de métricas", () => {
+    it("valida timestamps, erros externos, métricas inválidas e timeout pela rota HTTP", async () => {
+        const { execFileSync } = await import("node:child_process");
+        const script = String.raw`
+            import assert from 'node:assert/strict';
+            const { default: app } = await import('./src/app.ts').then(m => m.default?.default ? m.default : m);
+            const nativeFetch = globalThis.fetch;
+            let response;
+            globalThis.fetch = async () => {
+                if (response instanceof Error) throw response;
+                return response.clone();
+            };
+            const server = app.listen(0);
+            await new Promise(resolve => server.once('listening', resolve));
+            const url = 'http://127.0.0.1:' + server.address().port;
+            const metrics = { collection_interval_seconds: 60, metrics: { cpu_percent: 50, memory_gb: 2, disk_gb: 10, network_gb: 1 } };
+            try {
+                response = Response.json(metrics);
+                const started = Date.now();
+                let result = await nativeFetch(url + '/metrics/billing-api');
+                const body = await result.json();
+                assert.equal(result.status, 200);
+                assert.deepEqual(body.metrics, metrics.metrics);
+                assert.equal(body.collection_interval_seconds, 60);
+                assert(Date.parse(body.collectedAt) >= started);
+                assert(Date.parse(body.collectedAt) <= Date.now());
+                for (const status of [404, 500]) {
+                    response = Response.json({ error: status === 404 ? 'service_not_found' : 'metrics_missing' }, { status });
+                    result = await nativeFetch(url + '/metrics/billing-api');
+                    assert.equal(result.status, status);
+                    assert.equal((await result.json()).collectedAt, undefined);
+                }
+                response = Response.json({ ...metrics, metrics: { ...metrics.metrics, cpu_percent: 101 } });
+                result = await nativeFetch(url + '/metrics/billing-api');
+                assert.equal(result.status, 502);
+                assert.equal((await result.json()).error, 'invalid_metrics');
+                response = new Response('invalid json');
+                result = await nativeFetch(url + '/metrics/billing-api');
+                assert.equal(result.status, 502);
+                response = new TypeError('network failure');
+                result = await nativeFetch(url + '/metrics/billing-api');
+                assert.equal(result.status, 502);
+                response = new DOMException('timeout', 'TimeoutError');
+                result = await nativeFetch(url + '/metrics/billing-api');
+                assert.equal(result.status, 504);
+                assert.equal((await result.json()).collectedAt, undefined);
+                result = await nativeFetch(url + '/services');
+                assert.deepEqual(await result.json(), { services: [], lastUpdatedAt: null });
+            } finally {
+                globalThis.fetch = nativeFetch;
+                await new Promise(resolve => server.close(resolve));
+            }
+        `;
+        execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], {
+            cwd: process.cwd(),
+            env: { ...process.env, API_METRIC: "https://metrics.unilaunch.org" },
+            stdio: "pipe",
+            timeout: 20000,
+        });
+    });
+});

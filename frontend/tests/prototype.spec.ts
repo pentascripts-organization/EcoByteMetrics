@@ -23,6 +23,7 @@ test('research distinguishes disconnected monitoring from unknown regions', asyn
   await page.goto('/pesquisa');
   await page.getByLabel('País', { exact: true }).fill('Brasil');
   await expect(page.getByRole('alert')).toContainText('Não foi possível consultar o agregador');
+  await page.getByLabel('Cidade', { exact: true }).selectOption('br-sudeste');
   await page.getByRole('button', { name: 'Buscar', exact: true }).click();
   await expect(page.locator('.research-status').getByRole('status')).toContainText('Consulta indisponível');
   await expect(page.getByRole('dialog')).not.toBeVisible();

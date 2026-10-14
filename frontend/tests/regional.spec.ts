@@ -18,7 +18,7 @@ test('regional matching accepts API names, translations and country aliases', ()
 test('every API country and city opens its own regional dashboard', async ({ page }) => {
   test.slow();
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices(apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } }))) : apiMetrics }));
+  await page.route(/\/backend\/(?:services$|metrics\/)/, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices(apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } }))) : apiMetrics }));
   for (const region of apiRegions) {
     await page.goto('/pesquisa');
     await expect(page.getByRole('button', { name: 'Buscar', exact: true })).toBeEnabled();
@@ -41,7 +41,7 @@ test('every API country and city opens its own regional dashboard', async ({ pag
 
 test('direct dashboard links keep translated regional selections without a region code', async ({ page }) => {
   test.slow();
-  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices(apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } }))) : apiMetrics }));
+  await page.route(/\/backend\/(?:services$|metrics\/)/, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices(apiRegions.map((region) => ({ id: region.code, name: region.code, location: { ...region, region_code: region.code } }))) : apiMetrics }));
   for (const region of apiRegions.slice(1)) {
     const country = region.code === 'eu-west' ? 'Irlanda' : region.code === 'us-east' ? 'EUA' : region.country;
     await page.goto(`/dashboard?${new URLSearchParams({ pais: country, cidade: region.city })}`);

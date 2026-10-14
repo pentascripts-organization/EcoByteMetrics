@@ -71,3 +71,52 @@ export async function fetchAvailableServices(): Promise<AggregatorService[]> {
 
   return data as AggregatorService[];
 }
+
+export async function fetchServiceMetrics(serviceId: string): Promise<{
+  status: number;
+  body: Record<string, unknown>;
+}> {
+  if (!aggregatorUrl) {
+    throw new Error("A variável API_METRIC não foi configurada.");
+  }
+
+  const baseUrl = aggregatorUrl.replace(/\/+$/, "");
+  const response = await fetch(
+    baseUrl + "/metrics/" + encodeURIComponent(serviceId),
+    {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(10000),
+    }
+  );
+  const data: unknown = await response.json();
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new Error("Resposta inválida do Agregador de Métricas.");
+  }
+  const body = data as Record<string, unknown>;
+  if (!response.ok) return { status: response.status, body };
+
+  const interval = body.collection_interval_seconds;
+  const metrics = body.metrics;
+  if (
+    typeof interval !== "number" ||
+    !Number.isSafeInteger(interval) || interval < 0 ||
+    typeof metrics !== "object" || metrics === null || Array.isArray(metrics)
+  ) {
+    throw Object.assign(new Error("Métricas ou intervalo de coleta inválidos."), { name: "InvalidMetricsError" });
+  }
+  const values = metrics as Record<string, unknown>;
+  for (const key of ["cpu_percent", "memory_gb", "disk_gb", "network_gb"]) {
+    const value = values[key];
+    if (
+      typeof value !== "number" || !Number.isFinite(value) || value < 0 ||
+      (key === "cpu_percent" && value > 100)
+    ) {
+      throw Object.assign(new Error("Métrica ausente ou inválida: " + key + "."), { name: "InvalidMetricsError" });
+    }
+  }
+
+  return {
+    status: 200,
+    body: { ...body, collectedAt: new Date().toISOString() },
+  };
+}

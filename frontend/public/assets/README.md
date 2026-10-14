@@ -16,3 +16,5 @@ As paisagens usam versões `*.optimized.jpg` em `src/home/assets`, redimensionad
 | `hero-lakes.optimized.jpg` | `omri-d-cohen-ISdle_qVhnM-unsplash.jpg` |
 | `hero-mountains.optimized.jpg` | `omri-d-cohen-Ur-5Qiq4oFY-unsplash.jpg` |
 | `hero-lagoon.optimized.jpg` | `pexels-marcelo-mora-203572590-37544007.jpg` |
+
+As versões hero-*.mobile.jpg são derivadas das mesmas quatro fotografias, com largura de 960 px, para reduzir transferência em telas pequenas.

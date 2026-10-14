@@ -13,7 +13,7 @@ test('adapter uses regional codes, actual intervals and localized API locations'
     const snapshot = await getMonitoringSnapshot();
     expect(requested).toContain('/backend/services');
     expect(requested).not.toContain('https://metrics.unilaunch.org/services');
-    expect(requested).toContain('https://metrics.unilaunch.org/metrics/billing-api');
+    expect(requested).toContain('/backend/metrics/billing-api');
     expect(snapshot.regions).toHaveLength(5);
     expect(snapshot.regions[4].city).toBe('Tóquio');
     expect(findCountry(snapshot.regions[1].country)?.properties.code).toBe('US');
@@ -44,7 +44,7 @@ test('adapter distinguishes unavailable, missing, removed and valid zero metrics
     if (id === 'missing') return Response.json({ error: 'metrics_missing' }, { status: 500 });
     if (id === 'removed') return Response.json({ error: 'service_not_found' }, { status: 404 });
     if (id === 'partial') return Response.json({ ...apiMetrics, metrics: { ...apiMetrics.metrics, cpu_percent: 101 } });
-    return Response.json({ collection_interval_seconds: 0, metrics: { cpu_percent: 0, memory_gb: 0, disk_gb: 0, network_gb: 0 } });
+    return Response.json({ collectedAt: new Date().toISOString(), collection_interval_seconds: 0, metrics: { cpu_percent: 0, memory_gb: 0, disk_gb: 0, network_gb: 0 } });
   };
   try {
     const snapshot = await getMonitoringSnapshot();
@@ -75,7 +75,7 @@ test('carbon failure preserves energy without inventing an emission factor', asy
 
 test('live mode offers only registered cities and shows the selected regional factor', async ({ page }, testInfo) => {
   test.slow();
-  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([apiService]) : apiMetrics }));
+  await page.route(/\/backend\/(?:services$|metrics\/)/, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([apiService]) : apiMetrics }));
   await page.goto('/pesquisa');
   await expect(page.getByLabel('Usar dados de demonstração')).toHaveCount(0);
   await page.getByLabel('País', { exact: true }).fill('Brasil');
@@ -104,7 +104,7 @@ test('polling discovers removals and new services and preserves data during an o
   await page.clock.install();
   let summaries = [apiService];
   let outage = false;
-  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => {
+  await page.route(/\/backend\/(?:services$|metrics\/)/, (route) => {
     if (route.request().url().endsWith('/services')) return route.fulfill({ status: outage ? 503 : 200, json: outage ? { error: 'unavailable' } : backendServices(summaries) });
     return route.fulfill({ json: apiMetrics });
   });

@@ -1,6 +1,6 @@
 # Tour do EcoByteMetrics
 
-Abra http://localhost:5173 com o frontend e o backend local em execução. Esta versão muda somente frontend/. As páginas consultam serviços e mostram estimativas; o navegador não controla os serviços monitorados.
+Abra http://localhost:5173 após executar npm run dev na pasta frontend; o comando prepara o backend local existente. Esta versão muda somente frontend/. As páginas consultam serviços e mostram estimativas; o navegador não controla os serviços monitorados.
 
 ## Comece pela pesquisa
 
@@ -55,7 +55,7 @@ Existem respostas distintas:
 | Região cadastrada sem serviços atuais | Informa que não há serviços monitorados |
 | Todos os serviços indisponíveis | Mostra Serviço indisponível e permite tentar novamente |
 | Parte das métricas ou fatores ausente | Lista motivos e permite Ver dashboard com dados parciais |
-| Falha de conexão ou catálogo | Exibe indisponibilidade sem transformar isso em erro 404 |
+| Falha de conexão ou catálogo | Exibe indisponibilidade sem transformar isso em erro 404; mantém cidades recebidas do catálogo mesmo quando a descoberta falha |
 | Tudo disponível | Abre o dashboard regional |
 
 Alterar a seleção ou sair da página invalida uma busca anterior. A resposta atrasada não muda a página escolhida pelo usuário. Se WebGL não funcionar, os campos de país e cidade continuam disponíveis.

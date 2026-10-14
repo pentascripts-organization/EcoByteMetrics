@@ -1,5 +1,5 @@
-import { BarChart3, Cloud, Leaf, UsersRound } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { BarChart3, Cloud, Leaf, UsersRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface SolutionsProps {
   copy: {

@@ -5,7 +5,7 @@ import { getTestSnapshot } from './data/monitoring';
 async function mockServices(page: import('@playwright/test').Page, count = 1) {
   const services = Array.from({ length: count }, (_, index) => ({ ...apiService, id: 'service-' + index, name: 'Service ' + index }));
   await page.route('**/backend/services', route => route.fulfill({ json: backendServices(services) }));
-  await page.route('https://metrics.unilaunch.org/**', route => route.fulfill({ json: apiMetrics }));
+  await page.route('**/backend/metrics/**', route => route.fulfill({ json: apiMetrics }));
 }
 
 test('historical dates anchor the entire period and use the location recorded at collection time', () => {
@@ -61,7 +61,7 @@ test('indicators update automatically and removed controls stay absent', async (
   let cpu = 50;
   let calls = 0;
   await page.route('**/backend/services', route => { calls++; return route.fulfill({ json: backendServices([apiService]) }); });
-  await page.route('https://metrics.unilaunch.org/**', route => route.fulfill({ json: { ...apiMetrics, metrics: { ...apiMetrics.metrics, cpu_percent: cpu } } }));
+  await page.route('**/backend/metrics/**', route => route.fulfill({ json: { ...apiMetrics, metrics: { ...apiMetrics.metrics, cpu_percent: cpu } } }));
   await page.goto('/dashboard?regiao=br-sudeste');
   await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');
   const initial = await page.locator('.metric-value').first().innerText();

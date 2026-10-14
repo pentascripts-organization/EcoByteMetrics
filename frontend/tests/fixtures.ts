@@ -11,7 +11,7 @@ export const apiRegions = [
 ];
 
 export const apiService = { id: 'billing-api', name: 'Billing API', location: { ...apiRegions[0], region_code: 'br-sudeste' }, metrics_path: '/metrics/billing-api' };
-export const apiMetrics = { collection_interval_seconds: 60, metrics: { cpu_percent: 50, memory_gb: 2, disk_gb: 10, network_gb: 1 } };
+export const apiMetrics = { get collectedAt() { return new Date().toISOString(); }, collection_interval_seconds: 60, metrics: { cpu_percent: 50, memory_gb: 2, disk_gb: 10, network_gb: 1 } };
 
 export function backendServices(services: unknown[]) {
   return { services, lastUpdatedAt: new Date().toISOString() };
@@ -21,7 +21,7 @@ export function backendServices(services: unknown[]) {
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.route('**/backend/services', (route) => route.fulfill({ json: backendServices([]) }));
-    await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: [], headers: { 'access-control-allow-origin': '*' } }));
+    await page.route('**/backend/metrics/**', (route) => route.fulfill({ json: [], headers: { 'access-control-allow-origin': '*' } }));
     await page.route('https://carbon.unilaunch.org/**', (route) => route.fulfill({ json: { regions: apiRegions, total: apiRegions.length }, headers: { 'access-control-allow-origin': '*' } }));
     await use(page);
   },
@@ -39,7 +39,7 @@ export async function mockRegionalScenario(page: Page) {
   await page.route('**/backend/services', route => route.fulfill({ json: backendServices(snapshot.services.map(service => ({
     id: service.id, name: service.name, location: { ...service, region_code: service.regionCode },
   }))) }));
-  await page.route('https://metrics.unilaunch.org/**', route => {
+  await page.route('**/backend/metrics/**', route => {
     const id = route.request().url().split('/').at(-1);
     return route.fulfill(id === 'demo-fr' ? { status: 500, json: { error: 'service_unavailable' } } :
       { json: id === 'demo-jp' ? { ...apiMetrics, metrics: { ...apiMetrics.metrics, memory_gb: null, disk_gb: null, network_gb: null } } : apiMetrics });

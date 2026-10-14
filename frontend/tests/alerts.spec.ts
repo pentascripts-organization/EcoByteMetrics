@@ -15,7 +15,7 @@ test('alert reasons identify missing fields and ignore healthy or removed servic
 test('unavailable services show a real alert and recover after retry', async ({ page }) => {
   let unavailable = true;
   await page.route('**/backend/services', route => route.fulfill({ json: backendServices([japan]) }));
-  await page.route('https://metrics.unilaunch.org/**', route => route.fulfill(unavailable ? { status: 500, json: { error: 'service_unavailable' } } : { json: apiMetrics }));
+  await page.route('**/backend/metrics/**', route => route.fulfill(unavailable ? { status: 500, json: { error: 'service_unavailable' } } : { json: apiMetrics }));
   await page.goto('/pesquisa');
   await page.getByLabel('País', { exact: true }).fill('Japão');
   await page.getByLabel('Cidade', { exact: true }).selectOption('jp-east');
@@ -28,7 +28,7 @@ test('unavailable services show a real alert and recover after retry', async ({ 
 
 test('real partial metrics show the failing field and can be retried', async ({ page }, testInfo) => {
   let missing = true;
-  await page.route(/\/backend\/services$|^https:\/\/metrics\.unilaunch\.org\//, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([japan]) : { ...apiMetrics, metrics: { ...apiMetrics.metrics, memory_gb: missing ? null : 2 } } }));
+  await page.route(/\/backend\/(?:services$|metrics\/)/, (route) => route.fulfill({ json: route.request().url().endsWith('/services') ? backendServices([japan]) : { ...apiMetrics, metrics: { ...apiMetrics.metrics, memory_gb: missing ? null : 2 } } }));
   await page.goto('/pesquisa');
   await page.getByLabel('País', { exact: true }).fill('Japão');
   await page.getByLabel('Cidade', { exact: true }).selectOption('jp-east');

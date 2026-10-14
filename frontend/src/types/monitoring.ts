@@ -1,10 +1,25 @@
-export type ServiceStatus = 'available' | 'unavailable' | 'no-metrics' | 'removed';
-export type Period = '24h' | '7d' | '30d';
+export type ServiceStatus =
+  | "available"
+  | "unavailable"
+  | "no-metrics"
+  | "removed";
+export const serviceStatusLabels: Record<ServiceStatus, string> = {
+  available: "Disponível",
+  unavailable: "Indisponível",
+  "no-metrics": "Sem métricas",
+  removed: "Removido",
+};
+
+export function isPeriod(value: unknown): value is Period {
+  return value === "24h" || value === "7d" || value === "30d";
+}
+
+export type Period = "24h" | "7d" | "30d";
 
 export interface RequestRecord {
   url: string;
   status: number | null;
-  outcome: 'response' | 'timeout' | 'cancelled' | 'network-error';
+  outcome: "response" | "timeout" | "cancelled" | "network-error";
   durationMs: number;
   completedAt: string;
 }
@@ -39,6 +54,7 @@ export interface MonitoredService {
   renewablePercent?: number | null;
   carbonIntensity?: number | null;
   collectionIntervalSeconds?: number | null;
+  lastCollectionAt?: string | null;
   statusMessage?: string;
 }
 
@@ -48,6 +64,8 @@ export interface CollectionPoint {
   country?: string | null;
   city?: string | null;
   collectedAt: string;
+  cycleAt?: string;
+  cycleId?: string;
   energyKwh: number;
   emissionsG: number | null;
   intervalSeconds?: number;

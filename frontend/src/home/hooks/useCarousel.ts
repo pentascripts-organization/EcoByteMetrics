@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export function useCarousel(length: number, intervalMs = 6000) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [reducedMotion, setReducedMotion] = useState(
+    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
 
   useEffect(() => {
-    const preference = matchMedia('(prefers-reduced-motion: reduce)');
+    const preference = matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReducedMotion(preference.matches);
-    preference.addEventListener('change', update);
-    return () => preference.removeEventListener('change', update);
+    preference.addEventListener("change", update);
+    return () => preference.removeEventListener("change", update);
   }, []);
 
   useEffect(() => {

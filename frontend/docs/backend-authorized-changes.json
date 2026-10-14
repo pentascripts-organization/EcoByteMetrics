@@ -1,0 +1,17 @@
+{
+  "reason": "Alteração autorizada para #52: endpoint de métricas com timestamp do recebimento validado e teste do contrato HTTP.",
+  "files": [
+    {
+      "path": "backend/src/app.ts",
+      "sha": "16632639c2a563eff8e50ab6bb14f9580370c94e"
+    },
+    {
+      "path": "backend/src/integrations/metrics-api.ts",
+      "sha": "49680be4d43ffade921e8036efa724c0286611ca"
+    },
+    {
+      "path": "backend/tests/services.service.test.ts",
+      "sha": "f1a83d9b2254ba950b4cdfdb769366aea5cf751c"
+    }
+  ]
+}

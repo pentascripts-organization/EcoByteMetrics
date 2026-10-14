@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { ArrowUpRight, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Brand } from './Brand';
+import { useEffect, useState } from "react";
+import { ArrowUpRight, Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Brand } from "./Brand";
 
 interface HeaderProps {
   labels: {
@@ -9,9 +9,7 @@ interface HeaderProps {
     solutions: string;
     data: string;
     about: string;
-    access: string;
     login: string;
-    language: string;
     menu: string;
   };
 }
@@ -21,17 +19,17 @@ export function Header({ labels }: HeaderProps) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key === "Escape") setMenuOpen(false);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const links = [
-    [labels.home, '#inicio'],
-    [labels.solutions, '#solucoes'],
-    [labels.data, '#dados'],
-    [labels.about, '#projeto'],
+    [labels.home, "#inicio"],
+    [labels.solutions, "#solucoes"],
+    [labels.data, "#dados"],
+    [labels.about, "#projeto"],
   ] as const;
 
   return (
@@ -41,7 +39,7 @@ export function Header({ labels }: HeaderProps) {
       <nav className="desktop-nav" aria-label="Navegação principal">
         <Link to="/pesquisa">Pesquisa</Link>
         {links.map(([label, href], index) => (
-          <a key={href} className={index === 0 ? 'active' : ''} href={href}>
+          <a key={href} className={index === 0 ? "active" : ""} href={href}>
             {label}
           </a>
         ))}
@@ -66,15 +64,27 @@ export function Header({ labels }: HeaderProps) {
       </div>
 
       {menuOpen && (
-        <nav className="mobile-nav" id="mobile-navigation" aria-label="Navegação móvel">
-          <Link to="/pesquisa" onClick={() => setMenuOpen(false)}>Pesquisa</Link>
+        <nav
+          className="mobile-nav"
+          id="mobile-navigation"
+          aria-label="Navegação móvel"
+        >
+          <Link to="/pesquisa" onClick={() => setMenuOpen(false)}>
+            Pesquisa
+          </Link>
           {links.map(([label, href]) => (
             <a key={href} href={href} onClick={() => setMenuOpen(false)}>
               {label}
             </a>
           ))}
-          <Link to="/login" onClick={() => setMenuOpen(false)}>{labels.login}</Link>
-          <Link className="mobile-nav__cta" to="/pesquisa" onClick={() => setMenuOpen(false)}>
+          <Link to="/login" onClick={() => setMenuOpen(false)}>
+            {labels.login}
+          </Link>
+          <Link
+            className="mobile-nav__cta"
+            to="/pesquisa"
+            onClick={() => setMenuOpen(false)}
+          >
             Pesquisar uma região
             <ArrowUpRight size={14} aria-hidden="true" />
           </Link>

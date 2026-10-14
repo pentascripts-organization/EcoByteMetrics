@@ -50,7 +50,7 @@ test('fractional intervals and overflowing calculations never become valid estim
   expect(fractional.snapshot.services[0].status).toBe('no-metrics');
   expect(fractional.snapshot.history).toEqual([]);
   const overflow = await snapshotFrom(backendServices([apiService]), undefined,
-    { collection_interval_seconds: Number.MAX_SAFE_INTEGER, metrics: { cpu_percent: 50, memory_gb: Number.MAX_VALUE, disk_gb: Number.MAX_VALUE, network_gb: Number.MAX_VALUE } });
+    { collectedAt: new Date().toISOString(), collection_interval_seconds: Number.MAX_SAFE_INTEGER, metrics: { cpu_percent: 50, memory_gb: Number.MAX_VALUE, disk_gb: Number.MAX_VALUE, network_gb: Number.MAX_VALUE } });
   expect(overflow.snapshot.totalEnergyKwh).toBeNull();
 });
 
@@ -91,8 +91,8 @@ test('only monitoring routes collect data and changing period requests fresh dat
 test('comparison displays equal hourly estimates for unequal collection intervals', async ({ page }) => {
   const services = [30, 60].map((seconds) => ({ ...apiService, id: 'service-' + seconds, name: 'Service ' + seconds }));
   await page.route('**/backend/services', (route) => route.fulfill({ json: backendServices(services) }));
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: {
-    collection_interval_seconds: Number(route.request().url().split('-').at(-1)),
+  await page.route('**/backend/metrics/**', (route) => route.fulfill({ json: {
+    collectedAt: new Date().toISOString(), collection_interval_seconds: Number(route.request().url().split('-').at(-1)),
     metrics: { cpu_percent: 50, memory_gb: 0, disk_gb: 0, network_gb: 0 },
   } }));
   await page.goto('/comparar');
@@ -109,7 +109,7 @@ test('region selection preserves distinct codes for the same city', async ({ pag
   const alternate = { ...apiRegions[0], code: 'br-alternate', carbon_intensity_gco2e_per_kwh: 150 };
   await page.route('https://carbon.unilaunch.org/**', (route) => route.fulfill({ json: { regions: [apiRegions[0], alternate] } }));
   await page.route('**/backend/services', (route) => route.fulfill({ json: backendServices([{ ...apiService, location: { ...apiService.location, region_code: alternate.code } }]) }));
-  await page.route('https://metrics.unilaunch.org/**', (route) => route.fulfill({ json: apiMetrics }));
+  await page.route('**/backend/metrics/**', (route) => route.fulfill({ json: apiMetrics }));
   await page.goto('/pesquisa');
   await page.getByLabel('País', { exact: true }).fill('Brasil');
   await page.getByLabel('Cidade', { exact: true }).selectOption(alternate.code);

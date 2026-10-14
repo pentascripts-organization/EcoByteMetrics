@@ -8,6 +8,8 @@ import {
   getServicesLastUpdatedAt,
 } from "./modules/services/services.service.js";
 
+import { fetchServiceMetrics } from "./integrations/metrics-api.js";
+
 const app = express();
 
 app.use(cors());
@@ -24,6 +26,23 @@ app.get("/services", (_req: Request, res: Response) => {
     services: getDiscoveredServices(),
     lastUpdatedAt: getServicesLastUpdatedAt(),
   });
+});
+
+app.get("/metrics/:serviceId", async (req: Request, res: Response) => {
+  const serviceId = req.params.serviceId;
+  if (typeof serviceId !== "string" || !serviceId.trim()) {
+    res.status(400).json({ error: "invalid_service_id" });
+    return;
+  }
+  try {
+    const result = await fetchServiceMetrics(serviceId);
+    res.status(result.status).json(result.body);
+  } catch (error: unknown) {
+    const timeout = error instanceof Error && error.name === "TimeoutError";
+    res.status(timeout ? 504 : 502).json({
+      error: timeout ? "metrics_timeout" : error instanceof Error && error.name === "InvalidMetricsError" ? "invalid_metrics" : "metrics_collection_failed",
+    });
+  }
 });
 
 // Rotas existentes da API.
