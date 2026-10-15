@@ -1,7 +1,7 @@
 create table Users(
 	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	name_user varchar(50) not null,
-	email_user varchar(50) not null,
+	email_user varchar(50) not null unique,
 	password_user varchar(25)not null,
 	token_user varchar(255)not null
 );
@@ -39,7 +39,7 @@ create table Metrics (
 	references services(id_service)
 );
 
-create table Cabons(
+create table Carbons(
 	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_location int,
 	date_houry TIMESTAMP not null,
