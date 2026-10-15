@@ -1,18 +1,22 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
-import routes from "./index.js";
-import pool from "./db/connection.js";
+import userRouter from "./modules/Users/user.router.js";
+import metricRouter from "./modules/Metrics/metric.router.js";
+import carbonRouter from "./modules/Carbons/carbon.router.js";
+import serviceRouter from "./modules/Services/service.router.js";
+import locationRouter from "./modules/Locations/location.router.js";
 
 import {
   getDiscoveredServices,
   getServicesLastUpdatedAt,
-} from "./modules/services/services.service.js";
+} from "./modules/Services/services.service.js";
+
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-
+// Rotas existentes da API.
 // Verifica se o backend está respondendo.
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
@@ -26,26 +30,15 @@ app.get("/services", (_req: Request, res: Response) => {
   });
 });
 
-// Rotas existentes da API.
-app.use("/api", routes);
-
-// Consulta existente ao banco de dados.
-app.get("/", async (_req: Request, res: Response) => {
-  try {
-    const response = await pool.query(
-      "SELECT name_user FROM users"
-    );
-
-    res.status(200).json({
-      mensagem: response.rows[0]?.name_user ?? null,
-    });
-  } catch (error) {
-    console.error("Erro ao executar a consulta SQL:", error);
-
-    res.status(500).json({
-      mensagem: "Erro ao consultar o banco de dados.",
-    });
-  }
-});
+// Rotas do módulo de usuários.
+app.use("/api/users", userRouter);
+// Rotas do módulo de métricas.
+app.use("/api/metrics", metricRouter);
+//Rota do Carbon
+app.use("/api/carbons",carbonRouter);
+//Rota do service
+app.use("/api/services", serviceRouter);
+//Rota da Localização
+app.use("/api/locations",locationRouter);
 
 export default app;

@@ -1,8 +1,7 @@
-
 import app from "./app.js";
 import {
     refreshDiscoveredServices,
-} from "./modules/services/services.service.js";
+} from "./modules/Services/services.service.js";
 
 const PORT = process.env.PORT || 3000;
 
