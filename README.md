@@ -1,18 +1,18 @@
 # 🍃 EcoByteMetrics (GreenER)
 
-**EcoByteMetrics** — É uma plataforma web voltada à análise e ao monitoramento do consumo energético e da emissão de CO₂e de softwares.
+O **EcoByteMetrics** é uma plataforma web voltada para a análise e o monitoramento do consumo energético e das emissões de CO₂e em softwares.
 
 ---
 
-### 💡 Visão do Produto & Valor para o Cliente
-O **EcoByteMetrics** resolve a falta de visibilidade sobre o impacto ambiental de arquiteturas em nuvem e microsserviços. A plataforma atua em três pilares fundamentais:
-* 🔍 **Descoberta & Monitoramento Ativo:** Conecta-se ao ambiente para listar e monitorar dinamicamente microsserviços ativos, detectando indisponividades, oscilações ou falhas na exportação de dados em tempo real.
-* ⚡ **Análise Ambiental (ESG):** Converte a utilização de recursos (CPU, memória, rede) em consumo energético (kWh) e emissões de carbono (CO₂e) correlacionando dados com a localização geográfica e fatores regionais de carbono.
-* 📊 **Gestão Operacional & Comparativa:** Oferece dashboards operacionais, rankings de impacto por período, mapeamento geográfico e comparadores de eficiência ambiental entre aplicações.
+### 💡 Sobre o Projeto
+A plataforma resolve a falta de visibilidade sobre o impacto ambiental de arquiteturas em nuvem e microsserviços. O sistema conecta-se ao ambiente para listar e monitorar dinamicamente os microsserviços ativos, identificando indisponividades e falhas na exportação de métricas. 
+
+A utilização de recursos de hardware, como CPU, memória e rede, é convertida em consumo elétrico (kWh) e emissões de carbono (CO₂e) com base na localização geográfica e em fatores regionais de emissão. A aplicação disponibiliza painéis operacionais, rankings de impacto, mapeamento geográfico e comparadores de eficiência entre serviços.
 
 ---
 
-### 🏗️ Arquitetura do Sistema & Mapeamento de Tecnologias
+### 🏗️ Arquitetura e Tecnologias
+A solução foi estruturada para ser executada em ambiente containerizado, garantindo isolamento e reprodutibilidade.
 
 ```mermaid
 graph LR
@@ -31,11 +31,10 @@ graph LR
     SC -->|Fatores CO₂e| BE
     FE <-->|API REST / Auth JWT| BE
     BE <-->|Consultas SQL DDL / DML| DB
-
 ```
 
 <details>
-<summary><b>🛠️ Clique aqui para expandir a Matriz de Diretrizes Técnicas (RP01 a RP07)</b></summary>
+<summary><b>🛠️ Diretrizes e Restrições Técnicas</b></summary>
 
 <br>
 
@@ -51,27 +50,23 @@ graph LR
 
 </details>
 
----
-
-### 🔌 Configuração das APIs Auxiliares
-
-A plataforma consome duas APIs externas para realizar a amostragem de infraestrutura e o cálculo ambiental:
-
-1. **Agregador de Métricas:**
-   * **Variável `.env`:** `METRICS_AGGREGATOR_URL=http://agregador-metricas.local:8080`
-   * **Endpoints Consumidos:** `GET /services` (descoberta de aplicações) e `GET /metrics/{id_servico}` (amostragem de consumo de hardware).
-2. **Serviço de Intensidade de Carbono:**
-   * **Variável `.env`:** `CARBON_INTENSITY_URL=http://carbon-intensity.local:8081`
-   * **Endpoint Consumido:** `GET /carbon-intensity/{code}` (obtenção de fatores regionais de emissão).
+A camada de interface web foi desenvolvida com React e TypeScript para promover responsividade em dispositivos móveis e desktop. O backend foi construído em Node.js com TypeScript, seguindo uma estrutura modular dividida em controllers, services e repositories. A persistência de dados utiliza o banco PostgreSQL de forma nativa por meio de comandos SQL explícitos em DDL e DML, sem a utilização de ORMs. A comunicação e o acesso às rotas administrativas são protegidos via tokens de autenticação JWT.
 
 ---
 
-### 🗄️ Modelo de Dados Relacional (PostgreSQL Nativo)
+### 🔌 Integração com APIs Externas
+O sistema consome duas APIs externas para realizar a coleta de métricas e o cálculo do impacto ambiental.
 
-Conforme a restrição **RP03**, a persistência é feita exclusivamente em SQL nativo sem ORM:
+1. **Agregador de Métricas:** A rota `GET /services` realiza a descoberta das aplicações e o endpoint `GET /metrics/{id_servico}` obtém as amostras de consumo de hardware (`METRICS_AGGREGATOR_URL=http://agregador-metricas.local:8080`).
+2. **Serviço de Intensidade de Carbono:** A rota `GET /carbon-intensity/{code}` obtém os fatores regionais de emissão para o cálculo de carbono (`CARBON_INTENSITY_URL=http://carbon-intensity.local:8081`).
+
+---
+
+### 🗄️ Estrutura do Banco de Dados
+A modelagem do banco relacional utiliza SQL nativo e explícito no PostgreSQL.
 
 <details>
-<summary><b>🗃️ Clique aqui para expandir os Scripts SQL DDL de Criação de Tabelas</b></summary>
+<summary><b>🗃️ Clique para expandir o Script SQL DDL (schema.sql)</b></summary>
 
 <br>
 
@@ -80,12 +75,13 @@ create table Users(
 	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	name_user varchar(50) not null,
 	email_user varchar(50) not null,
-	password_user varchar(25)not null,
-	token_user varchar(255)not null
+	password_user varchar(25) not null,
+	token_user varchar(255) not null
 );
+
 create table Locations(
 	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_location varchar(50)not null,
+	name_location varchar(50) not null,
 	county_location varchar(50),
 	region_location varchar(50),
 	city_location varchar(50),
@@ -98,8 +94,8 @@ create table Services(
 	id_location int,
 	name_service varchar(50),
 	constraint fk_service 
-	foreign key (id_location)
-	references locations(id_location)
+		foreign key (id_location)
+		references locations(id_location)
 );
 
 create table Metrics (
@@ -113,8 +109,8 @@ create table Metrics (
 	hd_metric numeric not null,
 	network_metric numeric not null,
 	constraint fk_service
-	foreign key (id_service)
-	references services(id_service)
+		foreign key (id_service)
+		references services(id_service)
 );
 
 create table Cabons(
@@ -124,8 +120,8 @@ create table Cabons(
 	intesity_co2e_kwh_carbon int not null,
 	renewable_percent_carbon int not null,
 	constraint fk_service
-	foreign key(id_location)
-	references locations(id_location)
+		foreign key (id_location)
+		references locations(id_location)
 );
 ```
 
@@ -133,11 +129,11 @@ create table Cabons(
 
 ---
 
-
-### 📑 Catálogo de Requisitos
+### 📑 Requisitos do Sistema
+O escopo do projeto está catalogado em requisitos funcionais e não funcionais que orientam o desenvolvimento do software.
 
 <details>
-<summary><b>📑 Clique aqui para ver a Tabela de Requisitos Funcionais (RF01 a RF15)</b></summary>
+<summary><b>📋 Requisitos Funcionais (RF01 a RF15)</b></summary>
 
 <br>
 
@@ -162,7 +158,7 @@ create table Cabons(
 </details>
 
 <details>
-<summary><b>⚡ Clique aqui para ver a Tabela de Requisitos Não Funcionais (RNF01 a RNF05)</b></summary>
+<summary><b>⚡ Requisitos Não Funcionais (RNF01 a RNF05)</b></summary>
 
 <br>
 
@@ -172,17 +168,15 @@ create table Cabons(
 | **RNF02** | **Atualização em Tempo Real** | Intervalos definidos de amostragem com exibição da data/hora da última leitura. |
 | **RNF03** | **Desempenho** | Resposta rápida e fluida para o acompanhamento contínuo da infraestrutura. |
 | **RNF04** | **Tolerância a Falhas** | Garantir funcionamento contínuo do sistema mesmo com a queda de serviços. |
-| **RNF05** | **Documentação Técnica** | Manual completo com arquitetura, modelo de dados, rotas e instruções. |
+| **RNF05** | **Documentação Técnica** | Manual completo com arquitetura, modelo de dados, rotas e instruções de execução. |
 
 </details>
 
 ---
 
-### 📋 Backlog de Produto & Mapeamento da Sprint 1
+### 📋 Planejamento e Sprints
+O desenvolvimento do MVP foi planejado em três entregas incrementais ao longo do semestre.
 
-O backlog foi organizado para priorizar as entregas essenciais do MVP ao longo do semestre.
-
-#### 📌 Mapeamento de User Stories
 | ID | User Story | Requisitos Relacionados | Sprint |
 | :--- | :--- | :--- | :--- |
 | **US00** | **Setup Infra & Schema SQL:** Docker Compose, tabelas PostgreSQL nativas (DDL) e documentação base. | RNF05, RP02, RP03, RP04 | **Sprint 1** |
@@ -195,136 +189,117 @@ O backlog foi organizado para priorizar as entregas essenciais do MVP ao longo d
 | **US07** | **Visualização Geográfica em Mapa:** Exibição interativa da posição dos serviços em mapa. | RF13 | **Sprint 3** |
 | **US08** | **Comparador & Consolidação MVP:** Módulo de comparação entre serviços e entrega do MVP containerizado. | RF15, RP05, RP07 | **Sprint 3** |
 
----
-
-### 🎯 Acordos de Qualidade (DoR & DoD)
-* **Definition of Ready (DoR):** User Story redigida, critérios de aceitação validados com IDs de RF/RNF, protótipo aprovado no Figma e consultas SQL/endpoints mapeados.
-* **Definition of Done (DoD):** Código implementado em TypeScript, consultas SQL em DDL puras salvas no PostgreSQL, aplicação rodando em containers Docker, resiliência validada e aprovação na *Sprint Review*.
+As histórias de usuário seguem critérios objetivos de alinhamento e prontidão (DoR) e de conclusão e validação (DoD).
 
 ---
 
-### ⏳ Cronograma & Entregas das Sprints
-
-```mermaid
-graph TD
-    S1[Sprint 1: Fundação, Polling e Interface Base] --> S2[Sprint 2: Motor de Cálculos CO₂e, Persistência DML e Segurança]
-    S2 --> S3[Sprint 3: Geolocalização em Mapa, Comparador e MVP Final]
-```
-
-| Período | Documentação da Sprint | Vídeo |
-| :--- | :--- | :--- |
-| **Sprint 1:** 13/04 a 30/04/2026 | [Sprint Review](./docs/sprints/sprint-1.md) | [▶ YouTube](Link) |
-| **Sprint 2:** 04/05 a 21/05/2026 | [Sprint Review](./docs/sprints/sprint-2.md) | [▶ YouTube](Link) |
-| **Sprint 3:** 25/05 a 11/06/2026 | [Sprint Review](./docs/sprints/sprint-3.md) | [▶ YouTube](Link) |
-
----
-
-### 📂 Organização do Repositório
-
-```bash
-├── backend/                  # API REST Node.js + TypeScript
-│   ├── src/
-│   │   ├── controllers/      # Handlers das requisições HTTP
-│   │   ├── services/         # Polling, regras de negócio e cálculo ambiental
-│   │   ├── database/         # Conexão nativa PostgreSQL
-│   │   └── middlewares/      # Interceptador e validação de token JWT
-│   ├── Dockerfile            # Configuração Docker do Backend
-│   └── package.json
-├── frontend/                 # Aplicação Web React + TypeScript
-│   ├── src/
-│   │   ├── components/       # Cards, Tabelas, Gráficos e Mapa
-│   │   ├── pages/            # Views e telas do sistema
-│   │   └── services/         # Cliente de comunicação HTTP com a API
-│   ├── Dockerfile            # Configuração Docker do Frontend
-│   └── package.json
-├── database/                 # Persistência relacional sem ORM
-│   └── ddl.sql               # Script de estrutura DDL de tabelas
-├── docker-compose.yml        # Orquestrador do ambiente em containers
-├── .env.example              # Arquivo modelo de variáveis de ambiente
-└── README.md                 # Documentação principal
-```
-
----
-
-### 🚀 Guia de Execução (Via Docker — Sprint 1)
-
-Toda a aplicação é obrigatoriamente executada através de containers Docker.
+### 🚀 Como Executar o Projeto
+Toda a infraestrutura do sistema é orquestrada através de containers Docker para garantir facilidade de execução.
 
 #### Pré-requisitos
-* **Docker Engine** e **Docker Compose** instalados na máquina.
+É necessário ter o Docker Engine e o Docker Compose instalados no ambiente local.
 
-#### Passo a Passo para Subida da Aplicação
-
-1. **Clonar o Repositório e Configurar `.env`:**
+#### Passo a Passo
+1. **Configurar as Variáveis de Ambiente:**
+   Crie o arquivo de ambiente `.env` copiando o modelo de exemplo:
    ```bash
-   git clone <URL_DO_REPOSITORIO>
-   cd greener
    cp .env.example .env
    ```
 
-2. **Subir Aplicação Containerizada:**
+2. **Iniciar os Containers:**
+   Suba os serviços do frontend, backend e banco de dados via Docker Compose:
    ```bash
    docker compose up --build -d
    ```
 
-3. **Criação da Estrutura do Banco de Dados (DDL Nativo):**
+3. **Inicializar o Banco de Dados:**
+   Execute o script DDL nativo para criar a estrutura das tabelas no container do PostgreSQL:
    ```bash
-   docker exec -i greener_postgres psql -U greener_user -d greener_db < database/ddl.sql
+   docker exec -i greener_postgres psql -U greener_user -d greener_db < database/schema.sql
    ```
 
-4. **Portas de Acesso Local:**
-   * **Frontend Dashboard:** `http://localhost:5173`
-   * **Backend API REST:** `http://localhost:3000`
+4. **Acessos Locais:**
+   Após a inicialização, o painel web fica disponível em `http://localhost:5173` e a API REST em `http://localhost:3000`.
 
-## 👥 Equipe
+---
 
+### 📂 Estrutura do Repositório
+O repositório está organizado de forma modular, contendo documentações específicas para cada módulo e para o planejamento geral do projeto.
+
+```bash
+greener/
+├── README.md                   # Manual principal e guia de execução
+├── .env.example                # Modelo de variáveis de ambiente
+├── compose.yaml                # Arquivo de orquestração do Docker Compose
+├── frontend/                   # Aplicação Web em React + TypeScript
+│   ├── README.md               # Guia de execução e telas do frontend
+│   ├── Dockerfile
+│   └── src/
+├── backend/                    # API REST em Node.js + TypeScript
+│   ├── README.md               # Guia de módulos e integrações do backend
+│   ├── Dockerfile
+│   └── src/
+├── database/                   # Persistência relacional sem ORM
+│   ├── README.md               # Instruções de restauração do PostgreSQL
+│   └── schema.sql              # Script DDL oficial com a estrutura de tabelas
+└── docs/                       # Documentação técnica e planejamento
+    ├── plano-de-entregas.md    # Matriz oficial da Rubrica e rastreabilidade da equipe
+    ├── arquitetura.md          # Fluxo de dados e diagramas da solução
+    ├── calculos.md             # Memória de cálculo de consumo energético e CO₂e
+    ├── api.md                  # Especificação das rotas REST e autenticação JWT
+    └── sprints/
+        ├── sprint-1.md         # Registro da Sprint Review 1 e evidências
+        ├── sprint-2.md
+        └── sprint-3.md
+```
+
+---
+
+### 👥 Equipe do Projeto
 <body>
-   <div align="center">
-      <table>
-         <thead>
-            <th>Scrum Master</th>
-            <th>Product Owner</th>
-            <th>Dev Team</th>
-            <th>Dev Team</th>
-            <th>Dev Team</th>
-         </thead>
-         <tbody>
-            <tr>
-               <th><a href="https://github.com/ViniciusGuin"><img src="https://github.com/ViniciusGuin.png" width="90px" height="90px"/></a></th>
-               <th><a href="https://github.com/Cauaisq"><img src="https://github.com/Cauaisq.png" width="90px" height="90px"/></a></th>
-               <th><a href="https://github.com/VtecturboBr"><img src="https://github.com/VtecturboBr.png" width="90px" height="90px"/></a></th>
-               <th><a href="https://github.com/ThiagoDT"><img src="https://github.com/ThiagoDT.png" width="90px" height="90px"/></a></th>
-               <th><a href="https://github.com/EnzoSuzukiProkopas"><img src="https://github.com/EnzoSuzukiProkopas.png" width="90px" height="90px"/></a></th>
-            </tr>
-            <tr>
-               <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-               <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-               <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-               <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-               <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-            </tr>
-         </tbody>
-      </table>
-   </div>
+<div align="center">
+<table>
+<thead>
+<th>Scrum Master</th>
+<th>Product Owner</th>
+<th>Dev Team</th>
+<th>Dev Team</th>
+<th>Dev Team</th>
+</thead>
+<tbody>
+<tr>
+<th><a href="https://github.com/ViniciusGuin"><img src="https://github.com/ViniciusGuin.png" width="90px" height="90px"/></a></th>
+<th><a href="https://github.com/Cauaisq"><img src="https://github.com/Cauaisq.png" width="90px" height="90px"/></a></th>
+<th><a href="https://github.com/VtecturboBr"><img src="https://github.com/VtecturboBr.png" width="90px" height="90px"/></a></th>
+<th><a href="https://github.com/ThiagoDT"><img src="https://github.com/ThiagoDT.png" width="90px" height="90px"/></a></th>
+<th><a href="https://github.com/EnzoSuzukiProkopas"><img src="https://github.com/EnzoSuzukiProkopas.png" width="90px" height="90px"/></a></th>
+</tr>
+<tr>
+<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+</tr>
+</tbody>
+</table>
+</div>
 </body>
 
 ---
 
-### 📝 Convenções de Versionamento (Git)
-
-#### Padrão de Commits
-As mensagens devem conter o ID da Issue vinculada:
-* `tipo (#id_issue): descrição clara do trabalho`
-* *Exemplo:* `feat (#21): implementar integracao com agregador de metricas`
-
-#### Padrão de Branches
-* `tipo/id_issue-nome-curto`
-* *Exemplo:* `feat/21-integracao-services`
-
-**Tipos autorizados:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `cleanup`, `remove`.
+### 📝 Padronização de Versionamento (Git)
+Os commits e branches devem manter a rastreabilidade com as tarefas do repositório.
+* **Commits:** Devem conter o tipo da alteração e o número da issue correspondente (exemplo: `feat (#21): implementar integracao com agregador de metricas`).
+* **Branches:** Devem indicar a categoria e a tarefa associada (exemplo: `feat/21-integracao-services`).
 
 ---
 
-### 🔗 Documentos de Apoio
-* [Pasta de Documentação Técnica](./docs)
-* [Documentação dos Endpoints da API](./docs/api.md)
+### 📚 Documentação Complementar
+Para detalhamento técnico completo e acompanhamento do projeto, consulte os arquivos presentes na pasta `docs/`:
+
+* 📅 **[Plano de Entregas & Rubrica](./docs/plano-de-entregas.md):** Matriz de rastreabilidade, responsáveis e status dos critérios.
+* 🔌 **[Especificação da API REST](./docs/api.md):** Detalhamento dos endpoints, parâmetros, respostas JSON e segurança JWT.
+* 📐 **[Arquitetura do Sistema](./docs/arquitetura.md):** Responsabilidades dos módulos e fluxo de dados.
+* 🧮 **[Memória de Cálculo Ambiental](./docs/calculos.md):** Fórmulas e fatores de conversão em kWh e CO₂e.
+* 📄 **[Relatório da Sprint Review 1](./docs/sprints/sprint-1.md):** Resumo das entregas, autoavaliação e evidências da Sprint 1.
