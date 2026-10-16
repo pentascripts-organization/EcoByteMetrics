@@ -1,4 +1,5 @@
-import { listServicesByLocationIdRepository } from "../Services/service.repository";
+
+//importação de tipos e funções do repositório de localização, incluindo Location, createLocationInput, createLocationRepository, getLocationByIdRepository e listLocationsRepository.
 import {
     Location,
     createLocationInput,
@@ -7,19 +8,27 @@ import {
     listLocationsRepository
 } from "./location.repository";
 
+/**
+ * Criação da classe LocationError que estende a classe Error e
+ *  adiciona uma propriedade statusCode para representar o código de status HTTP associado ao erro.
+ */
 export class LocationError extends Error{
     constructor(message:string, public readonly statusCode:number){
         super(message);
         this.name = "LocationError"
     }
 }
-
+/*Função validateLocationId que valida o identificador de localização,
+ lançando um erro LocationError se o identificador não for um número inteiro seguro ou for menor ou igual a zero.
+ */
 function validateLocationId(id:number):void{
     if(!Number.isSafeInteger(id) || id<=0){
         throw new LocationError("ID da localização invalido",400)
     }
 }
-
+/*Função validadeLocationInput que valida os dados de entrada para criar uma nova localização,
+  lançando erros LocationError se algum campo for inválido ou ausente.
+ */
 function validadeLocationInput(localInput:Omit<Location, "id_location">): Omit<Location, "id_location">{
     if(!localInput.name_location || localInput.name_location.trim()===""){
         throw new LocationError("Nome da Localização Invalido",400);
@@ -41,14 +50,19 @@ function validadeLocationInput(localInput:Omit<Location, "id_location">): Omit<L
     }
     return localInput;
 }
-
+/* Função handleRepositoryError que trata erros do repositório,
+lançando um erro LocationError específico se o código de erro for "23505" (violação de chave única) ou
+propagando o erro original caso contrário.
+*/
 function handleRepositoryError(error: unknown): never {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
         throw new LocationError("Já existe um latitude com esse nome.", 409);
     }
     throw error; 
 }
-
+/*Função assíncrona createLocation que valida os dados de entrada,
+  chama a função createLocationRepository para criar uma nova localização e trata erros do repositório.
+*/
 export async function createLocation(local:Location):Promise<Location> {
     const data = validadeLocationInput(local)
     try{
@@ -58,7 +72,9 @@ export async function createLocation(local:Location):Promise<Location> {
         handleRepositoryError(error)
     }
 }
-
+/*Função assíncrona getLocationById que valida o identificador de localização,
+  chama a função getLocationByIdRepository para buscar a localização correspondente e lança um erro LocationError se a localização não for encontrada.
+*/
 export async function getLocationById(id_location:number):Promise<Location> {
     validateLocationId(id_location)
     const location = await getLocationByIdRepository(id_location)
@@ -67,7 +83,9 @@ export async function getLocationById(id_location:number):Promise<Location> {
     }
     return location;
 }
-
+/*Função assíncrona listLocationALl que chama a função listLocationsRepository para buscar todas as localizações,
+  lançando um erro LocationError se não houver localizações encontradas.
+*/  
 export async function listLocationALl():Promise<Location[]> {
     const location = await listLocationsRepository();
     if(location.length===0){
