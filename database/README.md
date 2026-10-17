@@ -16,7 +16,7 @@ Este repositório contém a modelagem de dados relacional, os scripts DDL de cri
 ```bash
 database/
 ├── README.md       # Orientações para restauração, DML e volume Docker
-└── schema.sql      # Script DDL oficial de criação das tabelas e chaves
+└── DDL.sql      # Script DDL oficial de criação das tabelas e chaves
 ```
 
 ---
@@ -26,7 +26,7 @@ database/
 Para aplicar a estrutura oficial em um container PostgreSQL vazio, execute o comando abaixo no terminal:
 
 ```bash
-docker exec -i greener_postgres psql -U greener_user -d greener_db < database/schema.sql
+docker exec -i greener_postgres psql -U greener_user -d greener_db < database/DDL.sql
 ```
 
 ---
