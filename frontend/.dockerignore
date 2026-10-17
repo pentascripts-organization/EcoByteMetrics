@@ -4,7 +4,3 @@ dist
 *.log
 .env
 .env.*
-test-results
-playwright-report
-tests
-playwright.config.ts

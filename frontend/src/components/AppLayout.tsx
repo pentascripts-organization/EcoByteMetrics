@@ -1,34 +1,145 @@
-import { useState } from 'react';
-import { NavLink, Outlet, Link } from 'react-router-dom';
-import { ArrowUpRight, ChartNoAxesCombined, ChevronRight, GitCompareArrows, LayoutDashboard, Leaf, Menu, Server, Settings2, X, Zap } from 'lucide-react';
-import { Brand } from './Brand';
-import { LeafScene } from './LeafScene';
-import { useMonitoring } from '../hooks/useMonitoring';
+import { useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
+import {
+  ArrowUpRight,
+  ChevronRight,
+  GitCompareArrows,
+  LayoutDashboard,
+  Leaf,
+  Menu,
+  Search,
+  Server,
+  Settings2,
+  X,
+  Zap,
+} from "lucide-react";
+import { Brand } from "./Brand";
+import { LeafScene } from "./LeafScene";
+import { useMonitoring } from "../hooks/useMonitoring";
+import { useAnalysis } from "../hooks/useAnalysis";
+import { analysisLink } from "../utils/analysis";
+import { isDeferredPage } from "../data/deferredPages";
 
 const links = [
-  { to: '/dashboard', label: 'Visão geral', icon: LayoutDashboard },
-  { to: '/servicos', label: 'Serviços', icon: Server },
-  { to: '/emissoes', label: 'Emissões', icon: Leaf },
-  { to: '/energia', label: 'Energia', icon: Zap },
-  { to: '/comparar', label: 'Comparar', icon: GitCompareArrows },
+  { to: "/pesquisa", label: "Pesquisa", icon: Search },
+  { to: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
+  { to: "/servicos", label: "Serviços", icon: Server },
+  { to: "/emissoes", label: "Emissões", icon: Leaf },
+  { to: "/energia", label: "Energia", icon: Zap },
+  { to: "/comparar", label: "Comparar", icon: GitCompareArrows },
+  { to: "/gerenciamento", label: "Gerenciamento", icon: Settings2 },
 ];
 
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { search, pathname } = useLocation();
+  const { selection, date, periodLabel } = useAnalysis();
+  const researchPage = pathname === "/pesquisa";
+  const constructionPage = isDeferredPage(pathname);
+  const monitoringPage = !constructionPage;
+  const menuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [menuOpen]);
   const { snapshot, error } = useMonitoring();
-  return <div className="app-shell">
-    <div className="sky-background" aria-hidden="true" /><LeafScene subtle />
-    <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
-    <header className="app-header"><div className="app-header-inner"><Brand />
-      <nav className="desktop-nav" aria-label="Navegação principal">{links.map(({ to, label }) => <NavLink key={to} to={to}>{label}</NavLink>)}</nav>
-      <div className="header-actions"><Link className="header-settings" to="/configuracoes" aria-label="Configurações"><Settings2 size={20} /></Link>
-        <Link className="button button-small button-outline header-login" to="/login">Entrar<ArrowUpRight size={15} /></Link>
-        <button className="mobile-menu-button" aria-label={menuOpen ? 'Fechar navegação' : 'Abrir navegação'} aria-expanded={menuOpen} aria-controls="mobile-nav" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={23} /> : <Menu size={23} />}</button>
-      </div>
-    </div>{menuOpen && <nav id="mobile-nav" className="mobile-nav" aria-label="Navegação móvel">{links.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setMenuOpen(false)}><Icon size={18} />{label}<ChevronRight size={15} /></NavLink>)}<NavLink to="/configuracoes" onClick={() => setMenuOpen(false)}><Settings2 size={18} />Configurações</NavLink></nav>}</header>
-    <main id="main-content" className="dashboard-main"><div className="connection-strip"><span><span className="neutral-dot" />{snapshot.lastCollectionAt ? 'Última coleta: ' + new Date(snapshot.lastCollectionAt).toLocaleString('pt-BR') : 'Aguardando a primeira coleta'}</span><span className="connection-caption"><ChartNoAxesCombined size={14} />Monitoramento ambiental</span></div>
-      {error && <p className="form-message error-message" role="alert">{error}</p>}<Outlet />
-    </main>
-    <footer className="app-footer"><span>EcoByteMetrics<span className="footer-dot">·</span>Cada byte conta.</span><Link to="/">Conheça o projeto<ArrowUpRight size={14} /></Link></footer>
-  </div>;
+  return (
+    <div className="app-shell">
+      <div className="sky-background" aria-hidden="true" />
+      {!constructionPage && <LeafScene subtle />}
+      <a className="skip-link" href="#main-content">
+        Pular para o conteúdo
+      </a>
+      <header className="app-header">
+        <div className="app-header-inner">
+          <Brand linked={!researchPage} />
+          {!researchPage && (
+            <>
+              <nav className="desktop-nav" aria-label="Navegação principal">
+                {links.map(({ to, label }) => (
+                  <NavLink key={to} to={analysisLink(to, search)}>
+                    {label}
+                  </NavLink>
+                ))}
+              </nav>
+              <div className="header-actions">
+                <Link
+                  className="button button-small button-outline header-login"
+                  to="/login"
+                >
+                  Entrar
+                  <ArrowUpRight size={15} />
+                </Link>
+                <button
+                  ref={menuButton}
+                  className="mobile-menu-button"
+                  aria-label={menuOpen ? "Fechar navegação" : "Abrir navegação"}
+                  aria-expanded={menuOpen}
+                  aria-controls="mobile-nav"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                >
+                  {menuOpen ? <X size={23} /> : <Menu size={23} />}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+        {!researchPage && menuOpen && (
+          <nav
+            id="mobile-nav"
+            className="mobile-nav"
+            aria-label="Navegação móvel"
+          >
+            {links.map(({ to, label, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={analysisLink(to, search)}
+                onClick={() => setMenuOpen(false)}
+              >
+                <Icon size={18} />
+                {label}
+                <ChevronRight size={15} />
+              </NavLink>
+            ))}
+            <NavLink to="/login" onClick={() => setMenuOpen(false)}>
+              Login / Cadastro
+              <ArrowUpRight size={18} />
+            </NavLink>
+          </nav>
+        )}
+      </header>
+      <main tabIndex={-1} id="main-content" className="dashboard-main">
+        {monitoringPage && !researchPage && (
+          <div className="analysis-context">
+            <span>
+              <strong>{selection || "Todas as regiões"}</strong>
+              <small>
+                {" "}
+                · {periodLabel}
+                {date && " · Histórico até " + date.replace("T", " ")}
+              </small>
+            </span>
+          </div>
+        )}
+        {monitoringPage && error && (
+          <p className="form-message error-message" role="alert">
+            {error}
+          </p>
+        )}
+        {monitoringPage && snapshot.warning && (
+          <p className="form-message" role="alert">
+            {snapshot.warning}
+          </p>
+        )}
+        <Outlet />
+      </main>
+    </div>
+  );
 }
