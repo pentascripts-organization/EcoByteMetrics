@@ -1,4 +1,4 @@
-import logo from '../assets/ecobyte-logo.png';
+import logo from "../assets/ecobyte-logo.png";
 
 interface BrandProps {
   compact?: boolean;

@@ -1,62 +1,68 @@
-# Frontend EcoByteMetrics
+# Frontend — EcoByteMetrics
 
-Interface em React e TypeScript, com Vite e React Router.
+React, TypeScript, Vite e React Router. Esta pasta contém o trabalho de interface. A responsabilidade deste trabalho é exclusivamente o frontend; backend, banco, infraestrutura da raiz e documentação compartilhada seguem a branch develop da equipe.
 
-## Executar
+## Executar o frontend
 
-Para desenvolvimento local, use Node.js 24:
+Com Node.js 24 e npm, dentro de frontend:
 
-```sh
-cd frontend
+```powershell
 npm ci
 npm run dev
 ```
 
-O Vite usa a porta 5173. Se ela estiver ocupada, execute `npm run dev -- --port 5174`.
+O comando inicia somente o Vite. Não instala, inicia ou altera o backend. O backend mantido pelos colegas deve estar disponível no endereço configurado. A interface pode abrir sem ele, mas pesquisa e indicadores dependem das respostas das APIs.
 
-Para executar somente o frontend em um container, na raiz do repositório:
+Copiar frontend/.env.example para frontend/.env.local caso seja necessário configurar os endereços:
 
-```sh
-docker compose -f frontend/compose.yaml up --build -d
+```dotenv
+VITE_BACKEND_URL=/backend
+BACKEND_PROXY_TARGET=http://127.0.0.1:3000
 ```
 
-Acesse `http://localhost:5173`. Para encerrar, execute `docker compose -f frontend/compose.yaml down`.
-
-## Telas
-
-| Rota | Conteúdo |
-| --- | --- |
-| `/` | Página inicial, seletor PT/EN e folhas que acompanham o mouse |
-| `/dashboard` | Indicadores, histórico e estado do monitoramento |
-| `/servicos` | Busca, filtros e localização dos serviços |
-| `/emissoes` | Indicadores e explicação do cálculo de CO₂e |
-| `/energia` | Indicadores e explicação do consumo energético |
-| `/comparar` | Comparação entre serviços |
-| `/login` | Formulário de acesso |
-| `/configuracoes` | Preferências locais de movimento e período de análise |
-
-O menu adapta-se a dispositivos móveis. Rotas desconhecidas apresentam uma página 404. No container, o Nginx permite acessar diretamente as rotas da aplicação.
+O Vite encaminha /backend para o destino configurado, removendo esse prefixo. Variáveis VITE_ são públicas no cliente; credenciais pertencem ao ambiente do backend, configurado pelos responsáveis.
 
 ## Integração
 
-Esta entrega contém a interface. A conexão com o backend e a autenticação ainda não estão implementadas.
+O frontend consome a descoberta em GET /backend/services e as métricas em GET /backend/metrics/:id. O adaptador aceita o envelope existente na develop com serviceId, metrics e updatedAt e mantém compatibilidade com o formato anterior com collectedAt. Carbono é consultado em https://carbon.unilaunch.org/regions.
 
-`src/services/monitoring.ts` é o ponto de integração dos dados. Atualmente retorna listas vazias e valores nulos, exibidos como estados de espera. O contrato está em `src/types/monitoring.ts`.
+Atualizações na develop podem alterar o contrato. Ajustes necessários devem ser feitos no adaptador e nos testes do frontend. Problemas no código, build, coleta ou persistência do backend devem ser comunicados aos responsáveis; não devem ser corrigidos nesta entrega de frontend.
 
-O login informa que o acesso está pendente; não envia nem salva credenciais. As preferências de visualização ficam no armazenamento local do navegador e não configuram a coleta no servidor.
+Os horários da amostra vêm do backend. O frontend não fabrica uma nova amostra ao reler o mesmo cache. Cidade e coordenadas ausentes são preservadas como ausentes. A capacidade de sinalizar uma falha atual depende do contrato enviado pelo backend: a interface não consegue inferir uma falha ocultada pelo cache do servidor.
 
-O valor de 0,072 gCO₂e na página inicial é o exemplo de cálculo da atividade, identificado como ilustrativo. O fundo é fixo, e as folhas usam uma camada transparente separada. Movimento reduzido e preferências de pausa são respeitados por padrão; a home permite ativação temporária explícita.
+## Telas e regras mantidas
 
-## Verificações
+| Rota | Conteúdo |
+| --- | --- |
+| / | Apresentação com quatro paisagens e movimento reduzido |
+| /login, /cadastro | Formulários desativados; “Criar conta” na entrada conduz à pesquisa sem cadastrar usuário |
+| /pesquisa | Seleção de país e região, sem atalhos para outras páginas no cabeçalho |
+| /dashboard | Visão geral da região e retorno para “Pesquisar outra região” |
+| /energia, /comparar, /gerenciamento, /emissoes, /servicos, /servicos/:id | Nome da página e “Em construção”, sem iniciar coleta |
+| /configuracoes | Tela removida; rota não encontrada |
 
-```sh
+No dashboard, o globo permite girar e aproximar, mas não trocar a região ou abrir serviços. Os serviços não aparecem como botões abaixo do mapa. O usuário retorna à pesquisa para escolher outra região.
+
+Os períodos visíveis são últimas 24 horas e últimos 7 dias. O histórico permanece na sessão do navegador. Os cálculos e rankings existentes na interface usam as amostras conhecidas e não comprovam um motor ambiental ou histórico implementados no backend.
+
+## Verificar sem alterar o trabalho dos colegas
+
+Dentro de frontend:
+
+```powershell
+npm run verify:backend
 npm run lint
-npm run typecheck
 npm run build
-npx playwright install chromium
 npm run test:e2e
 ```
 
-Os testes verificam rotas, layout em desktop e celular, estados vazios, idioma, navegação, formulário de login, preferências e movimento das folhas.
+Apesar do nome legado, verify:backend confere todos os arquivos compartilhados contra origin/develop e rejeita adições fora de frontend. A verificação é somente de leitura. Atualizar a referência com git fetch origin develop antes de conferir uma entrega; o comando não restaura arquivos nem faz fetch automaticamente.
 
-Para usar outra porta nos testes, defina `PLAYWRIGHT_PORT`. Os arquivos de resultado, dependências instaladas e builds não fazem parte do código versionado.
+Os testes Playwright usam respostas controladas em desktop/mobile. PLAYWRIGHT_PORT permite escolher outra porta. Esses testes não comprovam execução do backend da equipe. As evidências anteriores que usavam alterações próprias no backend foram retiradas do projeto junto com essas alterações.
+
+## Design
+
+- [Protótipo Figma fornecido](https://www.figma.com/design/ePuzwzqJXWtU6scgxSYcAd?node-id=1-2)
+- [FigJam fornecido](https://www.figma.com/board/2CB9smqpP1vdC1twg7oNSD)
+
+O único frame mobile da cópia fornecida está em branco e o usuário confirmou que não existe outra versão preenchida. Essa pendência de interface continua aberta. Nenhum arquivo do Figma foi alterado.

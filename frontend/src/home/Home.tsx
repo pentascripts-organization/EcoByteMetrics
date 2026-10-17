@@ -1,29 +1,25 @@
-import { useEffect, useState } from 'react';
-import { FooterStrip } from './components/FooterStrip';
-import { Header } from './components/Header';
-import { Hero } from './components/Hero';
-import { Solutions } from './components/Solutions';
-import { content, type Locale } from './data/content';
-import './styles.css';
+import { ProjectOverview } from "./components/ProjectOverview";
+import { Header } from "./components/Header";
+import { Hero } from "./components/Hero";
+import { Solutions } from "./components/Solutions";
+import { content } from "./data/content";
+import "./hero.css";
+import "./styles.css";
 
 export function Home() {
-  const [locale, setLocale] = useState<Locale>('pt');
-  const copy = content[locale];
-
-  useEffect(() => {
-    document.documentElement.lang = locale === 'pt' ? 'pt-BR' : 'en';
-    return () => { document.documentElement.lang = 'pt-BR'; };
-  }, [locale]);
+  const copy = content.pt;
 
   return (
     <div className="ecobyte-home site-shell">
-      <a className="skip-link" href="#conteudo">{locale === 'pt' ? 'Pular para o conteúdo' : 'Skip to content'}</a>
-      <Header locale={locale} onLocaleChange={setLocale} labels={copy.nav} />
+      <a className="skip-link" href="#conteudo">
+        Pular para o conteúdo
+      </a>
+      <Header />
       <main id="conteudo" tabIndex={-1}>
         <Hero copy={copy.hero} />
         <Solutions copy={copy.solutions} />
+        <ProjectOverview />
       </main>
-      <FooterStrip phrase={copy.footer.phrase} linkLabel={copy.footer.linkLabel} />
     </div>
   );
 }
