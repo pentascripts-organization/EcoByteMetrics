@@ -1,19 +1,16 @@
-import type { CSSProperties } from 'react';
-import { useState, useSyncExternalStore } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import heroImage from '../assets/hero-background.png';
-import leavesImage from '../assets/hero-leaves.png';
-import { useParallax } from '../../hooks/useParallax';
-import { useSettings } from '../../hooks/useSettings';
-import { MetricOrb } from './MetricOrb';
-
-function subscribeMotionPreference(onChange: () => void) {
-  const media = matchMedia('(prefers-reduced-motion: reduce)');
-  media.addEventListener('change', onChange);
-  return () => media.removeEventListener('change', onChange);
-}
-const getReducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+import type { CSSProperties } from "react";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import luganoMobile from "../assets/hero-lugano.mobile.jpg";
+import luganoImage from "../assets/hero-lugano.optimized.jpg";
+import lakesMobile from "../assets/hero-lakes.mobile.jpg";
+import lakesImage from "../assets/hero-lakes.optimized.jpg";
+import mountainsMobile from "../assets/hero-mountains.mobile.jpg";
+import mountainsImage from "../assets/hero-mountains.optimized.jpg";
+import lagoonMobile from "../assets/hero-lagoon.mobile.jpg";
+import lagoonImage from "../assets/hero-lagoon.optimized.jpg";
+import { useCarousel } from "../hooks/useCarousel";
+import { ImpactOverview } from "./ImpactOverview";
 
 interface HeroProps {
   copy: {
@@ -23,43 +20,48 @@ interface HeroProps {
     line3: string;
     description: string;
     primary: string;
-    secondary: string;
-    metricLabel: string;
-    metricValue: string;
-    metricUnit: string;
-    change: string;
-    changeCaption: string;
-    metricNote: string;
-    metricFormula: string;
-    motionPaused: string;
-    motionReduced: string;
-    enableMotion: string;
-    motionActive: string;
-    pauseMotion: string;
   };
 }
 
+const slides = [
+  [luganoImage, luganoMobile],
+  [lakesImage, lakesMobile],
+  [mountainsImage, mountainsMobile],
+  [lagoonImage, lagoonMobile],
+] as const;
+
 export function Hero({ copy }: HeroProps) {
-  const { settings } = useSettings();
-  const [motionOverride, setMotionOverride] = useState(false);
-  const reducedMotion = useSyncExternalStore(subscribeMotionPreference, getReducedMotion, () => false);
-  const leavesRef = useParallax(settings.parallaxEnabled || motionOverride, motionOverride);
+  const { index } = useCarousel(slides.length);
+
   return (
-    <section
-      className="hero"
-      id="inicio"
-    >
-      <div className="hero__background" style={{ backgroundImage: `url(${heroImage})` } as CSSProperties} aria-hidden="true" />
+    <section className="hero" id="inicio">
+      {slides.map(([image, mobileImage], slideIndex) => (
+        <div
+          key={image}
+          className={`hero__background${slideIndex === index ? " active" : ""}`}
+          style={
+            {
+              "--hero-image":
+                slideIndex <= index + 1 ||
+                slideIndex === (index + slides.length - 1) % slides.length
+                  ? "url(" + image + ")"
+                  : undefined,
+              "--hero-mobile":
+                slideIndex <= index + 1 ||
+                slideIndex === (index + slides.length - 1) % slides.length
+                  ? "url(" + mobileImage + ")"
+                  : undefined,
+            } as CSSProperties
+          }
+          aria-hidden="true"
+        />
+      ))}
       <div className="hero__wash" aria-hidden="true">
         <svg viewBox="0 0 1040 445" preserveAspectRatio="none">
           <path d="M0 0H640C632 77 605 159 566 237C528 314 478 388 425 445H0Z" />
         </svg>
       </div>
       <div className="hero__right-shade" aria-hidden="true" />
-      <div className="hero__grain" aria-hidden="true" />
-      <div ref={leavesRef} className={`home-leaves${motionOverride ? ' home-leaves--manual' : ''}`} aria-hidden="true">
-        <img className="home-leaves__image" src={leavesImage} alt="" draggable={false} />
-      </div>
 
       <div className="hero__content">
         <div className="hero-copy">
@@ -71,37 +73,15 @@ export function Hero({ copy }: HeroProps) {
           </h1>
           <p>{copy.description}</p>
           <div className="hero-copy__actions">
-            <Link className="primary-cta" to="/dashboard">
+            <Link className="primary-cta" to="/login">
               <span>{copy.primary}</span>
-              <ArrowRight size={15} strokeWidth={1.65} />
+              <ArrowRight size={22} strokeWidth={1.65} aria-hidden="true" />
             </Link>
-            <a className="secondary-cta" href="#dados">
-              <span>{copy.secondary}</span>
-              <ArrowRight size={14} strokeWidth={1.65} />
-            </a>
           </div>
         </div>
 
-        <MetricOrb
-          label={copy.metricLabel}
-          value={copy.metricValue}
-          unit={copy.metricUnit}
-          change={copy.change}
-          changeCaption={copy.changeCaption}
-          note={copy.metricNote}
-          formula={copy.metricFormula}
-        />
+        <ImpactOverview />
       </div>
-
-      {(motionOverride || !settings.parallaxEnabled || reducedMotion) && (
-        <div className="home-motion-control">
-          <span>{motionOverride ? copy.motionActive : reducedMotion ? copy.motionReduced : copy.motionPaused}</span>
-          <button type="button" onClick={() => setMotionOverride(value => !value)}>
-            {motionOverride ? copy.pauseMotion : copy.enableMotion}
-          </button>
-        </div>
-      )}
-
     </section>
   );
 }

@@ -193,6 +193,26 @@ As histórias de usuário seguem critérios objetivos de alinhamento e prontidã
 
 ---
 
+## Planeamento das Sprints
+
+```mermaid
+graph LR
+	S1[Sprint 1: Infraestrutura, Polling e Interface Base] --> S2[Sprint 2: Motor Ambiental, Dashboard e Segurança]
+	S2 --> S3[Sprint 3: Geolocalização em Mapa, Comparador e MVP Final]
+```
+
+---
+
+### Tabela de desenvolvimento e datas de previstas de cada etapa
+
+|             Período              |            Documentação da Sprint            |                   Vídeo                   |
+| :------------------------------: | :------------------------------------------: | :---------------------------------------: |
+| **Sprint 1:** 28/09 a 19/10/2026 | [Sprint Review](./docs/sprints/sprint-1/sprint-1.md) | [▶ YouTube](https://youtu.be/7RxJdSmYO0c) |
+| **Sprint 2:** 19/10 a 09/11/2026 | [Sprint Review](./docs/sprints/sprint-2/sprint-2.md) | [▶ YouTube](https://youtu.be/) |
+| **Sprint 3:** 09/11 a 23/11/2026 | [Sprint Review](./docs/sprints/sprint-3/sprint-3.md) | [▶ YouTube](https://youtu.be/) |
+
+---
+
 ### 🚀 Como Executar o Projeto
 Toda a infraestrutura do sistema é orquestrada através de containers Docker para garantir facilidade de execução.
 

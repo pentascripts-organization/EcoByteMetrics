@@ -153,16 +153,12 @@ export function getCollectedServiceMetrics(): CollectedServiceMetrics[] {
     return Array.from(collectedMetrics.values());
 }
 
-export function getCollectedMetricsByServiceId(
-    serviceId: string
-): CollectedServiceMetrics | undefined {
+export function getCollectedMetricsByServiceId(serviceId: string): CollectedServiceMetrics | undefined {
     return collectedMetrics.get(serviceId);
 }
 
 // Permite substituir a consulta de serviços durante testes.
-export function setServicesFetcherForTesting(
-    fetcher: ServicesFetcher
-): void {
+export function setServicesFetcherForTesting(fetcher: ServicesFetcher): void {
     fetchServices = fetcher;
 }
 
@@ -171,8 +167,7 @@ export function resetServicesFetcher(): void {
 }
 
 // Permite substituir a consulta de métricas durante testes.
-export function setMetricsFetcherForTesting(
-    fetcher: MetricsFetcher
+export function setMetricsFetcherForTesting(fetcher: MetricsFetcher
 ): void {
     fetchMetrics = fetcher;
 }

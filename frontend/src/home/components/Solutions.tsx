@@ -1,12 +1,11 @@
-import { BarChart3, Cloud, Leaf, UsersRound } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { BarChart3, Cloud, Leaf, UsersRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface SolutionsProps {
   copy: {
     eyebrow: string;
     title1: string;
     title2: string;
-    description: string;
     cards: readonly {
       title: string;
       body: string;
@@ -24,9 +23,9 @@ export function Solutions({ copy }: SolutionsProps) {
         <h2>
           {copy.title1}
           <br />
+          para decisões{" "}
           <span>{copy.title2}</span>
         </h2>
-        <p>{copy.description}</p>
       </div>
 
       <div className="solutions__grid">
