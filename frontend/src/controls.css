@@ -41,7 +41,6 @@ small { font-size: var(--eb-text-xs); line-height: var(--eb-leading-caption); }
 .button[aria-busy='true'] { cursor: progress; }
 .text-link { min-height: 36px; text-underline-offset: 4px; }
 .text-link:hover { text-decoration: underline; }
-.chart-data summary { min-height: var(--eb-control-height); }
 .table-scroll { border-radius: inherit; scrollbar-color: var(--eb-border-strong) transparent; }
 .table-scroll:focus-visible { outline-offset: -3px; }
 tbody tr:hover { background: var(--eb-surface-page); }

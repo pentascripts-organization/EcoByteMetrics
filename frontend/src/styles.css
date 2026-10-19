@@ -88,8 +88,6 @@ button.text-link { background: transparent; padding: var(--eb-space-1) 0; }
 .diagnostic-actions { display: flex; flex-wrap: wrap; gap: var(--eb-space-3); margin-bottom: var(--eb-space-4); }
 .unsaved-note { margin: var(--eb-space-3) 0; font-size: var(--eb-text-sm); color: var(--eb-ink); }
 .collection-ranking strong small { display: block; font-size: var(--eb-text-xs); font-weight: var(--eb-weight-regular); margin-top: var(--eb-space-1); }
-.chart-data { margin-top: var(--eb-space-4); font-size: var(--eb-text-sm); }
-.chart-data summary { cursor: pointer; padding: var(--eb-space-2) 0; color: var(--eb-ink); }
 caption { text-align: left; padding: var(--eb-space-4) var(--eb-space-3); font-size: var(--eb-text-sm); color: var(--eb-ink); }
 .page-load-error { max-width: 620px; margin: 10vh auto; padding: var(--eb-space-6); }
 .page-load-error p { margin: var(--eb-space-5) 0; }
@@ -130,11 +128,6 @@ select { padding: var(--eb-space-3) var(--eb-space-3); border: 1px solid var(--e
 .panel-heading h2 { font-size: var(--eb-text-md); font-weight: var(--eb-weight-semibold); letter-spacing: -.4px; line-height: var(--eb-leading-heading); color: var(--eb-ink); }
 .panel-heading .text-link { font-size: var(--eb-text-xs); }
 .history-panel { min-height: 340px; }
-.trend-chart { min-height: 226px; margin-top: var(--eb-space-3); position: relative; padding: var(--eb-space-4) 0 var(--eb-space-5) var(--eb-space-6); }
-.chart-unit { position: absolute; font-size: var(--eb-text-xs); color: var(--eb-ink-muted); top: 0; left: 0; }
-.chart-grid-line { height: 1px; width: 100%; background: #3a799414; }
-.trend-chart > svg { display: block; position: relative; width: 100%; height: 200px; }
-.trend-chart .empty-state { min-height: 190px; position: relative; }
 .empty-state { min-height: 285px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: var(--eb-space-10) var(--eb-space-5); }
 .empty-state-icon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--eb-radius-md); background: var(--eb-surface-subtle); color: var(--eb-green); margin-bottom: var(--eb-space-4); box-shadow: none; }
 .empty-state h3 { font-size: var(--eb-text-md); font-weight: var(--eb-weight-semibold); color: var(--eb-ink-secondary); letter-spacing: -.4px; }
@@ -552,8 +545,5 @@ td { padding: var(--eb-space-4) var(--eb-space-5); border-bottom: 1px solid var(
   .globe-cities { padding-inline: var(--eb-space-4); }
 }
 
-.collection-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--eb-space-3); margin-top: var(--eb-space-3); }
 
 @media (max-width: 680px) { .landscape-background { background-image: url("./home/assets/hero-lugano.mobile.jpg"); } }
-.chart-grid { position: absolute; inset: 25px 0 28px 24px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(20% - 1px), #3a799410 calc(20% - 1px), #3a799410 20%); display: flex; flex-direction: column; justify-content: space-between; bottom: auto; height: 170px; pointer-events: none; }
-.chart-axis { position: absolute; left: 24px; right: 0; display: flex; justify-content: space-between; font-size: var(--eb-text-xs); color: var(--eb-ink-muted); top: 215px; bottom: auto; pointer-events: none; }
