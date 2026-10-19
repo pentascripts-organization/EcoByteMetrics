@@ -66,7 +66,7 @@ O sistema consome duas APIs externas para realizar a coleta de métricas e o cá
 A modelagem do banco relacional utiliza SQL nativo e explícito no PostgreSQL.
 
 <details>
-<summary><b>🗃️ Clique para expandir o Script SQL DDL (schema.sql)</b></summary>
+<summary><b>🗃️ Clique para expandir o Script SQL DDL (DDL.sql)</b></summary>
 
 <br>
 
@@ -235,7 +235,7 @@ Toda a infraestrutura do sistema é orquestrada através de containers Docker pa
 3. **Inicializar o Banco de Dados:**
    Execute o script DDL nativo para criar a estrutura das tabelas no container do PostgreSQL:
    ```bash
-   docker exec -i greener_postgres psql -U greener_user -d greener_db < database/schema.sql
+   docker exec -i greener_postgres psql -U greener_user -d greener_db < database/DDL.sql
    ```
 
 4. **Acessos Locais:**
@@ -261,7 +261,7 @@ greener/
 │   └── src/
 ├── database/                   # Persistência relacional sem ORM
 │   ├── README.md               # Instruções de restauração do PostgreSQL
-│   └── schema.sql              # Script DDL oficial com a estrutura de tabelas
+│   └── DDL.sql              # Script DDL oficial com a estrutura de tabelas
 └── docs/                       # Documentação técnica e planejamento
     ├── plano-de-entregas.md    # Matriz oficial da Rubrica e rastreabilidade da equipe
     ├── arquitetura.md          # Fluxo de dados e diagramas da solução

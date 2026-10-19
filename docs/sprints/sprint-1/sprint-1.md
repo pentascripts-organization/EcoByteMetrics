@@ -2,8 +2,6 @@
 
 ## Projeto: EcoByteMetrics (GreenER) | Período: 28/09/2026 a 19/10/2026
 
----
-
 ## 🎥 1. Demonstração em Vídeo & Evidências Principais
 
 <table>
