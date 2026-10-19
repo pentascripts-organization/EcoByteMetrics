@@ -197,8 +197,8 @@ As histórias de usuário seguem critérios objetivos de alinhamento e prontidã
 
 ```mermaid
 graph LR
-    S1[Sprint 1: Fundação e Acesso] --> S2[Sprint 2: Core e Avaliações]
-    S2 --> S3[Sprint 3: Certificação e Dashboards]
+	S1[Sprint 1: Infraestrutura, Polling e Interface Base] --> S2[Sprint 2: Motor Ambiental, Dashboard e Segurança]
+	S2 --> S3[Sprint 3: Geolocalização em Mapa, Comparador e MVP Final]
 ```
 
 ---
