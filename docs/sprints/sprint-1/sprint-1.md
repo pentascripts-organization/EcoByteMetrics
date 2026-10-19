@@ -1,6 +1,6 @@
 # 📄 Sprint Review — Sprint 1
 
-## Projeto: EcoByteMetrics (GreenER) | Período: 13/04/2026 a 30/04/2026
+## Projeto: EcoByteMetrics (GreenER) | Período: 28/09/2026 a 19/10/2026
 
 ---
 
@@ -10,8 +10,8 @@
   <tr>
     <td width="50%" align="center" valign="middle">
       <!-- target="_blank" garante a abertura em nova guia no navegador -->
-      <a href="https://www.youtube.com/watch?v=ID_DO_VIDEO" target="_blank">
-        <img src="https://img.youtube.com/vi/ID_DO_VIDEO/mqdefault.jpg" 
+      <a href="https://www.youtube.com/watch?v=7RxJdSmYO0c" target="_blank">
+        <img src="https://img.youtube.com/vi/7RxJdSmYO0c/mqdefault.jpg" 
              alt="Prévia do Vídeo da Sprint Review" 
              width="100%" />
       </a>
@@ -30,7 +30,8 @@
 ---
 
 ## 🎯 2. Objetivo da Sprint
-**Estabelecer a fundação do projeto**, contemplando a orquestração da infraestrutura containerizada via Docker Compose, a modelagem do esquema relacional DDL no PostgreSQL sem ORM, a estruturação inicial das aplicações em Node.js e React com TypeScript, e a implementação do serviço de polling para descoberta dinâmica de microsserviços.
+
+**Estabelecer a fundação técnica e documental do projeto**, contemplando a orquestração em Docker Compose, a modelagem DDL no PostgreSQL sem ORM, a prototipagem e interface responsiva em React + TS com suporte à localização, e a estruturação do backend em Node.js + TS com rotina de polling para descoberta e coleta de métricas.
 
 ---
 
@@ -53,7 +54,19 @@
 
 ---
 
+## 📈 3.1. Gráfico de Burndown da Sprint 1
+
+<div align="center">
+  <img src="../sprint-1/burndown.png" alt="Gráfico de Burndown da Sprint 1" width="85%" />
+  <p><i>Acompanhamento da evolução diária dos 62 Story Points planejados e entregues na Sprint 1.</i></p>
+</div>
+
+> **📌 Observação:**  
+> A redução dos pontos iniciou-se no 11º dia de sprint (08/10), período dedicado ao alinhamento da equipe, definição de papéis e organização das ferramentas de trabalho. Com essa base consolidada, a Sprint 2 terá previsão e fluidez na execução das entregas.
+
+---
+
 ## 📝 4. Avaliação Geral da Sprint 1 & Pontos de Atenção para a Sprint 2
 
-* **O que funcionou bem:** A modularização do backend Node.js e a containerização via Docker Compose garantiram a subida rápida e estável do ambiente.
-* **Pontos de atenção para a Sprint 2:** Foco na execução das histórias **US03**, **US04**, **US05** e **US06** (Motor de cálculos de kWh/CO₂e, carga DML, Dashboard com ordenação e autenticação JWT).
+* **O que funcionou bem:** A boa comunicação da equipe e o uso do GitHub para versionamento e acompanhamento do projeto.
+* **O que precisa melhorar / Pontos de atenção para a Sprint 2:** A divisão de tarefas, realizando essa alocação de forma mais antecipada no início da próxima sprint e a separação de pontos para cada task.
