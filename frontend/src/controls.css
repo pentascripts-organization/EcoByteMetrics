@@ -1,4 +1,4 @@
-/* Interaction contracts shared by existing controls; no new behavior. */
+/* Estados dos controles e acessibilidade. */
 .construction-page { display: grid; place-items: center; min-height: calc(100svh - 128px); padding: var(--eb-space-12) var(--eb-space-4); text-align: center; }
 .construction-page h1 { color: var(--eb-ink); font-size: var(--eb-text-2xl); font-weight: var(--eb-weight-semibold); letter-spacing: -0.035em; line-height: var(--eb-leading-heading); }
 .construction-page p { margin-top: var(--eb-space-2); color: var(--eb-ink-muted); font-size: var(--eb-text-base); }
@@ -41,7 +41,6 @@ small { font-size: var(--eb-text-xs); line-height: var(--eb-leading-caption); }
 .button[aria-busy='true'] { cursor: progress; }
 .text-link { min-height: 36px; text-underline-offset: 4px; }
 .text-link:hover { text-decoration: underline; }
-.chart-data summary { min-height: var(--eb-control-height); }
 .table-scroll { border-radius: inherit; scrollbar-color: var(--eb-border-strong) transparent; }
 .table-scroll:focus-visible { outline-offset: -3px; }
 tbody tr:hover { background: var(--eb-surface-page); }

@@ -16,14 +16,6 @@ export function isPeriod(value: unknown): value is Period {
 
 export type Period = "24h" | "7d";
 
-export interface RequestRecord {
-  url: string;
-  status: number | null;
-  outcome: "response" | "timeout" | "cancelled" | "network-error";
-  durationMs: number;
-  completedAt: string;
-}
-
 export interface ResearchRegion {
   code: string;
   country: string;

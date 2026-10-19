@@ -92,8 +92,7 @@ test('dashboard globe preserves its region and changing it requires returning to
   await page.getByRole('button', { name: 'Girar globo à esquerda', exact: true }).click();
   const canvas = map.locator('canvas');
   const bounds = (await canvas.boundingBox())!;
-  // Find a visible country other than Brazil, so the click would change the
-  // selection if either the mouse handler or the touch raycast were enabled.
+  // Clique em outro país visível para verificar o bloqueio da seleção.
   let countryPoint: { x: number; y: number } | undefined;
   for (const y of [-0.15, 0, 0.15, -0.3, 0.3]) {
     for (const x of [0, -0.15, 0.15, -0.3, 0.3]) {

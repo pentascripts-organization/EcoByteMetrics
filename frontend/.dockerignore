@@ -4,3 +4,15 @@ dist
 *.log
 .env
 .env.*
+
+# Testes e resultados
+/tests/
+/playwright.config.ts
+/test-results/
+/playwright-report/
+/artifacts/
+
+# Documentação e protótipos
+/docs/
+/prototipo-mobile/
+/prototipo-mobile.zip

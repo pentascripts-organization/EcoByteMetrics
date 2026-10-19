@@ -1,6 +1,6 @@
 import { test, expect, apiService, apiMetrics, backendServices } from './fixtures';
 import { parseLocalDate, getAnalysis } from '../src/utils/analysis';
-import { aggregateCollections, commonCollectionPoints } from '../src/utils/history';
+import { aggregateCollections, commonCollectionPoints } from '../src/utils/collectionCycles';
 import { formatNumber } from '../src/utils/format';
 import { getTestSnapshot } from './data/monitoring';
 

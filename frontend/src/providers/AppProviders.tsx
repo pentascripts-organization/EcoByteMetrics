@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { MonitoringContext } from "../contexts/MonitoringContext";
-import { RequestsContext } from "../contexts/RequestsContext";
 import { SettingsContext } from "../contexts/SettingsContext";
 import { useLocation } from "react-router-dom";
 import type {
   MonitoringSettings,
   MonitoringSnapshot,
   Period,
-  RequestRecord,
 } from "../types/monitoring";
 import { mergeCollectionHistory, summarizeCollections } from "../utils/history";
 import { isPeriod } from "../types/monitoring";
@@ -40,13 +38,13 @@ function readSettings(): MonitoringSettings {
       };
     }
   } catch {
-    /* Unavailable storage or obsolete preferences: use safe defaults. */
+    /* Armazenamento indisponível ou preferências inválidas. */
   }
   return DEFAULT_SETTINGS;
 }
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState(readSettings);
+  const [settings] = useState(readSettings);
   const [selectedPeriod, setPeriod] = useState<Period>(settings.defaultPeriod);
   const [liveSnapshot, setLiveSnapshot] = useState<MonitoringSnapshot>({
     regions: [],
@@ -58,7 +56,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [requests, setRequests] = useState<RequestRecord[]>([]);
   const pending = useRef<AbortController | null>(null);
   const { pathname, search } = useLocation();
   const queryPeriod = new URLSearchParams(search).get("periodo");
@@ -73,9 +70,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const { getMonitoringSnapshot } = await import("../services/monitoring");
-      const next = await getMonitoringSnapshot(controller.signal, (record) =>
-        setRequests((previous) => [record, ...previous].slice(0, 50)),
-      );
+      const next = await getMonitoringSnapshot(controller.signal);
       if (controller.signal.aborted) return null;
       setLiveSnapshot((previous) => {
         const previousServices = new Map(
@@ -120,7 +115,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
                     },
               ),
           ],
-          // Keep observations; totals describe estimates per collection, not continuous consumption.
+          // Totais de estimativas por amostra.
           history: mergeCollectionHistory(previous.history, next.history).filter(
             (point) =>
               Date.parse(point.collectedAt) >=
@@ -182,25 +177,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     };
   }, [liveSnapshot]);
 
-  const saveSettings = useCallback((next: MonitoringSettings) => {
-    setSettings(next);
-    setPeriod(next.defaultPeriod);
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
   const preferences = useMemo(
-    () => ({ settings, saveSettings }),
-    [settings, saveSettings],
-  );
-  const clearRequests = useCallback(() => setRequests([]), []);
-  const diagnostics = useMemo(
-    () => ({ requests, clearRequests }),
-    [requests, clearRequests],
+    () => ({ settings }),
+    [settings],
   );
   const monitoring = useMemo(
     () => ({ snapshot, period, setPeriod, refresh, loading, error }),
@@ -209,11 +188,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <SettingsContext.Provider value={preferences}>
-      <RequestsContext.Provider value={diagnostics}>
-        <MonitoringContext.Provider value={monitoring}>
-          {children}
-        </MonitoringContext.Provider>
-      </RequestsContext.Provider>
+      <MonitoringContext.Provider value={monitoring}>
+        {children}
+      </MonitoringContext.Provider>
     </SettingsContext.Provider>
   );
 }
