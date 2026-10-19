@@ -1,6 +1,6 @@
 import type { CarbonRegion, MonitoringSnapshot, MonitoredService, Period } from '../../src/types/monitoring';
 
-// Controlled samples used only by tests; not included in the application.
+// Amostras exclusivas dos testes.
 const exampleEnergy = 50.87 / 60 / 1000;
 const services: MonitoredService[] = [
   { id: 'demo-br', name: 'Aplicação Brasil', status: 'available', country: 'Brasil', region: 'Sudeste', city: 'São Paulo', latitude: -23.55, longitude: -46.63, cpuPercent: 50, memoryGb: 2, diskGb: 10, networkGb: 1, energyKwh: exampleEnergy, emissionsG: exampleEnergy * 85, renewablePercent: 85, carbonIntensity: 85, collectionIntervalSeconds: 60 },

@@ -2,7 +2,6 @@ import type {
   CarbonRegion,
   MonitoringSnapshot,
   MonitoredService,
-  RequestRecord,
 } from "../types/monitoring";
 import { findCountry, localizeCity } from "../data/geography";
 import { summarizeCollections } from "../utils/history";
@@ -30,33 +29,11 @@ const text = (value: unknown): string =>
 async function request(
   url: string,
   signal: AbortSignal,
-  onRequest?: (record: RequestRecord) => void,
 ) {
-  const started = performance.now();
-  let status: number | null = null;
-  let outcome: RequestRecord["outcome"] = "network-error";
-  try {
-    const response = await fetch(url, {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-      cache: "no-store",
-    });
-    status = response.status;
-    outcome = "response";
-    return response;
-  } catch (cause) {
-    if (signal.aborted) outcome = "cancelled";
-    else if (cause instanceof Error && cause.name === "TimeoutError")
-      outcome = "timeout";
-    throw cause;
-  } finally {
-    onRequest?.({
-      url,
-      status,
-      outcome,
-      durationMs: Math.round(performance.now() - started),
-      completedAt: new Date().toISOString(),
-    });
-  }
+  return fetch(url, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+    cache: "no-store",
+  });
 }
 
 function location(value: unknown) {
@@ -121,7 +98,7 @@ function parseRegions(value: unknown) {
   return { regions, invalidCount };
 }
 
-// Coefficients required by the challenge's simplified model, in W and W/GB.
+// Coeficientes do modelo em W e W/GB.
 export function estimateEnergy(
   cpu: number,
   memory: number,
@@ -138,11 +115,10 @@ export function estimateEnergy(
 
 export async function getMonitoringSnapshot(
   signal = new AbortController().signal,
-  onRequest?: (record: RequestRecord) => void,
 ): Promise<MonitoringSnapshot> {
   const [servicesResult, regionsResult] = await Promise.allSettled([
-    request(BACKEND_API + "/services", signal, onRequest),
-    request(CARBON_API + "/regions", signal, onRequest),
+    request(BACKEND_API + "/services", signal),
+    request(CARBON_API + "/regions", signal),
   ]);
   signal.throwIfAborted();
   const warnings: string[] = [];
@@ -267,7 +243,6 @@ export async function getMonitoringSnapshot(
       const response = await request(
         BACKEND_API + "/metrics/" + encodeURIComponent(service.id),
         signal,
-        onRequest,
       );
       const data = object(await response.json().catch(() => null));
       if (!response.ok) {
@@ -286,8 +261,7 @@ export async function getMonitoringSnapshot(
           ").";
         return;
       }
-      // develop wraps the aggregator sample in a per-service cache envelope.
-      // Keep the former flat response compatible while integration is in progress.
+      // Formatos aceitos: cache por serviço e resposta direta do agregador.
       const cached = "serviceId" in data || "updatedAt" in data;
       if (cached && text(data.serviceId) !== service.id) {
         service.status = "no-metrics";

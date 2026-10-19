@@ -7,7 +7,7 @@ export function mergeCollectionHistory(
   const seen = new Map<string, number>();
   const history: CollectionPoint[] = [];
   for (const point of [...previous, ...incoming]) {
-    // Polling the backend cache again does not represent a new measurement.
+    // Identificação de amostras repetidas no cache do backend.
     const key = JSON.stringify([point.serviceId, Date.parse(point.collectedAt)]);
     const index = seen.get(key);
     if (index === undefined) {
@@ -16,7 +16,7 @@ export function mergeCollectionHistory(
       continue;
     }
     const existing = history[index]!;
-    // A recovered factor may complete this same sample, keeping its energy and cycle.
+    // Um fator recuperado pode completar as emissões da mesma amostra.
     if (existing.emissionsG === null && point.emissionsG !== null &&
       existing.energyKwh === point.energyKwh &&
       existing.intervalSeconds === point.intervalSeconds &&
@@ -55,51 +55,4 @@ export function summarizeCollections(points: CollectionPoint[]) {
         ? (emissionsG * 3600) / seconds
         : null,
   };
-}
-
-const cycleKey = (point: CollectionPoint) =>
-  point.cycleId ?? point.cycleAt ?? point.collectedAt;
-
-export function aggregateCollections(
-  points: CollectionPoint[],
-  metric: "energy" | "emissions",
-) {
-  const cycles = new Map<
-    string,
-    { id: string; collectedAt: string; value: number }
-  >();
-  for (const point of points) {
-    const value = metric === "energy" ? point.energyKwh : point.emissionsG;
-    if (value === null) continue;
-    const id = cycleKey(point);
-    const cycle = cycles.get(id);
-    if (!cycle) cycles.set(id, { id, collectedAt: point.collectedAt, value });
-    else {
-      cycle.value += value;
-      if (Date.parse(point.collectedAt) > Date.parse(cycle.collectedAt))
-        cycle.collectedAt = point.collectedAt;
-    }
-  }
-  return [...cycles.values()];
-}
-
-export function commonCollectionPoints(
-  points: CollectionPoint[],
-  serviceIds: string[],
-) {
-  const selected = new Set(serviceIds);
-  if (!selected.size) return [];
-  const cycles = new Map<string, Set<string>>();
-  for (const point of points) {
-    if (!selected.has(point.serviceId)) continue;
-    const key = cycleKey(point);
-    const ids = cycles.get(key) ?? new Set<string>();
-    ids.add(point.serviceId);
-    cycles.set(key, ids);
-  }
-  return points.filter(
-    (point) =>
-      selected.has(point.serviceId) &&
-      cycles.get(cycleKey(point))?.size === selected.size,
-  );
 }

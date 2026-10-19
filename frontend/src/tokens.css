@@ -1,4 +1,4 @@
-/* Shared foundations for the public site and monitoring workspace. */
+/* Cores, tipografia, espaçamento e dimensões. */
 :root {
   --eb-font-body: 'DM Sans Variable', system-ui, sans-serif;
   --eb-font-heading: 'Manrope Variable', system-ui, sans-serif;

@@ -63,7 +63,7 @@ button.text-link { background: transparent; padding: var(--eb-space-1) 0; }
 .mobile-menu-button { display: none; background: transparent; padding: var(--eb-space-2); border-radius: var(--eb-radius-sm); }
 .header-actions { display: flex; align-items: center; gap: var(--eb-space-5); }
 
-/* Nature is a separate decorative layer: every leaf has its own depth. */
+/* Folhas decorativas */
 .leaf-scene { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; --pointer-x: 0px; --pointer-y: 0px; }
 .leaf-position { position: absolute; aspect-ratio: 120 / 70; transform: translate(calc(var(--pointer-x) * var(--depth)), calc(var(--pointer-y) * var(--depth))) rotate(var(--leaf-angle)); will-change: transform; opacity: .85; }
 .floating-leaf { width: 100%; height: 100%; animation: leaf-drift 11s ease-in-out infinite; animation-delay: var(--leaf-delay); }
@@ -93,7 +93,7 @@ caption { text-align: left; padding: var(--eb-space-4) var(--eb-space-3); font-s
 .page-load-error p { margin: var(--eb-space-5) 0; }
 .page-load-error .button { margin: var(--eb-space-2); }
 
-/* Monitoring workspace */
+/* Área de monitoramento */
 .app-header-inner { width: min(var(--eb-page-width), calc(100% - var(--eb-page-gutter) * 2)); height: 80px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--eb-space-6); }
 .app-header .brand > span { font-size: var(--eb-text-xl); }
 .desktop-nav > a { display: flex; align-items: center; height: 100%; font-size: var(--eb-text-sm); color: var(--eb-ink-muted); position: relative; }
@@ -143,7 +143,7 @@ select { padding: var(--eb-space-3) var(--eb-space-3); border: 1px solid var(--e
 .dashboard-footnote { display: flex; justify-content: flex-end; margin-top: var(--eb-space-6); }
 .dashboard-footnote > a { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--eb-text-sm); color: var(--eb-ink-muted); }
 
-/* Lists, comparisons and preferences */
+/* Listas, comparações e preferências */
 .service-panel { padding: 0; overflow: hidden; }
 .table-toolbar { padding: var(--eb-space-5) var(--eb-space-6); display: flex; justify-content: space-between; align-items: center; gap: var(--eb-space-4); border-bottom: 1px solid var(--line); }
 .search-field { display: flex; align-items: center; gap: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-radius-md); background: var(--eb-surface); color: var(--eb-ink-muted); width: min(350px, 100%); min-height: var(--eb-control-height); }
@@ -187,7 +187,7 @@ td { padding: var(--eb-space-4) var(--eb-space-5); border-bottom: 1px solid var(
 .form-message { border: 1px solid #cae4d5; border-radius: var(--eb-radius-sm); background: #edf8f0; color: var(--eb-ink-muted); font-size: var(--eb-text-xs); line-height: var(--eb-leading-body); padding: var(--eb-space-3) var(--eb-space-3); margin-top: var(--eb-space-3); }
 .error-message { background: #fff1ed; border-color: #efcbc0; color: var(--eb-ink-muted); }
 
-/* Access screen */
+/* Tela de acesso */
 .login-page { position: relative; isolation: isolate; min-height: 100svh; display: flex; flex-direction: column; overflow: hidden; }
 .login-overlay { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #f2f8f1ed, #e5f2e9b8); }
 .login-header { display: flex; justify-content: space-between; align-items: center; width: min(1196px, calc(100% - 112px)); margin: var(--eb-space-6) auto; position: relative; z-index: 3; }
@@ -220,7 +220,7 @@ td { padding: var(--eb-space-4) var(--eb-space-5); border-bottom: 1px solid var(
 .not-found-page h1 { font-size: 42px; font-weight: var(--eb-weight-semibold); letter-spacing: -1.6px; }
 .not-found-page p { font-size: var(--eb-text-base); color: var(--eb-ink-muted); }
 
-/* Adapt the composition, including touch screens and motion preferences. */
+/* Layout responsivo e movimento reduzido */
 
 @media (max-width: 1180px) {
   .hero-copy h1 { font-size: 59px; letter-spacing: -2.8px; }
@@ -339,7 +339,7 @@ td { padding: var(--eb-space-4) var(--eb-space-5); border-bottom: 1px solid var(
   .leaf-position { will-change: auto; }
 }
 
-/* Regional research and administration share the existing nature palette. */
+/* Pesquisa por região */
 .app-shell { position: relative; isolation: isolate; min-height: 100svh; display: flex; flex-direction: column; background: var(--eb-surface-page); color: var(--eb-ink); }
 .sky-background { position: fixed; inset: 0; z-index: -2; background: var(--eb-surface-page); }
 .app-header { position: relative; z-index: 10; border-bottom: 1px solid var(--eb-border); backdrop-filter: blur(8px); background: #ffffffed; }

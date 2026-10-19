@@ -1,11 +1,13 @@
-# Geographic data
+# Dados geográficos
 
-`world.json` contains a compact extract of Natural Earth v5.0.1, in the public domain:
+`world.json` contém um extrato do Natural Earth v5.0.1, de domínio público:
 
-- [Countries, 1:110m](https://github.com/nvkelso/natural-earth-vector/blob/v5.0.1/geojson/ne_110m_admin_0_countries.geojson): 177 geographic features, Portuguese and English names, country codes, approximate camera positions and boundaries rounded to three decimal places.
-- [Populated places, 1:110m](https://github.com/nvkelso/natural-earth-vector/blob/v5.0.1/geojson/ne_110m_populated_places.geojson): 243 major cities, Portuguese/English names, country codes and coordinates, used to localize API city names.
-- [Terms of use](https://www.naturalearthdata.com/about/terms-of-use/).
+- [Países, escala 1:110m](https://github.com/nvkelso/natural-earth-vector/blob/v5.0.1/geojson/ne_110m_admin_0_countries.geojson): 177 feições geográficas, com nomes em português e inglês, códigos de país, posições aproximadas de câmera e contornos arredondados para três casas decimais.
+- [Localidades, escala 1:110m](https://github.com/nvkelso/natural-earth-vector/blob/v5.0.1/geojson/ne_110m_populated_places.geojson): 243 cidades, com nomes em português e inglês, códigos de país e coordenadas.
+- [Termos de uso](https://www.naturalearthdata.com/about/terms-of-use/).
 
-These datasets are geographic reference data, not carbon measurements. They do not include every country boundary or every municipality. Research cities and reference markers come from the carbon API (`GET /regions`); dashboard markers use monitored services' coordinates. The static city catalogue supplies translated names only. Geographic boundaries follow the source dataset.
+O arquivo fornece os contornos do globo e traduções dos nomes das cidades. A cobertura de países e municípios segue os conjuntos de origem e não é completa.
 
-The extract retains geometry and selection fields only. Camera positions use the spherical average of vertices of each country's longest boundary ring. Country boundaries are local; the registered region catalogue is fetched from the challenge API.
+As posições de câmera usam a média esférica dos vértices do maior anel de contorno de cada país. O extrato inclui apenas a geometria e os campos necessários à seleção geográfica.
+
+As cidades disponíveis na pesquisa e seus marcadores vêm da API de carbono (`GET /regions`). No dashboard, os marcadores usam as coordenadas dos serviços monitorados. Os fatores de emissão são consultados na API e não fazem parte de `world.json`.

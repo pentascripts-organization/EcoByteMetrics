@@ -1,4 +1,3 @@
-// Keep navigation available while these screens are deferred to Sprint 2.
 export const deferredPages = [
   { path: "/energia", title: "Energia" },
   { path: "/comparar", title: "Comparar" },

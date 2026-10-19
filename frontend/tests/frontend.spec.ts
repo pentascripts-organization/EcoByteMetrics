@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
 
 test('all screens load directly without JS errors or horizontal overflow', async ({ page }, testInfo) => {
-  test.slow(); // Twelve complete page loads, including both lazy WebGL routes.
+  test.slow(); // Doze páginas, incluindo as rotas com WebGL.
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   for (const path of ['/', '/pesquisa', '/gerenciamento', '/dashboard', '/servicos', '/servicos/unknown-id', '/emissoes', '/energia', '/comparar', '/login', '/cadastro', '/configuracoes']) {

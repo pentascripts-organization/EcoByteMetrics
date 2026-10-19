@@ -1,5 +1,4 @@
 import type {
-  CollectionPoint,
   MonitoringSnapshot,
   Period,
 } from "../types/monitoring";
@@ -116,12 +115,6 @@ export function getAnalysis(
       .filter((service) => service.status !== "removed")
       .map((service) => service.regionCode),
   );
-  const historyByService = new Map<string, CollectionPoint[]>();
-  for (const point of history) {
-    const records = historyByService.get(point.serviceId);
-    if (records) records.push(point);
-    else historyByService.set(point.serviceId, [point]);
-  }
   const regions = snapshot.regions.filter((region) =>
     regionCode
       ? region.code === regionCode
@@ -132,7 +125,6 @@ export function getAnalysis(
   return {
     services,
     history,
-    historyByService,
     regions,
     country,
     city,

@@ -17,7 +17,7 @@ export function backendServices(services: unknown[]) {
   return { services, lastUpdatedAt: new Date().toISOString() };
 }
 
-// Browser checks use controlled responses; live endpoints change during the challenge.
+// Respostas controladas para os testes em navegador.
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.route('**/backend/services', (route) => route.fulfill({ json: backendServices([]) }));

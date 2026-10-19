@@ -1,6 +1,6 @@
 import { test, expect, apiService, apiRegions, apiMetrics, backendServices } from './fixtures';
 import { getMonitoringSnapshot } from '../src/services/monitoring';
-import { commonCollectionPoints } from '../src/utils/history';
+import { commonCollectionPoints } from '../src/utils/collectionCycles';
 
 test('backend timestamps remain authoritative and group unequal service completion times', async () => {
   const original = globalThis.fetch;

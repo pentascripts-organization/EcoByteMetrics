@@ -5,14 +5,14 @@ dist
 .env
 .env.*
 
-# Testes e resultados locais
+# Testes e resultados
 /tests/
 /playwright.config.ts
 /test-results/
 /playwright-report/
 /artifacts/
 
-# Documentacao e material local para o Figma
+# Documentação e protótipos
 /docs/
 /prototipo-mobile/
 /prototipo-mobile.zip

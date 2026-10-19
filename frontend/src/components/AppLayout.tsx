@@ -19,6 +19,7 @@ import { useMonitoring } from "../hooks/useMonitoring";
 import { useAnalysis } from "../hooks/useAnalysis";
 import { analysisLink } from "../utils/analysis";
 import { isDeferredPage } from "../data/deferredPages";
+import { AnalysisProvider } from "../providers/AnalysisProvider";
 
 const links = [
   { to: "/pesquisa", label: "Pesquisa", icon: Search },
@@ -31,6 +32,14 @@ const links = [
 ];
 
 export function AppLayout() {
+  return (
+    <AnalysisProvider>
+      <LayoutContent />
+    </AnalysisProvider>
+  );
+}
+
+function LayoutContent() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { search, pathname } = useLocation();
   const { selection, date, periodLabel } = useAnalysis();

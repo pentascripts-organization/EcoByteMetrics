@@ -38,7 +38,7 @@ test('dashboard shows each service location, sample interval and backend timesta
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.locator('.service-collection-panel').screenshot({
     path: testInfo.outputPath('service-collection.png'),
-    // Mobile element captures can paint an offscreen fixed skip link over the panel.
+    // Evita sobreposição do link de navegação na captura mobile do painel.
     style: '.skip-link:not(:focus) { visibility: hidden; }',
   });
 });

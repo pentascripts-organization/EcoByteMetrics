@@ -1,6 +1,7 @@
 import { test, expect, apiService, apiRegions, apiMetrics, backendServices } from './fixtures';
 import { getMonitoringSnapshot } from '../src/services/monitoring';
-import { commonCollectionPoints, summarizeCollections } from '../src/utils/history';
+import { commonCollectionPoints } from '../src/utils/collectionCycles';
+import { summarizeCollections } from '../src/utils/history';
 import { formatNumber } from '../src/utils/format';
 import type { CollectionPoint } from '../src/types/monitoring';
 

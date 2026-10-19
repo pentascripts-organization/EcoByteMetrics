@@ -96,7 +96,7 @@ test('leaving a pending regional search cannot navigate away from the next page'
   release();
   await expect(page.locator('h1')).toHaveText('Energia');
   await expect(page.getByText('Em construção', { exact: true })).toBeVisible();
-  // Re-enter monitoring: automatic collection must recover after cancellation.
+  // Retomada da coleta após cancelamento e retorno ao monitoramento.
   if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Abrir navegação' }).click();
   await page.getByRole('navigation', { name: testInfo.project.name === 'mobile' ? 'Navegação móvel' : 'Navegação principal' }).getByRole('link', { name: 'Visão geral', exact: true }).click();
   await expect(page.locator('.metric-value').first()).not.toHaveText('—gCO₂e');

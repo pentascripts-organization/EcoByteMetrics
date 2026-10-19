@@ -152,7 +152,7 @@ export default function WorldGlobe({
     const bounds = globe.current.renderer().domElement.getBoundingClientRect();
     const x = event.clientX - bounds.left,
       y = event.clientY - bounds.top;
-    // Fast taps can finish before the library refreshes its hover raycast.
+    // Toques rápidos podem terminar antes da atualização do raycast da biblioteca.
     const location = globe.current.toGlobeCoords(x, y);
     if (!location) return;
     const marker = points
