@@ -1,0 +1,52 @@
+.landscape-background { position: absolute; inset: 0; z-index: -2; background: #d6e8df url('../../shared/assets/landscapes/hero-lugano.optimized.jpg') center center / cover no-repeat; }
+.login-page { position: relative; isolation: isolate; min-height: 100svh; display: flex; flex-direction: column; overflow: hidden; }
+.login-overlay { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #f2f8f1ed, #e5f2e9b8); }
+.login-header { display: flex; justify-content: space-between; align-items: center; width: min(1196px, calc(100% - 112px)); margin: var(--eb-space-6) auto; position: relative; z-index: 3; }
+.login-content { position: relative; z-index: 3; width: min(1090px, calc(100% - 160px)); margin: auto; display: grid; grid-template-columns: 1.2fr 1fr; align-items: center; gap: var(--eb-space-16); padding: var(--eb-space-10) 0; }
+.login-intro h1 { font-size: 66px; font-weight: var(--eb-weight-semibold); line-height: 1.14; letter-spacing: -3px; margin-top: var(--eb-space-6); }
+.login-intro h1 span { color: var(--eb-green); }
+.login-intro > p { font-size: var(--eb-text-md); line-height: var(--eb-leading-body); color: var(--eb-ink-muted); margin-top: var(--eb-space-6); }
+.login-card { padding: var(--eb-space-8); border: 1px solid var(--eb-border); border-radius: var(--eb-radius-lg); background: #fffffffa; backdrop-filter: blur(8px); box-shadow: var(--eb-shadow-raised); }
+.login-card > .icon-tile { width: 47px; height: 47px; margin-bottom: var(--eb-space-6); }
+.login-card > .eyebrow { display: block; font-size: var(--eb-text-xs); }
+.login-card h2 { font-size: var(--eb-text-3xl); letter-spacing: -1px; font-weight: var(--eb-weight-semibold); margin-top: var(--eb-space-2); }
+.login-card > p { margin-top: var(--eb-space-2); font-size: var(--eb-text-sm); color: var(--eb-ink-muted); line-height: var(--eb-leading-body); }
+.login-card form { margin-top: var(--eb-space-6); }
+.login-card form > label { font-size: var(--eb-text-sm); font-weight: var(--eb-weight-semibold); display: block; margin: var(--eb-space-5) 0 var(--eb-space-2); }
+.input-with-icon { display: flex; align-items: center; gap: var(--eb-space-2); border: 1px solid var(--eb-border-strong); border-radius: var(--eb-radius-md); padding: var(--eb-space-2) var(--eb-space-3); color: var(--eb-ink-muted); background: #f8fbf8; min-height: var(--eb-control-height); }
+.input-with-icon:focus-within { border-color: #45a481; box-shadow: var(--eb-shadow-sm); }
+.input-with-icon input { width: 100%; min-width: 0; border: 0; outline: none; background: transparent; color: var(--eb-ink); font-size: var(--eb-text-base); }
+.input-with-icon input::placeholder { color: var(--eb-ink-muted); }
+.input-with-icon input:focus-visible { outline: 0; }
+.input-with-icon button { display: inline-flex; background: transparent; padding: 1px; color: var(--eb-ink-muted); min-width: 36px; min-height: 36px; align-items: center; justify-content: center; border-radius: var(--eb-radius-sm); }
+.login-availability { font-size: var(--eb-text-xs); color: var(--eb-ink-muted); line-height: var(--eb-leading-body); padding: var(--eb-space-3) 0 var(--eb-space-4); }
+.login-card .button { width: 100%; }
+.login-divider { position: relative; text-align: center; margin: var(--eb-space-5) 0; font-size: var(--eb-text-xs); color: var(--eb-ink-muted); }
+.login-divider::before, .login-divider::after { position: absolute; top: 50%; height: 1px; width: 27%; background: #e2ebe6; content: ''; }
+.login-divider::before { left: 0; }
+.login-divider::after { right: 0; }
+
+@media (max-width: 1180px) {
+  .login-content { width: calc(100% - 120px); gap: var(--eb-space-12); }
+  .login-intro h1 { font-size: 55px; }
+}
+@media (max-width: 920px) {
+  .login-content { width: calc(100% - 80px); gap: var(--eb-space-6); }
+  .login-card { padding: var(--eb-space-6); }
+  .login-intro h1 { font-size: 45px; }
+  .login-intro .pill-label { font-size: var(--eb-text-xs); }
+}
+@media (max-width: 680px) {
+  .landscape-background { background-position: 56% center; }
+  .login-header { width: calc(100% - 36px); margin: var(--eb-space-5) auto; }
+  .login-header > .text-link { font-size: var(--eb-text-xs); gap: var(--eb-space-1); }
+  .login-header > .text-link svg { width: 13px; }
+  .login-content { width: calc(100% - 40px); grid-template-columns: 1fr; gap: var(--eb-space-6); padding-block: var(--eb-space-6); }
+  .login-intro h1 { font-size: 40px; letter-spacing: -1.8px; margin-top: var(--eb-space-5); }
+  .login-intro > p { font-size: var(--eb-text-sm); margin-top: var(--eb-space-4); }
+  .login-card { padding: var(--eb-space-6) var(--eb-space-6); }
+  .login-card h2 { font-size: var(--eb-text-3xl); }
+}
+
+
+@media (max-width: 680px) { .landscape-background { background-image: url("../../shared/assets/landscapes/hero-lugano.mobile.jpg"); } }

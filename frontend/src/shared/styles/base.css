@@ -1,0 +1,41 @@
+:root {
+  font-family: var(--eb-font-body);
+  color: var(--eb-ink);
+  background: var(--eb-surface-page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --ink: var(--eb-ink);
+  --muted: var(--eb-ink-muted);
+  --green: var(--eb-green);
+  --green-bright: var(--eb-green);
+  --line: var(--eb-border);
+  --heading-font: var(--eb-font-heading);
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; font-size: var(--eb-text-base); line-height: var(--eb-leading-body); }
+button, input, select { font: inherit; }
+button, a, select, input { -webkit-tap-highlight-color: transparent; }
+button, select { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+button { color: inherit; border: 0; }
+button:disabled, select:disabled { cursor: not-allowed; }
+svg { flex-shrink: 0; }
+img { max-width: 100%; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { font-family: var(--eb-font-heading); }
+:focus-visible { outline: 3px solid #169c7c; outline-offset: 5px; }
+::selection { background: #bee8cf; color: var(--eb-ink); }
+html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+caption { text-align: left; padding: var(--eb-space-4) var(--eb-space-3); font-size: var(--eb-text-sm); color: var(--eb-ink); }
+select { padding: var(--eb-space-3) var(--eb-space-3); border: 1px solid var(--eb-border-strong); background: var(--eb-surface); border-radius: var(--eb-radius-sm); color: var(--eb-ink); font-size: var(--eb-text-sm); min-height: var(--eb-control-height); }
+table { width: 100%; border-collapse: collapse; font-size: var(--eb-text-xs); text-align: left; white-space: nowrap; }
+th { font-weight: var(--eb-weight-semibold); color: var(--eb-ink-secondary); background: var(--eb-surface-page); padding: var(--eb-space-4) var(--eb-space-5); border-bottom: 1px solid var(--line); font-size: var(--eb-text-xs); }
+td { padding: var(--eb-space-4) var(--eb-space-5); border-bottom: 1px solid var(--line); color: var(--eb-ink-secondary); font-size: var(--eb-text-sm); }
+@media (max-width: 680px) {
+  th, td { padding: var(--eb-space-3) var(--eb-space-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
