@@ -1,5 +1,5 @@
 
-import { afterEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import type {
@@ -18,6 +18,10 @@ import {
     refreshServiceMetrics,
     resetMetricsFetcher,
     setMetricsFetcherForTesting,
+    resetCarbonRegionsFetcher,
+    resetPersistence,
+    setCarbonRegionsFetcherForTesting,
+    setPersistenceForTesting,
 } from "../src/modules/services/services.service.js";
 
 const billingService: AggregatorService = {
@@ -78,9 +82,16 @@ const checkoutMetrics: ServiceMetrics = {
     },
 };
 
+beforeEach(() => {
+    setPersistenceForTesting(async () => {}, async () => {});
+    setCarbonRegionsFetcherForTesting(async () => []);
+});
+
 afterEach(() => {
     resetServicesFetcher();
     resetMetricsFetcher();
+    resetCarbonRegionsFetcher();
+    resetPersistence();
 });
 
 describe("Serviço de descoberta de serviços", () => {
@@ -134,6 +145,37 @@ describe("Serviço de descoberta de serviços", () => {
 });
 
 describe("Serviço de coleta de métricas", () => {
+    it("persiste a amostra com o fator de carbono da região", async () => {
+        let persistedSample: {
+            serviceId: string;
+            metrics: ServiceMetrics;
+            carbonIntensity: number | null;
+        } | undefined;
+
+        setServicesFetcherForTesting(async () => [billingService]);
+        await refreshDiscoveredServices();
+        setMetricsFetcherForTesting(async () => billingMetrics);
+        setCarbonRegionsFetcherForTesting(async () => [{
+            code: "SA-SP",
+            carbonIntensity: 85,
+            renewablePercent: 83,
+        }]);
+        setPersistenceForTesting(
+            async () => {},
+            async (serviceId, metrics, carbonIntensity) => {
+                persistedSample = { serviceId, metrics, carbonIntensity };
+            }
+        );
+
+        await refreshServiceMetrics();
+
+        assert.deepEqual(persistedSample, {
+            serviceId: "billing-api",
+            metrics: billingMetrics,
+            carbonIntensity: 85,
+        });
+    });
+
     it("armazena as métricas após uma consulta bem-sucedida", async () => {
         setServicesFetcherForTesting(async () => [billingService]);
         await refreshDiscoveredServices();
