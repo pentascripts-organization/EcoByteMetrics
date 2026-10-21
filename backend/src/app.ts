@@ -1,10 +1,12 @@
 import express, { type Request, type Response } from "express";
 import cors from "cors";
+
 import userRouter from "./modules/Users/user.router.js";
 import metricRouter from "./modules/Metrics/metric.router.js";
 import carbonRouter from "./modules/Carbons/carbon.router.js";
 import serviceRouter from "./modules/Services/service.router.js";
 import locationRouter from "./modules/Locations/location.router.js";
+import statisticsRouter from "./modules/Statistics/statistics.router.js";
 
 import {
   getDiscoveredServices,
@@ -39,6 +41,9 @@ app.use("/api/metrics", metricRouter);
 app.use("/api/carbons",carbonRouter);
 //Rota do service
 app.use("/api/services", serviceRouter);
+// Rotas de estatísticas consolidadas e ranking
+app.use("/api/statistics", statisticsRouter);
+app.use("/api/dashboard", statisticsRouter);
 //Rota da Localização
 app.use("/api/locations",locationRouter);
 // Retorna as métricas coletadas de todos os serviços.
@@ -70,6 +75,5 @@ app.get("/metrics/:serviceId", (req: Request, res: Response) => {
     res.json(serviceMetrics);
   }
 );
-
 
 export default app;

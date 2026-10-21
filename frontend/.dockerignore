@@ -4,3 +4,8 @@ dist
 *.log
 .env
 .env.*
+
+# Documentação e protótipos
+/docs/
+/prototipo-mobile/
+/prototipo-mobile.zip

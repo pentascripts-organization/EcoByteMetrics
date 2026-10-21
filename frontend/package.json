@@ -4,14 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/start-local.mjs",
-    "dev:frontend": "vite --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",
-    "typecheck": "tsc -b",
-    "test:e2e": "playwright test",
-    "verify:backend": "node scripts/verify-team-copy.mjs"
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
@@ -26,7 +23,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.63.0",
     "@types/d3-geo": "^3.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
