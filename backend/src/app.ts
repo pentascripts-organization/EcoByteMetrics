@@ -76,5 +76,4 @@ app.get("/metrics/:serviceId", (req: Request, res: Response) => {
   }
 );
 
-
 export default app;
