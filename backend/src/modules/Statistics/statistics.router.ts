@@ -1,2 +1,3 @@
-import statisticsRouter from './statistics.controller';
+import statisticsRouter from "./statistics.controller";
+
 export default statisticsRouter;

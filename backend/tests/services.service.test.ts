@@ -158,7 +158,6 @@ describe("Serviço de coleta de métricas", () => {
         setCarbonRegionsFetcherForTesting(async () => [{
             code: "SA-SP",
             carbonIntensity: 85,
-            renewablePercent: 83,
         }]);
         setPersistenceForTesting(
             async () => {},
