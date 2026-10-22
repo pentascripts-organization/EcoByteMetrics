@@ -27,7 +27,7 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
   const { pathname, search } = useLocation();
   const queryPeriod = new URLSearchParams(search).get("periodo");
   const period = isPeriod(queryPeriod) ? queryPeriod : selectedPeriod;
-  const monitoringActive = ["/pesquisa", "/dashboard"].includes(pathname);
+  const monitoringActive = pathname === "/dashboard";
 
   const refresh = useCallback(async () => {
     if (pending.current) return null;

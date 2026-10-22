@@ -17,6 +17,8 @@ export interface CountryFeature {
 
 export interface GlobeCity {
   id: string;
+  color?: string;
+  count?: number;
   countryCode: string;
   name: string;
   latitude: number | null;

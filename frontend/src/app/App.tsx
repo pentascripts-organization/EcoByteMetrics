@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import {
+  Navigate,
   Route,
   Routes,
   useLocation,
   useNavigationType,
+  useParams,
 } from "react-router-dom";
 import { PageBoundary } from "@/shared/ui/PageBoundary";
 import { deferredPages } from "@/app/routes/deferredPages";
@@ -25,11 +27,6 @@ const NotFoundPage = lazy(() =>
     default: module.NotFoundPage,
   })),
 );
-const ResearchPage = lazy(() =>
-  import("@/features/monitoring/pages/ResearchPage").then((module) => ({
-    default: module.ResearchPage,
-  })),
-);
 const DashboardPage = lazy(() =>
   import("@/features/monitoring/pages/DashboardPage").then((module) => ({
     default: module.DashboardPage,
@@ -38,7 +35,7 @@ const DashboardPage = lazy(() =>
 
 const titles: Record<string, string> = {
   "/": "Entendendo o hoje",
-  "/dashboard": "Visão geral",
+  "/dashboard": "Monitoramento",
   "/servicos": "Serviços",
   "/emissoes": "Emissões",
   "/energia": "Energia",
@@ -98,16 +95,29 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/cadastro" element={<LoginPage register />} />
           <Route element={<AppLayout />}>
-            <Route path="/pesquisa" element={<ResearchPage />} />
+            <Route path="/pesquisa" element={<LegacyMapRedirect />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             {deferredPages.map(({ path, title }) => (
               <Route key={path} path={path} element={<UnderConstructionPage title={title} />} />
             ))}
-            <Route path="/servicos/:id" element={<UnderConstructionPage title="Serviços" />} />
+            <Route path="/servicos/:id" element={<LegacyServiceRedirect />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </PageBoundary>
   );
+}
+
+function LegacyMapRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={"/dashboard" + search} replace />;
+}
+
+function LegacyServiceRedirect() {
+  const { id } = useParams();
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  if (id) params.set("servico", id);
+  return <Navigate to={"/dashboard?" + params.toString()} replace />;
 }

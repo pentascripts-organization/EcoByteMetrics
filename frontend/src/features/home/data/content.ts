@@ -7,7 +7,7 @@ export const content = {
       line3: "mais limpo.",
       description:
         "CPU, memória, disco e rede contam uma história. A EcoByteMetrics transforma essas métricas em estimativas de energia e emissão de carbono por serviço.",
-      primary: "Explorar dashboard",
+      primary: "Explorar monitoramento",
     },
     solutions: {
       eyebrow: "DO RECURSO AO IMPACTO",

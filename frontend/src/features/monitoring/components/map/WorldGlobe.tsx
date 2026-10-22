@@ -4,7 +4,6 @@ import Globe from "react-globe.gl";
 import type { GlobeMethods } from "react-globe.gl";
 import { MeshPhongMaterial } from "three";
 import { geoContains, geoDistance } from "d3-geo";
-import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { countries } from "@/shared/geography/geography";
 import type { CountryFeature, GlobeCity } from "@/shared/geography/geography";
 import { useSettings } from "@/shared/preferences/useSettings";
@@ -98,7 +97,7 @@ export default function WorldGlobe({
               lng: country.properties.longitude,
               altitude: 1.5,
             }
-          : { lat: 12, lng: -35, altitude: 2.3 };
+          : { lat: 12, lng: -35, altitude: 1.5 };
     globe.current.pointOfView(target, country || cityId ? duration : 0);
     cameraInitialized.current = true;
   }, [ready, country, cityId, cityLat, cityLng, settings.parallaxEnabled]);
@@ -128,22 +127,6 @@ export default function WorldGlobe({
     },
     [ocean],
   );
-
-  function moveView(zoomFactor: number, longitudeDelta = 0) {
-    if (!globe.current) return;
-    const current = globe.current.pointOfView();
-    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? 0
-      : 180;
-    globe.current.pointOfView(
-      {
-        ...current,
-        lng: current.lng + longitudeDelta,
-        altitude: Math.max(0.2, Math.min(3.5, current.altitude * zoomFactor)),
-      },
-      duration,
-    );
-  }
 
   function selectTouch(event: PointerEvent<HTMLDivElement>) {
     const start = touch.current;
@@ -219,7 +202,7 @@ export default function WorldGlobe({
         <p className="globe-fallback" role="status">
           {readOnly
             ? "A visualização 3D foi interrompida."
-            : "A visualização 3D foi interrompida. Use os campos de país e cidade para continuar."}
+            : "A visualização 3D foi interrompida. Continue pela lista de aplicações."}
         </p>
       ) : (
         size.width > 0 && (
@@ -254,7 +237,7 @@ export default function WorldGlobe({
             polygonsTransitionDuration={0}
             onPolygonHover={(feature) =>
               setHover(
-                feature ? (feature as CountryFeature).properties.name : "",
+                feature && onCountrySelect ? (feature as CountryFeature).properties.name : "",
               )
             }
             onPolygonClick={(feature, event) => {
@@ -269,7 +252,7 @@ export default function WorldGlobe({
               (point as GlobeCity).id === city?.id ? 1.4 : 0.7
             }
             pointColor={(point) =>
-              (point as GlobeCity).id === city?.id ? "#ffcc70" : "#f8fffb"
+              (point as GlobeCity).color ?? "#f8fffb"
             }
             pointsTransitionDuration={0}
             onPointHover={(point) =>
@@ -286,7 +269,7 @@ export default function WorldGlobe({
             labelLat="latitude"
             labelLng="longitude"
             labelText={(point) =>
-              (point as GlobeCity).name
+              ((point as GlobeCity).name + ((point as GlobeCity).count && (point as GlobeCity).count! > 1 ? " · " + (point as GlobeCity).count + " serviços" : ""))
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
             }
@@ -304,28 +287,6 @@ export default function WorldGlobe({
             }}
           />
         )
-      )}
-      {ready && !lost && (
-        <div className="globe-controls" aria-label="Controles do globo">
-          <button
-            aria-label="Girar globo à esquerda"
-            onClick={() => moveView(1, -25)}
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            aria-label="Girar globo à direita"
-            onClick={() => moveView(1, 25)}
-          >
-            <ChevronRight size={18} />
-          </button>
-          <button aria-label="Aproximar globo" onClick={() => moveView(0.8)}>
-            <Plus size={18} />
-          </button>
-          <button aria-label="Afastar globo" onClick={() => moveView(1.25)}>
-            <Minus size={18} />
-          </button>
-        </div>
       )}
       {hover && (
         <span className="globe-hover" role="status">

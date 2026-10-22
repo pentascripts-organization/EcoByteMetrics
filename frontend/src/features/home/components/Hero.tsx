@@ -73,7 +73,7 @@ export function Hero({ copy }: HeroProps) {
           </h1>
           <p>{copy.description}</p>
           <div className="hero-copy__actions">
-            <Link className="primary-cta" to="/login">
+            <Link className="primary-cta" to="/dashboard">
               <span>{copy.primary}</span>
               <ArrowRight size={22} strokeWidth={1.65} aria-hidden="true" />
             </Link>

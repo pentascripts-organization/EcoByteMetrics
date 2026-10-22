@@ -7,8 +7,8 @@ export function HomeHeader() {
     <header className="site-header" aria-label="Cabeçalho principal">
       <HomeBrand />
       <div className="header-actions">
-        <Link className="platform-link" to="/login">
-          <span>Login / Cadastro</span>
+        <Link className="platform-link" to="/dashboard">
+          <span>Monitoramento</span>
           <ArrowUpRight size={19} strokeWidth={1.7} aria-hidden="true" />
         </Link>
       </div>

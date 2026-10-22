@@ -10,7 +10,7 @@ export function NotFoundPage() {
       window.history.state.idx > 0
     )
       navigate(-1);
-    else navigate("/pesquisa", { replace: true });
+    else navigate("/dashboard", { replace: true });
   };
   return (
     <main className="not-found-page nature-error">
