@@ -1,12 +1,33 @@
 .monitoring-shell {
   --monitoring-ink: #103a40;
-  --monitoring-muted: #657b88;
+  --monitoring-muted: #526b78;
   --monitoring-green: #087e59;
   --monitoring-line: #dfe7eb;
   min-height: 100vh;
   background: #fff;
   color: var(--monitoring-ink);
   font-size: 16px;
+  position: relative;
+  isolation: isolate;
+}
+.monitoring-header { position: relative; z-index: 1; }
+.monitoring-main { position: relative; z-index: 1; }
+.monitoring-main:has(.monitoring-map) { pointer-events: none; }
+.monitoring-header,
+.monitoring-heading,
+.monitoring-tabs,
+.monitoring-filters,
+.monitoring-notice,
+.monitoring-applications,
+.monitoring-service-summary,
+.monitoring-evolution,
+.monitoring-resources,
+.monitoring-location > h2,
+.observation-timeline,
+.monitoring-state,
+.monitoring-empty {
+  background: transparent;
+  pointer-events: auto;
 }
 .monitoring-shell button { background: transparent; }
 .monitoring-header {
@@ -21,7 +42,7 @@
 .monitoring-header nav a { padding: 8px 3px; font-size: 18px; border-bottom: 2px solid transparent; }
 .monitoring-header nav a.active { border-color: var(--monitoring-green); font-weight: 700; }
 .monitoring-home { justify-self: end; display: inline-flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 650; }
-.monitoring-main { width: min(1410px, calc(100% - 144px)); margin: 0 auto; padding: 0 0 52px; outline: none; }
+.monitoring-main { width: min(1410px, calc(100% - 144px)); margin: 0 auto; padding: 0 0 12px; outline: none; }
 .monitoring-heading { display: flex; align-items: end; justify-content: space-between; gap: 28px; margin-bottom: 8px; min-height: 88px; }
 .monitoring-heading h1 { color: #082f35; font-size: clamp(40px, 4.6vw, 72px); letter-spacing: -2.8px; line-height: 1.12; font-weight: 750; margin-bottom: 5px; }
 .monitoring-heading p { color: var(--monitoring-muted); font-size: 21px; line-height: 1.5; }
@@ -38,7 +59,8 @@
 .monitoring-tabs button[aria-selected="true"] { color: var(--monitoring-green); border-bottom-color: var(--monitoring-green); font-weight: 700; }
 .monitoring-tabs .mobile-map-tab { display: none; }
 .tab-mobile-label { display: none; }
-.monitoring-overview { display: grid; grid-template-columns: 45% 55%; min-height: 464px; }
+.monitoring-overview { display: grid; grid-template-columns: 45% 55%; min-height: 0; height: 100%; }
+.monitoring-overview[hidden] { display: none; }
 .monitoring-main h2 { font-size: clamp(24px, 2.2vw, 33px); letter-spacing: -.8px; line-height: 1.3; font-weight: 700; }
 .monitoring-location { min-width: 0; padding-right: 36px; }
 .monitoring-applications, .monitoring-service-summary { min-width: 0; border-left: 1px solid var(--monitoring-line); padding-left: 40px; }
@@ -56,28 +78,20 @@
 .monitoring-app-table td:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .monitoring-app-table td:first-child { padding: 0; }
 .monitoring-app-table td button { min-height: 54px; padding: 12px 10px; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 5px; text-align: left; overflow-wrap: anywhere; }
-.monitoring-app-table td button svg { opacity: 0; }
+.monitoring-app-table td button > svg { opacity: 0; }
+.monitoring-application-name { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.detail-heading .country-flag { margin-right: 8px; }
 .monitoring-app-table tr:focus-within, .monitoring-app-table tbody tr:hover { background: #eef8f4; }
 .monitoring-app-table tr:focus-within td, .monitoring-app-table tbody tr:hover td { border-bottom-color: var(--monitoring-green); }
-.monitoring-app-table td button:hover svg, .monitoring-app-table td button:focus-visible svg { opacity: 1; }
+.monitoring-app-table td button:hover > svg, .monitoring-app-table td button:focus-visible > svg { opacity: 1; }
 .monitoring-status { display: inline-flex; align-items: center; gap: 12px; font-size: 16px; line-height: 1.35; }
-.monitoring-status i, .monitoring-caution i { display: inline-block; width: 13px; height: 13px; flex: 0 0 13px; border-radius: 50%; }
-.monitoring-summary { margin-top: 34px; padding-top: 22px; border-top: 1px solid #ccd9e0; }
-.monitoring-summary > strong { display: block; font-family: var(--eb-font-heading); font-size: clamp(20px, 1.7vw, 26px); letter-spacing: -.5px; line-height: 1.45; }
-.monitoring-summary > div { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 40px; }
-.monitoring-summary p { color: var(--monitoring-muted); font-size: 16px; line-height: 1.6; }
-.monitoring-caution { display: inline-flex; align-items: center; gap: 9px; }
-.monitoring-caution i { background: #ffb61e; width: 10px; height: 10px; flex-basis: 10px; }
-.monitoring-summary details { margin-top: 10px; color: #617781; font-size: 13px; max-width: 900px; }
-.monitoring-summary details p { font-size: 14px; padding-top: 8px; }
-.monitoring-update { margin-top: 16px; color: var(--monitoring-muted); font-size: 14px; }
+.monitoring-status i { display: inline-block; width: 13px; height: 13px; flex: 0 0 13px; border-radius: 50%; }
 .monitoring-shell summary { cursor: pointer; }
 .monitoring-filters { display: flex; flex-wrap: wrap; gap: 18px; padding: 20px 0; border-top: 1px solid var(--monitoring-line); }
 .monitoring-filters label, .evolution-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
 .monitoring-filters select, .monitoring-filters input, .evolution-controls select { border: 1px solid #c6d6dc; border-radius: 5px; padding: 9px 11px; min-height: 44px; background: #fff; color: var(--monitoring-ink); font-size: 14px; }
 .monitoring-text-button { min-height: 44px; padding: 8px 0; color: var(--monitoring-green); display: inline-flex; gap: 7px; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
 .monitoring-filters > button { align-self: end; }
-.monitoring-filter-count { margin: -8px 0 12px; color: var(--monitoring-muted); font-size: 14px; }
 .monitoring-notice { padding: 14px 0; border-top: 1px solid var(--monitoring-line); font-size: 14px; color: #6f591a; }
 .monitoring-notice button { padding: 6px 0; min-height: 40px; color: var(--monitoring-green); text-decoration: underline; }
 .monitoring-notice details, .monitoring-notice > p { max-width: 1000px; }
@@ -112,6 +126,46 @@
 .chart-point { fill: #138467; }
 .monitoring-chart > p, .chart-data { font-size: 14px; color: var(--monitoring-muted); margin-top: 12px; }
 .chart-data table { max-width: 700px; margin-top: 12px; }
+.monitoring-app-table tr[data-highlighted="true"] { background: #eaf5f0; }
+.monitoring-app-table tr[data-highlighted="true"] td { border-bottom-color: #77b49f; }
+.monitoring-sample-value { display: inline-block; animation: sampleArrived 900ms ease-out; }
+.monitoring-header { animation: monitoringEnter 420ms ease-out backwards; }
+.monitoring-heading { animation: monitoringEnter 480ms ease-out 60ms backwards; }
+.monitoring-tabs { animation: monitoringEnter 480ms ease-out 120ms backwards; }
+.monitoring-applications, .monitoring-service-summary,
+.monitoring-view > .monitoring-evolution { animation: monitoringEnter 520ms ease-out 180ms backwards; }
+.observation-timeline { margin: 14px 0 20px; padding: 14px 0; border-top: 1px solid var(--monitoring-line); border-bottom: 1px solid var(--monitoring-line); }
+.timeline-heading, .timeline-heading > span { display: flex; align-items: center; gap: 8px; }
+.timeline-heading { justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+.timeline-heading strong { font-size: 15px; font-weight: 600; }
+.timeline-heading button { font-size: 12px; min-height: 36px; }
+.timeline-heading button:disabled { opacity: .45; text-decoration: none; }
+.observation-timeline label { display: block; font-size: 13px; color: var(--monitoring-muted); }
+.observation-timeline label strong { font-weight: 500; color: var(--monitoring-ink); }
+.observation-timeline input[type="range"] { display: block; width: 100%; accent-color: #087e59; margin: 12px 0 6px; min-height: 28px; cursor: pointer; }
+.timeline-range { display: flex; justify-content: space-between; gap: 20px; font-size: 11px; color: var(--monitoring-muted); }
+.observation-timeline > p { font-size: 12px; color: var(--monitoring-muted); line-height: 1.6; margin-top: 8px; }
+.observation-timeline > p span { opacity: .9; }
+.monitoring-state { padding: 46px 12px; max-width: 430px; display: flex; flex-direction: column; align-items: start; gap: 10px; color: var(--monitoring-muted); }
+.monitoring-state > svg { color: #3f9680; }
+.monitoring-state h3 { font-size: 20px; letter-spacing: -.5px; color: var(--monitoring-ink); }
+.monitoring-state p { font-size: 14px; line-height: 1.7; }
+.state-loading > svg { animation: stateWaiting 1.8s linear infinite; }
+@keyframes sampleArrived { from { background: #d5eddf; } to { background: transparent; } }
+@keyframes monitoringEnter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes stateWaiting { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .monitoring-sample-value, .state-loading > svg,
+  .monitoring-header, .monitoring-heading, .monitoring-tabs,
+  .monitoring-applications, .monitoring-service-summary,
+  .monitoring-view > .monitoring-evolution { animation: none; }
+}
+@media (max-width: 680px) {
+  .timeline-heading { align-items: start; }
+  .timeline-heading strong { font-size: 13px; }
+  .timeline-range { font-size: 10px; }
+  .monitoring-state { padding: 32px 3px; }
+}
 @media (min-width: 1201px) {
   .monitoring-overview:not(.service-overview) { grid-template-columns: 43% 57%; }
   .monitoring-applications { padding-left: 32px; }
@@ -153,7 +207,6 @@
   .monitoring-section-heading { gap: 8px; flex-wrap: wrap; }
   .monitoring-status { font-size: 13px; gap: 6px; }
   .monitoring-shell td { font-size: 14px; }
-  .monitoring-summary > div { gap: 5px; }
 }
 @media (max-width: 680px) {
   .monitoring-header { width: calc(100% - 32px); padding-top: 16px; }
@@ -187,12 +240,9 @@
   .monitoring-app-table th:nth-child(2) { width: 37%; }
   .monitoring-app-table th:last-child { width: 26%; }
   .monitoring-app-table td button { padding: 12px 3px; min-height: 58px; }
-  .monitoring-app-table td button svg { display: none; }
+  .monitoring-app-table td button > svg { display: none; }
   .monitoring-status { font-size: 12px; gap: 6px; }
   .monitoring-status i { width: 8px; height: 8px; flex-basis: 8px; }
-  .monitoring-summary { margin-top: 26px; padding-top: 20px; }
-  .monitoring-summary > strong { font-size: 20px; }
-  .monitoring-summary p { font-size: 13px; }
   .monitoring-filters { gap: 14px; }
   .monitoring-filters label { flex: 1 1 140px; min-width: 0; }
   .monitoring-filters select, .monitoring-filters input { width: 100%; min-width: 0; }
@@ -204,4 +254,61 @@
   .monitoring-chart { margin-top: 30px; }
   .monitoring-chart svg { min-height: 175px; }
   .monitoring-resource-list dt { font-size: 17px; }
+}
+
+/* Keep the page within the viewport; expanded content scrolls in its own area. */
+.monitoring-shell:has(.monitoring-view) {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.monitoring-shell:has(.monitoring-view) .monitoring-header { flex: none; margin: 0 auto; }
+.monitoring-shell:has(.monitoring-view) .monitoring-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0;
+  padding-bottom: 12px;
+  overflow: auto;
+}
+.monitoring-main > :not(.monitoring-view) { flex-shrink: 0; }
+.monitoring-main > .monitoring-view { flex: 1; min-height: 0; }
+.monitoring-view:has(> .monitoring-evolution) { overflow: auto; }
+.monitoring-service-summary { min-height: 0; overflow: auto; }
+.monitoring-service-summary .monitoring-section-heading { flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+.monitoring-service-summary .evolution-controls { width: 100%; }
+.monitoring-service-summary .evolution-controls label { flex: 1; min-width: 0; }
+.monitoring-service-summary .evolution-controls select { width: 100%; min-width: 0; }
+.monitoring-location { display: flex; flex-direction: column; min-height: 0; }
+.monitoring-location .monitoring-map { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.monitoring-location .monitoring-map .globe-stage { flex: 1; min-height: 0; height: 100%; max-height: none; aspect-ratio: auto; }
+.monitoring-location .globe-fallback { min-height: 0; }
+.monitoring-location .map-choices { flex: 0 1 auto; max-height: 45%; overflow: auto; }
+.monitoring-applications { display: flex; flex-direction: column; min-height: 0; contain: layout style; }
+.monitoring-applications > :not(.monitoring-table-scroll) { flex-shrink: 0; }
+.monitoring-applications .monitoring-table-scroll { min-height: 0; overflow: auto; }
+.monitoring-applications .monitoring-section-heading { margin-bottom: 8px; }
+.monitoring-app-table th { position: sticky; top: 0; z-index: 1; background: #fff; }
+.monitoring-filters, .monitoring-notice, .observation-timeline { max-height: 25dvh; overflow: auto; }
+.observation-timeline { margin: 8px 0 12px; padding: 8px 0; }
+@media (min-width: 901px) {
+  .monitoring-header { min-height: clamp(60px, 8dvh, 80px); }
+  .monitoring-heading { min-height: clamp(68px, 9dvh, 88px); }
+  .monitoring-heading h1 { font-size: clamp(40px, min(4.6vw, 7.5dvh), 72px); }
+  .monitoring-app-table td { padding-top: clamp(6px, 1dvh, 12px); padding-bottom: clamp(6px, 1dvh, 12px); }
+  .monitoring-app-table td:first-child { padding: 0; }
+  .monitoring-app-table td button { min-height: clamp(40px, 5.4dvh, 56px); padding-top: 6px; padding-bottom: 6px; }
+}
+@media (max-width: 900px) {
+  .monitoring-tools { margin-top: 8px; }
+  .monitoring-tabs { margin-top: 0; margin-bottom: 10px; }
+}
+@media (max-width: 680px) {
+  .monitoring-header { padding-top: 8px; }
+  .monitoring-overview:not(.service-overview) > section { height: 100%; }
+  .service-overview { overflow: auto; }
+  .service-overview .monitoring-location { height: 35dvh; }
+  .service-overview .monitoring-service-summary { overflow: visible; }
 }

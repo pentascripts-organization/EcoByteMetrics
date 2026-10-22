@@ -9,6 +9,7 @@ import { mergeCollectionHistory, summarizeCollections } from "@/features/monitor
 import { isPeriod } from "@/shared/lib/period";
 import { DiscoveryError } from "@/features/monitoring/api/discoveryError";
 import { isCollectionStale, STALE_METRICS_MESSAGE } from "@/features/monitoring/domain/freshness";
+import { appendObservation } from "../domain/observatory";
 
 export function MonitoringProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
@@ -39,6 +40,7 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
       const { getMonitoringSnapshot } = await import("@/features/monitoring/api/monitoring");
       const next = await getMonitoringSnapshot(controller.signal);
       if (controller.signal.aborted) return null;
+      const observedAt = new Date().toISOString();
       setLiveSnapshot((previous) => {
         const previousServices = new Map(
           previous.services.map((service) => [service.id, service]),
@@ -50,10 +52,7 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
             Date.parse(next.lastCollectionAt) > Date.parse(previous.lastCollectionAt))
             ? next.lastCollectionAt
             : previous.lastCollectionAt;
-        return {
-          ...next,
-          lastCollectionAt,
-          services: [
+        const services = [
             ...next.services.map((service) => ({
               ...service,
               lastCollectionAt:
@@ -81,7 +80,12 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
                       statusMessage: "Serviço ausente do registro atual.",
                     },
               ),
-          ],
+          ];
+        return {
+          ...next,
+          lastCollectionAt,
+          services,
+          observations: appendObservation(previous.observations ?? [], observedAt, services, next.history, next.warning),
           // Totais de estimativas por amostra.
           history: mergeCollectionHistory(
             previous.history,

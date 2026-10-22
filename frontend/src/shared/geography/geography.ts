@@ -19,6 +19,9 @@ export interface GlobeCity {
   id: string;
   color?: string;
   count?: number;
+  size?: number;
+  missingImpact?: boolean;
+  valueLabel?: string;
   countryCode: string;
   name: string;
   latitude: number | null;

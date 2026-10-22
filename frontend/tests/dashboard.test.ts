@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applicationImpacts, collectionSeries, filterApplications, groupServiceLocations } from "../src/features/monitoring/domain/dashboard.ts";
+import { applicationImpacts, collectionSeries, filterApplications, groupServiceLocations, serviceLocationPeers } from "../src/features/monitoring/domain/dashboard.ts";
 import { mergeCollectionHistory } from "../src/features/monitoring/domain/history.ts";
 import type { CollectionPoint, MonitoredService } from "../src/features/monitoring/types.ts";
 
@@ -11,6 +11,36 @@ const service = (id: string, extra: Partial<MonitoredService> = {}): MonitoredSe
 const sample = (serviceId: string, second: number, emissionsG: number | null, energyKwh = 0.001): CollectionPoint => ({
   serviceId, collectedAt: new Date(Date.UTC(2026, 9, 21, 12, 0, second)).toISOString(),
   energyKwh, emissionsG, intervalSeconds: 30,
+});
+
+test("removed applications stay last for both metrics and return to ranking when available", () => {
+  const services = [service("removed", { status: "removed" }), service("active"), service("missing"), service("removed-low", { status: "removed" })];
+  const history = [sample("removed", 0, 100, 100), sample("active", 0, 1, 1), sample("removed-low", 0, 2, 2)];
+  for (const metric of ["emissions", "energy"] as const) {
+    assert.deepEqual(applicationImpacts(services, history, metric).map(entry => entry.service.id), ["active", "missing", "removed", "removed-low"]);
+    const restored = services.map(entry => entry.id === "removed" ? { ...entry, status: "available" as const } : entry);
+    assert.equal(applicationImpacts(restored, history, metric)[0]!.service.id, "removed");
+  }
+});
+
+test("opening any application preserves all peers at its location", () => {
+  const locations = [
+    { country: "Canada", city: "Toronto", latitude: 43.6532, longitude: -79.3832 },
+    { country: "United States", city: "Ashburn", latitude: 39.0438, longitude: -77.4874 },
+    { country: "Brazil", city: "Sao Paulo", latitude: -23.5505, longitude: -46.6333 },
+    { country: "Ireland", city: "Dublin", latitude: 53.3498, longitude: -6.2603 },
+  ];
+  const services = locations.flatMap((location, i) => [service(i + "a", location), service(i + "b", location)]);
+  services.push(service("removed", { ...locations[0], status: "removed" }));
+  for (const selected of services.filter(entry => entry.status !== "removed")) {
+    const peers = serviceLocationPeers(services, selected);
+    assert.equal(peers.length, 2);
+    assert.ok(peers.some(peer => peer.id === selected.id));
+    assert.ok(peers.every(peer => peer.city === selected.city));
+    assert.equal(groupServiceLocations(peers)[0]!.count, 2);
+  }
+  const unknown = service("unknown");
+  assert.deepEqual(serviceLocationPeers([unknown], unknown), [unknown]);
 });
 
 test("busca ignora acentos e permite combinar localização e estado", () => {

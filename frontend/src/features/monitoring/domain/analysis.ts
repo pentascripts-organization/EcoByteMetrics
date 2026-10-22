@@ -3,6 +3,7 @@ import type { Period } from "@/shared/lib/period";
 import { isPeriod } from "@/shared/lib/period";
 import { matchesRegion } from "@/features/monitoring/domain/region";
 import { summarizeCollections } from "@/features/monitoring/domain/history";
+import { observationHistory } from "./observatory";
 
 export function parseLocalDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
@@ -26,7 +27,7 @@ export function parseLocalDate(value: string) {
 export function analysisQuery(search: string) {
   const input = new URLSearchParams(search);
   const result = new URLSearchParams();
-  for (const key of ["pais", "cidade", "regiao", "periodo", "ate"]) {
+  for (const key of ["pais", "cidade", "regiao", "periodo", "ate", "instante"]) {
     const value = input.get(key);
     if (value && (key !== "periodo" || isPeriod(value))) result.set(key, value);
   }
@@ -52,6 +53,12 @@ export function getAnalysis(
   search: string,
 ) {
   const params = new URLSearchParams(search);
+  const observedAt = params.get("instante") ?? "";
+  const observations = snapshot.observations ?? [];
+  const observation = observations.find(entry => entry.observedAt === observedAt);
+  const observationMissing = Boolean(observedAt && !observation);
+  const environmentServices = observation?.services ?? (observationMissing ? [] : snapshot.services);
+  const sourceHistory = observation ? observationHistory(observations, observedAt) : observationMissing ? [] : snapshot.history;
   const regionCode = params.get("regiao") ?? "";
   const selectedRegion = snapshot.regions.find(
     (region) => region.code === regionCode,
@@ -60,19 +67,19 @@ export function getAnalysis(
   const city = selectedRegion?.city ?? params.get("cidade") ?? "";
   const date = params.get("ate") ?? "";
   const regional = Boolean(regionCode || country || city);
-  const services = snapshot.services.filter((service) =>
+  const services = environmentServices.filter((service) =>
     regionCode
       ? service.regionCode === regionCode
       : matchesRegion(service, country, city),
   );
   const end = date
     ? parseLocalDate(date)
-    : Date.parse(snapshot.lastCollectionAt ?? "");
+    : Date.parse(observation?.observedAt ?? snapshot.lastCollectionAt ?? "");
   const invalidDate = Boolean(date && !Number.isFinite(end));
   const serviceIds = new Set(services.map((service) => service.id));
   const days = period === "24h" ? 1 : 7;
   const start = end - days * 86400_000;
-  const recordedHistory = snapshot.history.filter((point) => {
+  const recordedHistory = sourceHistory.filter((point) => {
     if (!regional) return true;
     if (regionCode)
       return point.regionCode
@@ -120,6 +127,10 @@ export function getAnalysis(
         : monitoredRegions.has(region.code),
   );
   return {
+    observedAt,
+    observationMissing,
+    environmentServices,
+    warning: observation ? observation.warning : observationMissing ? undefined : snapshot.warning,
     services,
     history,
     regions,

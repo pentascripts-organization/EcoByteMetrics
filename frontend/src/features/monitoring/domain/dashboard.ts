@@ -28,8 +28,9 @@ export function applicationImpacts(services: MonitoredService[], history: Collec
     const emissions = summary.emissionCount === summary.count ? summary.emissionsG : null;
     return { service, summary, value: metric === "energy" ? summary.energyKwh : emissions };
   }).sort((a, b) =>
-    a.value === null ? b.value === null ? a.service.name.localeCompare(b.service.name, "pt-BR") : 1
-      : b.value === null ? -1 : b.value - a.value || a.service.name.localeCompare(b.service.name, "pt-BR"),
+    Number(a.service.status === "removed") - Number(b.service.status === "removed") ||
+    (a.value === null ? b.value === null ? a.service.name.localeCompare(b.service.name, "pt-BR") : 1
+      : b.value === null ? -1 : b.value - a.value || a.service.name.localeCompare(b.service.name, "pt-BR")),
   );
 }
 
@@ -52,6 +53,10 @@ export function groupServiceLocations(services: MonitoredService[]) {
     group.color = statusColors[mostUrgent.status];
   }
   return [...groups.values()];
+}
+
+export function serviceLocationPeers(services: MonitoredService[], selected: MonitoredService) {
+  return groupServiceLocations(services).find(group => group.services.some(service => service.id === selected.id))?.services ?? [selected];
 }
 
 export function collectionSeries(history: CollectionPoint[], metric: DashboardMetric, cumulative = false) {
