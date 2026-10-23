@@ -7,9 +7,10 @@ import { formatNumber } from "@/shared/lib/format";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { Panel } from "@/shared/ui/Panel";
 
-export function ServiceImpactRanking({ history, services }: {
+export function ServiceImpactRanking({ history, services, periodLabel }: {
   history: CollectionPoint[];
   services: MonitoredService[];
+  periodLabel?: string;
 }) {
   const [metric, setMetric] = useState<ImpactMetric>("energy");
   const { entries, omittedCount } = useMemo(
@@ -20,7 +21,7 @@ export function ServiceImpactRanking({ history, services }: {
   const max = visible[0]?.value || 1;
   const unit = metric === "energy" ? "kWh" : "gCO₂e";
   return (
-    <Panel title="Impacto por serviço" eyebrow="PERÍODO SELECIONADO" className="service-impact-ranking">
+    <Panel title="Impacto por serviço" eyebrow={periodLabel ? `PERÍODO: ${periodLabel}` : "PERÍODO SELECIONADO"} className="service-impact-ranking">
       <div className="service-impact-controls">
         <p>Coletas disponíveis nesta sessão</p>
         <label>
