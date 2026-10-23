@@ -6,6 +6,7 @@ import metricRouter from "./modules/Metrics/metric.router.js";
 import carbonRouter from "./modules/Carbons/carbon.router.js";
 import serviceRouter from "./modules/Services/service.router.js";
 import locationRouter from "./modules/Locations/location.router.js";
+import authRouter from "./modules/Auth/auth.router";
 import statisticsRouter from "./modules/Statistics/statistics.router.js";
 
 import {
@@ -21,6 +22,7 @@ app.use(cors());
 app.use(express.json());
 // Rotas existentes da API.
 // Verifica se o backend está respondendo.
+app.use("/auth", authRouter);
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
