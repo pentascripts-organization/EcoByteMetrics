@@ -48,4 +48,4 @@ create table Carbons(
 	foreign key(id_location)
 	references locations(id_location)
 );
-insert into Users (name_user, email_user, password_user) values ('ecobytemetrics','ecobytemetrics@gamil.com', '123eco');
+--insert into Users (name_user, email_user, password_user) values ('ecobytemetrics','ecobytemetrics@gamil.com', '123eco');
