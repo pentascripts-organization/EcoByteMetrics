@@ -32,6 +32,7 @@ export function DashboardPage() {
     date,
     invalidDate,
     regional,
+    periodLabel,
     selection,
     totals: coverage,
   } = useAnalysis();
@@ -309,7 +310,11 @@ export function DashboardPage() {
             </ul>
           </div>
         </Panel>
-        <ServiceImpactRanking history={history} services={snapshot.services} />
+        <ServiceImpactRanking
+          history={history}
+          services={snapshot.services}
+          periodLabel={periodLabel}
+        />
       </div>
       <ServiceCollectionSummary services={services} />
       <RegionMap
