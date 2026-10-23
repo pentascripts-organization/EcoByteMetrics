@@ -63,7 +63,7 @@ O sistema consome duas APIs externas para realizar a coleta de métricas e o cá
 ---
 
 ### 🗄️ Estrutura do Banco de Dados
-A modelagem do banco relacional utiliza SQL nativo e explícito no PostgreSQL.
+A modelagem do banco de dados relacional utiliza SQL nativo no PostgreSQL, sem o uso de ORM. O script oficial database/DDL.sql define cinco tabelas responsáveis pelo armazenamento dos usuários, localizações, serviços, métricas e informações de intensidade de carbono.
 
 <details>
 <summary><b>🗃️ Clique para expandir o Script SQL DDL (DDL.sql)</b></summary>
@@ -74,9 +74,8 @@ A modelagem do banco relacional utiliza SQL nativo e explícito no PostgreSQL.
 create table Users(
 	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	name_user varchar(50) not null,
-	email_user varchar(50) not null,
-	password_user varchar(25) not null,
-	token_user varchar(255) not null
+	email_user varchar(254) not null unique,
+	password_user varchar(255) not null,
 );
 
 create table Locations(
@@ -126,6 +125,20 @@ create table Cabons(
 ```
 
 </details>
+
+Relacionamentos entre as tabelas:
+
+Users: armazena os dados de cadastro dos usuários, incluindo e-mail único e senha armazenada em formato de hash.
+
+Locations: armazena informações geográficas, como país, região, cidade e coordenadas.
+
+Services: registra os serviços e permite relacioná-los às localizações por meio de uma chave estrangeira.
+
+Metrics: armazena amostras de métricas de hardware associadas aos serviços.
+
+Carbons: armazena informações de intensidade de carbono e percentual de energia renovável associadas às localizações.
+
+As chaves estrangeiras conectam Services a Locations, Metrics a Services e Carbons a Locations.
 
 ---
 
@@ -299,7 +312,7 @@ greener/
 <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<th><a href="https://www.linkedin.com/in/enzo-suzuki-1756b7435/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 </tr>
 </tbody>
 </table>

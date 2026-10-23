@@ -1,9 +1,8 @@
-create table Users(
-	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_user varchar(50) not null,
-	email_user varchar(50) not null unique,
-	password_user varchar(25)not null,
-	token_user varchar(255)not null
+CREATE TABLE Users (
+    id_user INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name_user VARCHAR(50) NOT NULL,
+    email_user VARCHAR(254) NOT NULL UNIQUE,
+    password_user VARCHAR(255) NOT NULL
 );
 create table Locations(
 	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -49,4 +48,4 @@ create table Carbons(
 	foreign key(id_location)
 	references locations(id_location)
 );
-insert into Users (name_user, email_user, password_user, token_user) values ('ecobytemetrics','ecobytemetrics@gamil.com', '123eco', '123');
+--insert into Users (name_user, email_user, password_user) values ('ecobytemetrics','ecobytemetrics@gamil.com', '123eco');

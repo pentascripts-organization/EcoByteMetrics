@@ -4,6 +4,14 @@ import {
     type AggregatorService,
     type ServiceMetrics,
 } from "../../integrations/metrics-api.js";
+import {
+    fetchCarbonRegions,
+    type CarbonRegionFactor,
+} from "../../integrations/carbon-api.js";
+import {
+    persistAggregatorServices,
+    persistMetricSample,
+} from "../Statistics/statistics.repository.js";
 
 import {
     Service,
@@ -102,9 +110,15 @@ export interface CollectedServiceMetrics {
 type MetricsFetcher = (
     serviceId: string
 ) => Promise<ServiceMetrics>;
+type CarbonRegionsFetcher = () => Promise<CarbonRegionFactor[]>;
+type ServicesPersister = typeof persistAggregatorServices;
+type MetricSamplePersister = typeof persistMetricSample;
 
 let fetchServices: ServicesFetcher = fetchAvailableServices;
 let fetchMetrics: MetricsFetcher = fetchServiceMetrics;
+let fetchCarbonFactors: CarbonRegionsFetcher = fetchCarbonRegions;
+let saveServices: ServicesPersister = persistAggregatorServices;
+let saveMetricSample: MetricSamplePersister = persistMetricSample;
 
 let discoveredServices: AggregatorService[] = [];
 let lastUpdatedAt: string | null = null;
@@ -115,26 +129,15 @@ export async function refreshDiscoveredServices(): Promise<void> {
     try {
         const services = await fetchServices();
 
-        if (!Array.isArray(services)) {
-            throw new Error("Resposta inválida do agregador: lista esperada.");
-        }
-
-        // Atualiza a lista somente após uma consulta bem-sucedida.
-        discoveredServices = services;
-        lastUpdatedAt = new Date().toISOString();
-        return;
+    try {
+        await saveServices(services);
     } catch (error: unknown) {
-        console.error(
-            "Falha ao consultar o agregador; mantendo o cache anterior.",
-            error
-        );
-
-        // Mantém os dados mais recentes válidos quando o agregado estiver indisponível.
-        if (discoveredServices.length === 0) {
-            discoveredServices = [];
-            lastUpdatedAt = null;
-        }
+        console.error("Falha ao persistir serviços descobertos.", error);
     }
+
+    // Atualiza a lista somente após uma consulta bem-sucedida.
+    discoveredServices = services;
+    lastUpdatedAt = new Date().toISOString();
 }
 
 export function getDiscoveredServices(): AggregatorService[] {
@@ -148,21 +151,49 @@ export function getServicesLastUpdatedAt(): string | null {
 // Consulta as métricas de todos os serviços descobertos.
 // Uma falha individual não interrompe as consultas seguintes.
 export async function refreshServiceMetrics(): Promise<void> {
-    for (const service of discoveredServices) {
-        try {
-            const metrics = await fetchMetrics(service.id);
+    let carbonFactors = new Map<string, number>();
+    try {
+        carbonFactors = new Map(
+            (await fetchCarbonFactors()).map((factor) => [
+                factor.code,
+                factor.carbonIntensity,
+            ])
+        );
+    } catch (error: unknown) {
+        console.error("Falha ao consultar fatores de carbono.", error);
+    }
 
-            collectedMetrics.set(service.id, {
-                serviceId: service.id,
-                metrics,
-                updatedAt: new Date().toISOString(),
-            });
+    for (const service of discoveredServices) {
+        let metrics: ServiceMetrics;
+        try {
+            metrics = await fetchMetrics(service.id);
         } catch (error: unknown) {
             console.error(
                 `Falha ao consultar métricas do serviço "${service.id}".`,
                 error
             );
-            // Mantém as últimas métricas válidas desse serviço.
+            continue;
+        }
+
+        const collectedAt = new Date();
+        collectedMetrics.set(service.id, {
+            serviceId: service.id,
+            metrics,
+            updatedAt: collectedAt.toISOString(),
+        });
+
+        try {
+            await saveMetricSample(
+                service.id,
+                metrics,
+                carbonFactors.get(service.location.region_code) ?? null,
+                collectedAt
+            );
+        } catch (error: unknown) {
+            console.error(
+                `Falha ao persistir métricas do serviço "${service.id}".`,
+                error
+            );
         }
     }
 }
@@ -192,4 +223,27 @@ export function setMetricsFetcherForTesting(fetcher: MetricsFetcher
 
 export function resetMetricsFetcher(): void {
     fetchMetrics = fetchServiceMetrics;
+}
+
+export function setCarbonRegionsFetcherForTesting(
+    fetcher: CarbonRegionsFetcher
+): void {
+    fetchCarbonFactors = fetcher;
+}
+
+export function resetCarbonRegionsFetcher(): void {
+    fetchCarbonFactors = fetchCarbonRegions;
+}
+
+export function setPersistenceForTesting(
+    servicesPersister: ServicesPersister,
+    metricPersister: MetricSamplePersister
+): void {
+    saveServices = servicesPersister;
+    saveMetricSample = metricPersister;
+}
+
+export function resetPersistence(): void {
+    saveServices = persistAggregatorServices;
+    saveMetricSample = persistMetricSample;
 }

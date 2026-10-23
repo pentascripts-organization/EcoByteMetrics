@@ -19,7 +19,7 @@ services:
       - ./database:/docker-entrypoint-initdb.d
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DATABASE\""]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -43,6 +43,9 @@ services:
       POSTGRES_DATABASE: ${POSTGRES_DATABASE:-ecobytemetrics}
       POSTGRES_USER: ${POSTGRES_USER:-ecobyte}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecobytemetrics}
+
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
 
     ports:
       - "${PORT:-3000}:${PORT:-3000}"

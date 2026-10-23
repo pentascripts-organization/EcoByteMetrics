@@ -16,8 +16,21 @@ Este repositório contém a modelagem de dados relacional, os scripts DDL de cri
 ```bash
 database/
 ├── README.md       # Orientações para restauração, DML e volume Docker
-└── DDL.sql      # Script DDL oficial de criação das tabelas e chaves
+├── DDL.sql         # Estrutura principal do banco
+└── statistics.sql  # Serviços descobertos e snapshots usados no dashboard
 ```
+
+O Compose monta esta pasta em `/docker-entrypoint-initdb.d`, então os dois
+scripts SQL são executados em ordem em um volume PostgreSQL vazio. Para um
+volume já existente, aplique a migração sem apagar os dados:
+
+```bash
+docker exec -i database_EcoByteMetrics psql -U ecobytemetrics -d ecobytemetrics < database/statistics.sql
+```
+
+O coletor grava os serviços descobertos em `aggregator_services` e cada coleta
+em `aggregator_metric_samples`. A API consolida energia e emissões dessas
+amostras; o fator regional é obtido de `API_CARBON` e registrado junto à coleta.
 
 ---
 

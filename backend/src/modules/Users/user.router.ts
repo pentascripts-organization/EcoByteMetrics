@@ -5,13 +5,32 @@ import {
     getUserByIdController,
     updateUserController}
     from "./user.controller";
+import { authMiddleware } from "../Auth/auth.middleware";
+import { userAccessMiddleware } from "../Auth/userAccess.middleware";
 
 const userRouter = Router();
 
 userRouter.post("/", createUserController);
-userRouter.get("/:id", getUserByIdController);
-userRouter.put("/:id", updateUserController);
-userRouter.delete("/:id", deleteUserController);
+userRouter.get(
+  "/:id",
+  authMiddleware,
+  userAccessMiddleware,
+  getUserByIdController
+);
+
+userRouter.put(
+  "/:id",
+  authMiddleware,
+  userAccessMiddleware,
+  updateUserController
+);
+
+userRouter.delete(
+  "/:id",
+  authMiddleware,
+  userAccessMiddleware,
+  deleteUserController
+);
 
 userRouter.get("/", (req, res) => {
     res.set("Allow", "GET, HEAD, POST, OPTIONS").status(204).end();
