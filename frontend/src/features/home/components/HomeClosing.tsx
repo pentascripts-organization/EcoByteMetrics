@@ -25,7 +25,7 @@ export function HomeClosing() {
     <footer className="home-footer">
       <div className="footer-top"><HomeBrand /><p>Tecnologia em perspectiva.<br />Escolhas mais conscientes.</p><a className="footer-back" href="#inicio">Voltar ao início<ArrowUpRight size={17} aria-hidden="true" /></a></div>
       <div className="footer-links"><nav aria-label="Navegação do rodapé"><DashboardLink>Monitoramento</DashboardLink><a href="#solucoes">Como funciona</a><a href="#projeto">O projeto</a></nav><a href="https://github.com/pentascripts-organization/EcoByteMetrics" target="_blank" rel="noreferrer">Código do projeto<ArrowUpRight size={14} aria-hidden="true" /></a></div>
-      <div className="footer-bottom"><span>EcoByteMetrics · Energia e carbono em software.</span><details id="music-credits"><summary>Créditos da trilha</summary><p>“Clear Air” — Kevin MacLeod (<a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100626" target="_blank" rel="noreferrer">incompetech.com</a>). Licença <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">Creative Commons BY 4.0</a>. Áudio convertido para reprodução na página; composição preservada.</p></details></div>
+      <div className="footer-bottom"><span>EcoByteMetrics · Energia e carbono em software.</span></div>
     </footer>
   </>;
 }
