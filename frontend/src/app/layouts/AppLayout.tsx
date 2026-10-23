@@ -1,11 +1,14 @@
-import { NavLink, Outlet, Link } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Brand } from "@/shared/ui/Brand";
 import { AnalysisProvider } from "@/features/monitoring/providers/AnalysisProvider";
 
 export function AppLayout() {
+  const { state } = useLocation();
+  const [entry] = useState(() => state?.homeEntry === "crossfade" ? "crossfade" : state?.homeEntry === "fade" ? "fade" : undefined);
   return <AnalysisProvider>
-    <div className="monitoring-shell">
+    <div className="monitoring-shell" data-entry={entry}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <header className="monitoring-header">
         <Brand />

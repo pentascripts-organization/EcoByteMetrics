@@ -10,3 +10,4 @@
 @import "./overrides.css";
 
 @import "../../features/monitoring/styles/dashboard.css";
+@import "./page-transition.css";
