@@ -1,8 +1,22 @@
+import fs from "node:fs";
+import path from "node:path";
+import dotenv from "dotenv";
 import app from "./app.js";
 import {
   refreshDiscoveredServices,
   refreshServiceMetrics,
 } from "./modules/Services/services.service.js";
+
+const candidatePaths = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(process.cwd(), "..", ".env"),
+    path.resolve(process.cwd(), "..", "backend", ".env"),
+];
+
+const envPath = candidatePaths.find((value) => fs.existsSync(value));
+if (envPath) {
+    dotenv.config({ path: envPath });
+}
 
 const PORT = process.env.PORT || 3000;
 

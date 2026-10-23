@@ -18,12 +18,12 @@ export interface AggregatorService {
   metrics_path: string;
 }
 
-const aggregatorUrl = process.env.API_METRIC;
+const aggregatorUrl = (process.env.API_METRIC ?? "https://metrics.unilaunch.org").replace(/\/+$/, "");
 
 export async function fetchAvailableServices(): Promise<AggregatorService[]> {
-  if (!aggregatorUrl) {
-    throw new Error(
-      "A variável API_METRIC não foi configurada no ambiente."
+  if (!process.env.API_METRIC && process.env.NODE_ENV !== "test") {
+    console.warn(
+      "API_METRIC não configurada; usando o endpoint público padrão."
     );
   }
 
@@ -86,13 +86,7 @@ export interface ServiceMetrics {
 export async function fetchServiceMetrics(
     serviceId: string
 ): Promise<ServiceMetrics> {
-    if (!aggregatorUrl) {
-        throw new Error(
-            "A variável API_METRIC não foi configurada no ambiente."
-        );
-    }
-
-    const baseUrl = aggregatorUrl.replace(/\/+$/, "");
+    const baseUrl = aggregatorUrl;
     const encodedServiceId = encodeURIComponent(serviceId);
 
     const response = await fetch(

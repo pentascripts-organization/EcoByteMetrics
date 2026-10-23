@@ -126,7 +126,8 @@ let lastUpdatedAt: string | null = null;
 const collectedMetrics = new Map<string, CollectedServiceMetrics>();
 
 export async function refreshDiscoveredServices(): Promise<void> {
-    const services = await fetchServices();
+    try {
+        const services = await fetchServices();
 
     try {
         await saveServices(services);

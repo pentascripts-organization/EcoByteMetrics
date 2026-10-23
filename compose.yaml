@@ -7,12 +7,12 @@ services:
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: ${POSTGRES_DATABASE}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-ecobytemetrics}
+      POSTGRES_USER: ${POSTGRES_USER:-ecobyte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecobytemetrics}
 
     ports:
-      - "5433:${POSTGRES_PORT}"
+      - "5433:${POSTGRES_PORT:-5432}"
 
     volumes:
       - postgres_data:/var/lib/postgresql
@@ -36,19 +36,19 @@ services:
     restart: unless-stopped
 
     environment:
-      PORT: ${PORT}
+      PORT: ${PORT:-3000}
 
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no .env}
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-ecobytemetrics}
+      POSTGRES_USER: ${POSTGRES_USER:-ecobyte}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecobytemetrics}
 
       JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
 
     ports:
-      - "${PORT}:${PORT}"
+      - "${PORT:-3000}:${PORT:-3000}"
 
     depends_on:
       postgres:
@@ -71,7 +71,7 @@ services:
     restart: unless-stopped
 
     ports:
-      - "${FRONT_PORT}:80"
+      - "${FRONT_PORT:-8080}:80"
 
     depends_on:
       backend:
