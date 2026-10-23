@@ -112,11 +112,29 @@ let lastUpdatedAt: string | null = null;
 const collectedMetrics = new Map<string, CollectedServiceMetrics>();
 
 export async function refreshDiscoveredServices(): Promise<void> {
-    const services = await fetchServices();
+    try {
+        const services = await fetchServices();
 
-    // Atualiza a lista somente após uma consulta bem-sucedida.
-    discoveredServices = services;
-    lastUpdatedAt = new Date().toISOString();
+        if (!Array.isArray(services)) {
+            throw new Error("Resposta inválida do agregador: lista esperada.");
+        }
+
+        // Atualiza a lista somente após uma consulta bem-sucedida.
+        discoveredServices = services;
+        lastUpdatedAt = new Date().toISOString();
+        return;
+    } catch (error: unknown) {
+        console.error(
+            "Falha ao consultar o agregador; mantendo o cache anterior.",
+            error
+        );
+
+        // Mantém os dados mais recentes válidos quando o agregado estiver indisponível.
+        if (discoveredServices.length === 0) {
+            discoveredServices = [];
+            lastUpdatedAt = null;
+        }
+    }
 }
 
 export function getDiscoveredServices(): AggregatorService[] {

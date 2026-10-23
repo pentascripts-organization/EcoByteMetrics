@@ -123,7 +123,7 @@ describe("Serviço de descoberta de serviços", () => {
             throw new Error("Falha simulada na consulta");
         });
 
-        await assert.rejects(refreshDiscoveredServices());
+        await refreshDiscoveredServices();
 
         assert.deepEqual(getDiscoveredServices(), previousServices);
         assert.equal(
