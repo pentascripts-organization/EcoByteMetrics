@@ -5,12 +5,13 @@ import{
     listServiceByLocationIdController,
     listServiceController
 }from "./service.controller"
+import { authMiddleware } from "../Auth/auth.middleware";
 
 const serviceRouter = Router();
 
 serviceRouter.get("/all", listServiceController);
 serviceRouter.get("/loc/:id", listServiceByLocationIdController);
-serviceRouter.post("/", createServiceController);
+serviceRouter.post("/", authMiddleware, createServiceController);
 serviceRouter.get("/:id", getServiceByIdController);
 
 serviceRouter.post("/loc/:id", (req, res) => {
