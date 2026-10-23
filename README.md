@@ -312,7 +312,7 @@ greener/
 <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 <th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<th><a href="https://www.linkedin.com/in/enzo-suzuki-1756b7435/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 </tr>
 </tbody>
 </table>
