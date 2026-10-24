@@ -56,6 +56,9 @@ export interface CollectionPoint {
 }
 
 export interface MonitoringSnapshot {
+  refreshedAt?: string;
+  observations?: MonitoringObservation[];
+  collectionEvents?: CollectionEvent[];
   regions: CarbonRegion[];
   services: MonitoredService[];
   history: CollectionPoint[];
@@ -64,5 +67,19 @@ export interface MonitoringSnapshot {
   lastCollectionAt: string | null;
   discoveryUpdatedAt?: string | null;
   discoveryComplete?: boolean;
+  warning?: string;
+}
+
+export interface CollectionEvent {
+  from: string;
+  to: string;
+  kind: "tab-hidden" | "monitoring-inactive" | "request-failed" | "no-new-samples" | "service-unavailable";
+  serviceIds?: string[];
+}
+
+export interface MonitoringObservation {
+  observedAt: string;
+  services: MonitoredService[];
+  samples: CollectionPoint[];
   warning?: string;
 }

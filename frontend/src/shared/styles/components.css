@@ -94,3 +94,6 @@ button.text-link { background: transparent; padding: var(--eb-space-1) 0; }
   .panel-title-group { gap: var(--eb-space-2); }
 }
 .table-scroll td > small { display: block; margin-top: var(--eb-space-1); color: var(--eb-ink-muted); font-size: var(--eb-text-xs); max-width: 250px; white-space: normal; overflow-wrap: anywhere; }
+.country-flag { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; vertical-align: middle; }
+.country-flag img { display: block; width: 28px; height: 28px; object-fit: contain; }
+.country-flag svg { color: var(--eb-ink-muted); }

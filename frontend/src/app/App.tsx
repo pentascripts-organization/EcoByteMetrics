@@ -1,13 +1,16 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
 import {
+  Navigate,
   Route,
   Routes,
   useLocation,
   useNavigationType,
+  useParams,
 } from "react-router-dom";
 import { PageBoundary } from "@/shared/ui/PageBoundary";
 import { deferredPages } from "@/app/routes/deferredPages";
 import { UnderConstructionPage } from "@/app/pages/UnderConstructionPage";
+import { dashboardLocation } from "@/app/routes/dashboardLocation";
 
 const AppLayout = lazy(() =>
   import("@/app/layouts/AppLayout").then((module) => ({
@@ -25,20 +28,16 @@ const NotFoundPage = lazy(() =>
     default: module.NotFoundPage,
   })),
 );
-const ResearchPage = lazy(() =>
-  import("@/features/monitoring/pages/ResearchPage").then((module) => ({
-    default: module.ResearchPage,
-  })),
-);
 const DashboardPage = lazy(() =>
   import("@/features/monitoring/pages/DashboardPage").then((module) => ({
     default: module.DashboardPage,
   })),
 );
+const ComparisonPage = lazy(() => import("@/features/monitoring/pages/ComparisonPage").then(module => ({ default: module.ComparisonPage })));
 
 const titles: Record<string, string> = {
   "/": "Entendendo o hoje",
-  "/dashboard": "Visão geral",
+  "/dashboard": "Monitoramento",
   "/servicos": "Serviços",
   "/emissoes": "Emissões",
   "/energia": "Energia",
@@ -98,16 +97,31 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/cadastro" element={<LoginPage register />} />
           <Route element={<AppLayout />}>
-            <Route path="/pesquisa" element={<ResearchPage />} />
+            <Route path="/pesquisa" element={<LegacyMapRedirect />} />
+            <Route path="/servicos" element={<LegacyMapRedirect />} />
+            <Route path="/energia" element={<LegacyMapRedirect metric="energy" />} />
+            <Route path="/emissoes" element={<LegacyMapRedirect metric="emissions" />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/comparar" element={<ComparisonPage />} />
             {deferredPages.map(({ path, title }) => (
               <Route key={path} path={path} element={<UnderConstructionPage title={title} />} />
             ))}
-            <Route path="/servicos/:id" element={<UnderConstructionPage title="Serviços" />} />
+            <Route path="/servicos/:id" element={<LegacyServiceRedirect />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </PageBoundary>
   );
+}
+
+function LegacyMapRedirect({ metric }: { metric?: "energy" | "emissions" }) {
+  const { search } = useLocation();
+  return <Navigate to={dashboardLocation(search, { metric })} replace />;
+}
+
+function LegacyServiceRedirect() {
+  const { id } = useParams();
+  const { search } = useLocation();
+  return <Navigate to={dashboardLocation(search, { serviceId: id })} replace />;
 }
