@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applicationImpacts, collectionSeries, filterApplications, groupServiceLocations, serviceLocationPeers } from "../src/features/monitoring/domain/dashboard.ts";
+import { applicationImpacts, collectionSeries, chartSeries, filterApplications, groupServiceLocations, serviceLocationPeers } from "../src/features/monitoring/domain/dashboard.ts";
 import { mergeCollectionHistory } from "../src/features/monitoring/domain/history.ts";
 import type { CollectionPoint, MonitoredService } from "../src/features/monitoring/types.ts";
 
@@ -107,4 +107,21 @@ test("evolução individual preserva ausência e interrompe a linha em lacunas",
   assert.deepEqual(points.map(value => value.value), [1, null, 2, 3]);
   assert.equal(points[2]!.gap, true);
   assert.equal(points[3]!.gap, true);
+});
+
+test("acumulado incompleto não parece completo nem reconecta após uma emissão ausente", () => {
+  const points = collectionSeries([sample("a", 0, 1), sample("b", 0, null), sample("a", 30, 3)], "emissions", true);
+  assert.deepEqual(points.map(point => point.value), [null, null]);
+  assert.deepEqual(collectionSeries([sample("a", 0, 1), sample("b", 0, null)], "energy", true).map(point => point.value), [0.002]);
+});
+
+test("gráficos longos limitam elementos preservando extremos, datas e lacunas", () => {
+  const points = Array.from({ length: 100_000 }, (_, index) => ({ timestamp: index, value: index === 45_555 ? 999_999 : index, gap: false }));
+  const reduced = chartSeries(points);
+  assert.ok(reduced.length <= 360);
+  assert.equal(reduced[0]!.timestamp, 0);
+  assert.equal(reduced.at(-1)!.timestamp, 99_999);
+  assert.ok(reduced.some(point => point.value === 999_999));
+  points[50_000]!.gap = true;
+  assert.ok(chartSeries(points).some(point => point.gap && Math.abs(point.timestamp - 50_000) < 1200));
 });

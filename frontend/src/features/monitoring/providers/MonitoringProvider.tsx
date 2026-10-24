@@ -5,11 +5,11 @@ import { useSettings } from "@/shared/preferences/useSettings";
 import { useLocation } from "react-router-dom";
 import type { MonitoringSnapshot } from "@/features/monitoring/types";
 import type { Period } from "@/shared/lib/period";
-import { mergeCollectionHistory, summarizeCollections } from "@/features/monitoring/domain/history";
+import { summarizeCollections } from "@/features/monitoring/domain/history";
 import { isPeriod } from "@/shared/lib/period";
 import { DiscoveryError } from "@/features/monitoring/api/discoveryError";
-import { isCollectionStale, STALE_METRICS_MESSAGE } from "@/features/monitoring/domain/freshness";
-import { appendObservation } from "../domain/observatory";
+import { mergeMonitoringSnapshot, markStaleServices, isMonitoringPath, REFRESH_INTERVAL_MS } from "../domain/snapshot";
+import { appendCollectionEvents, createCollectionPauseTracker } from "../domain/collectionEvents";
 
 export function MonitoringProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
@@ -25,93 +25,37 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<AbortController | null>(null);
+  const trackPause = useRef(createCollectionPauseTracker());
   const { pathname, search } = useLocation();
   const queryPeriod = new URLSearchParams(search).get("periodo");
   const period = isPeriod(queryPeriod) ? queryPeriod : selectedPeriod;
-  const monitoringActive = pathname === "/dashboard";
+  const monitoringActive = isMonitoringPath(pathname);
 
   const refresh = useCallback(async () => {
     if (pending.current) return null;
     const controller = new AbortController();
+    const requestedAt = new Date().toISOString();
     pending.current = controller;
     setLoading(true);
     setError(null);
     try {
       const { getMonitoringSnapshot } = await import("@/features/monitoring/api/monitoring");
+      controller.signal.throwIfAborted();
       const next = await getMonitoringSnapshot(controller.signal);
       if (controller.signal.aborted) return null;
       const observedAt = new Date().toISOString();
-      setLiveSnapshot((previous) => {
-        const previousServices = new Map(
-          previous.services.map((service) => [service.id, service]),
-        );
-        const currentIds = new Set(next.services.map((service) => service.id));
-        const lastCollectionAt =
-          next.lastCollectionAt &&
-          (!previous.lastCollectionAt ||
-            Date.parse(next.lastCollectionAt) > Date.parse(previous.lastCollectionAt))
-            ? next.lastCollectionAt
-            : previous.lastCollectionAt;
-        const services = [
-            ...next.services.map((service) => ({
-              ...service,
-              lastCollectionAt:
-                service.lastCollectionAt ??
-                previousServices.get(service.id)?.lastCollectionAt ??
-                null,
-            })),
-            ...previous.services
-              .filter((service) => !currentIds.has(service.id))
-              .map((service) =>
-                next.discoveryComplete === false
-                  ? service
-                  : {
-                      ...service,
-                      status: "removed" as const,
-                      cpuPercent: null,
-                      memoryGb: null,
-                      diskGb: null,
-                      networkGb: null,
-                      energyKwh: null,
-                      emissionsG: null,
-                      collectionIntervalSeconds: null,
-                      carbonIntensity: null,
-                      renewablePercent: null,
-                      statusMessage: "Serviço ausente do registro atual.",
-                    },
-              ),
-          ];
-        return {
-          ...next,
-          lastCollectionAt,
-          services,
-          observations: appendObservation(previous.observations ?? [], observedAt, services, next.history, next.warning),
-          // Totais de estimativas por amostra.
-          history: mergeCollectionHistory(
-            previous.history,
-            next.history,
-            Date.parse(lastCollectionAt ?? next.discoveryUpdatedAt!) - 30 * 86400_000,
-          ),
-        };
-      });
+      setLiveSnapshot(previous => mergeMonitoringSnapshot(previous, next, observedAt, requestedAt));
       return next;
     } catch (cause) {
       if (!controller.signal.aborted) {
         const discovery = cause instanceof DiscoveryError ? cause : null;
+        const failedAt = new Date().toISOString();
         setLiveSnapshot((previous) => ({
           ...previous,
           regions: discovery?.regions ?? previous.regions,
           warning: discovery ? discovery.catalogWarning : previous.warning,
-          services: previous.services.map((service) =>
-            service.status === "available" && service.lastCollectionAt &&
-            isCollectionStale(service.lastCollectionAt, service.collectionIntervalSeconds ?? 0)
-              ? {
-                  ...service,
-                  status: "stale" as const,
-                  statusMessage: [STALE_METRICS_MESSAGE, service.statusMessage].filter(Boolean).join(" "),
-                }
-              : service,
-          ),
+          services: markStaleServices(previous.services),
+          collectionEvents: appendCollectionEvents(previous.collectionEvents, [{ from: requestedAt, to: failedAt, kind: "request-failed" }]),
         }));
         setError(
           "Não foi possível consultar o agregador pelo backend. Os últimos dados recebidos foram preservados. Verifique a conexão e tente atualizar novamente. " +
@@ -120,18 +64,21 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
       }
       return null;
     } finally {
-      if (pending.current === controller) pending.current = null;
-      if (!pending.current) setLoading(false);
+      if (pending.current === controller) {
+        pending.current = null;
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    if (!monitoringActive) return;
     const updateIfVisible = () => {
-      if (!document.hidden) void refresh();
+      const events = trackPause.current(!monitoringActive ? "monitoring-inactive" : document.hidden ? "tab-hidden" : null, new Date().toISOString());
+      if (events.length) setLiveSnapshot(previous => ({ ...previous, collectionEvents: appendCollectionEvents(previous.collectionEvents, events) }));
+      if (monitoringActive && !document.hidden) void refresh();
     };
     const initial = window.setTimeout(updateIfVisible, 0);
-    const timer = window.setInterval(updateIfVisible, 30_000);
+    const timer = monitoringActive ? window.setInterval(updateIfVisible, REFRESH_INTERVAL_MS) : undefined;
     document.addEventListener("visibilitychange", updateIfVisible);
     return () => {
       window.clearTimeout(initial);

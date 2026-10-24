@@ -3,9 +3,10 @@ import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Brand } from "@/shared/ui/Brand";
 import { AnalysisProvider } from "@/features/monitoring/providers/AnalysisProvider";
+import { analysisLink } from "@/features/monitoring/domain/analysis";
 
 export function AppLayout() {
-  const { state } = useLocation();
+  const { state, search } = useLocation();
   const [entry] = useState(() => state?.homeEntry === "crossfade" ? "crossfade" : state?.homeEntry === "fade" ? "fade" : undefined);
   return <AnalysisProvider>
     <div className="monitoring-shell" data-entry={entry}>
@@ -13,7 +14,8 @@ export function AppLayout() {
       <header className="monitoring-header">
         <Brand />
         <nav aria-label="Navegação principal">
-          <NavLink to="/dashboard">Monitoramento</NavLink>
+          <NavLink to={analysisLink("/dashboard", search)}>Monitoramento</NavLink>
+          <NavLink to={analysisLink("/comparar", search)}>Comparar</NavLink>
           <Link to="/#projeto">Projeto</Link>
         </nav>
         <Link className="monitoring-home" to="/"><ArrowLeft size={20} /> <span>Voltar ao início</span></Link>

@@ -8,35 +8,14 @@ import type {
 import { findCountry, localizeCity } from "@/shared/geography/geography";
 import { summarizeCollections } from "@/features/monitoring/domain/history";
 import { DiscoveryError } from "@/features/monitoring/api/discoveryError";
+import { requestJson, RequestError } from "@/shared/lib/http";
+import { object, number, text, parseDiscovery } from "./contracts";
 
 const BACKEND_API = (import.meta.env?.VITE_BACKEND_URL ?? "/backend").replace(
   /\/+$/,
   "",
 );
-const CARBON_API = "https://carbon.unilaunch.org";
-const object = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
-const number = (value: unknown, max = Infinity): number | null =>
-  typeof value === "number" &&
-  Number.isFinite(value) &&
-  value >= 0 &&
-  value <= max
-    ? value
-    : null;
-const text = (value: unknown): string =>
-  typeof value === "string" ? value.trim() : "";
-
-async function request(
-  url: string,
-  signal: AbortSignal,
-) {
-  return fetch(url, {
-    signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
-    cache: "no-store",
-  });
-}
+const CARBON_API = (import.meta.env?.VITE_CARBON_URL ?? "https://carbon.unilaunch.org").replace(/\/+$/, "");
 
 function location(value: unknown) {
   const data = object(value);
@@ -104,18 +83,16 @@ export async function getMonitoringSnapshot(
   signal = new AbortController().signal,
 ): Promise<MonitoringSnapshot> {
   const [servicesResult, regionsResult] = await Promise.allSettled([
-    request(BACKEND_API + "/services", signal),
-    request(CARBON_API + "/regions", signal),
+    requestJson(BACKEND_API + "/services", { signal }),
+    requestJson(CARBON_API + "/regions", { signal }),
   ]);
   signal.throwIfAborted();
   const warnings: string[] = [];
   let regions: CarbonRegion[] = [];
   let catalogLoaded = false;
   try {
-    const regionsResponse =
-      regionsResult.status === "fulfilled" ? regionsResult.value : null;
-    if (!regionsResponse?.ok) throw new Error("API de carbono indisponível.");
-    const parsed = parseRegions(await regionsResponse.json());
+    if (regionsResult.status === "rejected") throw regionsResult.reason;
+    const parsed = parseRegions(regionsResult.value);
     regions = parsed.regions;
     catalogLoaded = true;
     if (parsed.invalidCount)
@@ -129,39 +106,14 @@ export async function getMonitoringSnapshot(
     );
   }
 
-  let discovery: Record<string, unknown>;
+  let discovery: ReturnType<typeof parseDiscovery>;
   let discoveryUpdatedAt: string;
   try {
-    if (servicesResult.status === "rejected")
-      throw new Error(
-        "O serviço de monitoramento não respondeu. Verifique se o backend está em execução.",
-      );
-    const servicesResponse = servicesResult.value;
-    if (!servicesResponse.ok)
-      throw new Error(
-        "Backend indisponível (HTTP " + servicesResponse.status + ").",
-      );
-    const contentType = servicesResponse.headers.get("content-type") ?? "";
-    if (contentType.includes("text/html"))
-      throw new Error(
-        "O endereço do backend respondeu com HTML em vez de dados. Confira o proxy /backend.",
-      );
-    discovery = object(await servicesResponse.json());
-    if (!Array.isArray(discovery.services))
-      throw new Error(
-        "Resposta inválida do backend: esperados services e lastUpdatedAt.",
-      );
-    if (discovery.lastUpdatedAt === null)
-      throw new Error(
-        "O backend ainda não concluiu a descoberta de serviços. Aguarde a atualização automática; se persistir, confira a configuração API_METRIC do processo.",
-      );
-    if (
-      typeof discovery.lastUpdatedAt !== "string" ||
-      !Number.isFinite(Date.parse(discovery.lastUpdatedAt))
-    )
-      throw new Error("Data de descoberta inválida no backend.");
+    if (servicesResult.status === "rejected") throw servicesResult.reason;
+    discovery = parseDiscovery(servicesResult.value);
     discoveryUpdatedAt = discovery.lastUpdatedAt;
   } catch (cause) {
+    signal.throwIfAborted();
     throw new DiscoveryError(
       cause instanceof Error
         ? cause.message
@@ -170,7 +122,7 @@ export async function getMonitoringSnapshot(
       warnings.join(" ") || undefined,
     );
   }
-  const summaries = discovery.services as unknown[];
+  const summaries = discovery.services;
   if (Date.now() - Date.parse(discoveryUpdatedAt) > 90_000)
     warnings.push(
       "A descoberta do backend está desatualizada. A lista pode não refletir mudanças recentes.",
@@ -227,14 +179,14 @@ export async function getMonitoringSnapshot(
   async function collect(service: MonitoredService) {
     service.status = "unavailable";
     try {
-      const response = await request(
-        BACKEND_API + "/metrics/" + encodeURIComponent(service.id),
-        signal,
-      );
-      const data = object(await response.json().catch(() => null));
-      if (!response.ok) {
+      let data: Record<string, unknown>;
+      try {
+        data = object(await requestJson(BACKEND_API + "/metrics/" + encodeURIComponent(service.id), { signal }));
+      } catch (cause) {
+        if (!(cause instanceof RequestError) || cause.kind !== "http") throw cause;
+        const data = object(cause.data);
         service.status =
-          response.status === 404
+          cause.status === 404
             ? text(data.error) === "service_not_found"
               ? "removed"
               : "no-metrics"
@@ -244,7 +196,7 @@ export async function getMonitoringSnapshot(
         service.statusMessage =
           (text(data.message) || text(data.error) || "Falha ao consultar métricas") +
           " (HTTP " +
-          response.status +
+          cause.status +
           ").";
         return;
       }
@@ -273,7 +225,7 @@ export async function getMonitoringSnapshot(
       service.networkGb = number(metrics.network_gb);
       const interval = number(sample.collection_interval_seconds);
       service.collectionIntervalSeconds =
-        interval !== null && Number.isSafeInteger(interval) ? interval : null;
+        interval !== null && interval > 0 && Number.isSafeInteger(interval) ? interval : null;
       if (
         [
           service.cpuPercent,
@@ -326,11 +278,11 @@ export async function getMonitoringSnapshot(
           "Fator de carbono ou resultado de emissão não disponível para " +
           (service.regionCode || "este serviço") +
           ".";
-    } catch {
+    } catch (cause) {
       if (signal.aborted)
         throw new DOMException("Coleta cancelada", "AbortError");
       service.statusMessage =
-        "Não foi possível consultar as métricas deste serviço.";
+        "Não foi possível consultar as métricas deste serviço. " + (cause instanceof Error ? cause.message : "");
     }
   }
   for (let start = 0; start < valid.length; start += 6) {

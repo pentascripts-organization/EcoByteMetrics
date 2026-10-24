@@ -3,17 +3,18 @@ import { ArrowLeft, ArrowUpRight, ChevronDown, ListFilter, Search, X } from "luc
 import { useSearchParams } from "react-router-dom";
 import { RegionMap } from "../components/map/RegionMap";
 import { MonitoringTabs } from "../components/MonitoringTabs";
-import { HistoryChart } from "../components/HistoryChart";
+import { EvolutionPanel } from "../components/EvolutionPanel";
 import { ObservationTimeline } from "../components/ObservationTimeline";
+import { MonitoringSummary } from "../components/MonitoringSummary";
 import { MonitoringState } from "../components/MonitoringState";
 import type { ImpactLens } from "../domain/observatory";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useAnalysis } from "../hooks/useAnalysis";
-import { applicationImpacts, filterApplications, serviceLocationPeers, statusColors } from "../domain/dashboard";
+import { applicationImpacts, serviceLocationPeers, statusColors } from "../domain/dashboard";
 import type { DashboardMetric } from "../domain/dashboard";
 import { summarizeCollections } from "../domain/history";
 import { serviceStatusLabels } from "../types";
-import type { CollectionPoint, MonitoredService } from "../types";
+import type { MonitoredService } from "../types";
 import { formatNumber } from "@/shared/lib/format";
 import { CountryFlag } from "@/shared/ui/CountryFlag";
 import { TopographicSides } from "../components/TopographicSides";
@@ -50,6 +51,7 @@ export function DashboardPage() {
   const lens: ImpactLens = params.get("lente") === "energy" ? "energy" : params.get("lente") === "emissions" ? "emissions" : "status";
   const tab = params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
+  const evolutionMode = params.get("serie") === "acumulado" ? "cumulative" : "intervals";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || period !== "24h");
   const update = useCallback((values: Record<string, string>, replace = false) => {
     const next = new URLSearchParams(params);
@@ -58,14 +60,14 @@ export function DashboardPage() {
     }
     setParams(next, { replace });
   }, [params, setParams]);
-  const services = useMemo(() => filterApplications(analysis.services, search, status), [analysis.services, search, status]);
+  const services = analysis.services;
   const mapServices = useMemo(() => selected ? serviceLocationPeers(analysis.environmentServices, selected) : services, [selected, services, analysis.environmentServices]);
-  const ids = useMemo(() => new Set(services.map(service => service.id)), [services]);
-  const history = useMemo(() => analysis.history.filter(point => ids.has(point.serviceId)), [analysis.history, ids]);
+  const history = analysis.history;
   const impacts = useMemo(() => applicationImpacts(services, history, metric), [services, history, metric]);
   const focusServiceId = focusedServiceId || hoveredServiceId;
   const highlightedIds = focusServiceId ? [focusServiceId] : mapHighlightedIds;
   const selectedHistory = useMemo(() => analysis.history.filter(point => point.serviceId === selectedId), [analysis.history, selectedId]);
+  const selectedSummary = useMemo(() => summarizeCollections(selectedHistory), [selectedHistory]);
   const countries = [...new Set(analysis.environmentServices.map(service => service.country).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "pt-BR"));
   const regionOptions = [...new Map(analysis.environmentServices.filter(service => service.regionCode && (!analysis.country || service.country === analysis.country)).map(service => [service.regionCode!, service])).values()];
   useEffect(() => {
@@ -115,42 +117,37 @@ export function DashboardPage() {
     {error && <div className="monitoring-notice" role="alert"><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button><details><summary>Detalhes da conexão</summary><p>{error}</p></details></div>}
     {analysis.warning && <details className="monitoring-notice"><summary>Há informações indisponíveis nesta consulta</summary><p>{analysis.warning}</p></details>}
     {selectedId ? selected && <MonitoringTabs label="Informações da aplicação" value={detailTab} tabs={[{ value: "resumo", label: "Resumo" }, { value: "recursos", label: "Recursos" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ detalhe: value })} /> : <MonitoringTabs label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
-    {!selectedId && timeline}
+    {!selectedId && <MonitoringSummary showDetails={tab !== "evolucao"} services={services} history={history} periodLabel={analysis.periodLabel} refreshedAt={snapshot.refreshedAt} lastCollectionAt={snapshot.lastCollectionAt} observedAt={analysis.observedAt} loading={loading} onRefresh={() => void refresh()} />}
+    {!selectedId && tab !== "evolucao" && timeline}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
       <div className={"monitoring-overview" + (selected ? " service-overview" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao"}>
         <section className="monitoring-location" aria-label="Localização dos serviços">
           {selected && <h2>Localização do serviço</h2>}
+          {selected && (selected.latitude === undefined || selected.longitude === undefined) && <p className="monitoring-explanation">Sem coordenadas para marcar esta aplicação no globo. Os recursos e as estimativas continuam disponíveis ao lado.</p>}
           <RegionMap key="world" services={mapServices} selectedServiceId={selected?.id} onSelectService={openService} history={selected ? analysis.history : history} lens={lens} highlightedServiceIds={highlightedIds} focusServiceId={selected ? undefined : focusServiceId} onHighlightServices={setMapHighlightedIds} />
         </section>
         {selected ? <section className="monitoring-service-summary">
-          {timeline}
-          {detailTab === "resumo" ? <><h2>Impacto nas amostras</h2><dl className="monitoring-facts">
-            <div><dt>Energia estimada</dt><dd>{formatNumber(summarizeCollections(selectedHistory).energyKwh)} <small>kWh</small></dd></div>
-            <div><dt>Emissões estimadas</dt><dd>{formatNumber(summarizeCollections(selectedHistory).emissionsG)} <small>g CO₂e</small></dd></div>
-            <div><dt>Última coleta</dt><dd className="fact-text">{stamp(selected.lastCollectionAt)}</dd></div>
+          {detailTab !== "evolucao" && timeline}
+          {detailTab === "resumo" ? <><h2>Impacto nas amostras</h2><p className="monitoring-explanation">{analysis.periodLabel} · amostras desta sessão. Emissões disponíveis em {selectedSummary.emissionCount} de {selectedSummary.count} amostras.</p><dl className="monitoring-facts">
+            <div><dt>Energia estimada</dt><dd>{formatNumber(selectedSummary.energyKwh)} <small>kWh</small></dd></div>
+            <div><dt>Emissões estimadas</dt><dd>{formatNumber(selectedSummary.emissionCount === selectedSummary.count ? selectedSummary.emissionsG : null)} <small>g CO₂e</small></dd></div>
+            <div><dt>Última coleta válida</dt><dd className="fact-text">{stamp(selected.lastCollectionAt)}</dd></div>
             <div><dt>Intensidade de carbono</dt><dd className="fact-text">{formatNumber(selected.carbonIntensity ?? null)} g CO₂e/kWh</dd></div>
           </dl>{selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}</> : detailTab === "recursos" ? <section className="monitoring-resources"><div className="monitoring-section-heading"><h2>Recursos da última coleta</h2><span>{stamp(selected.lastCollectionAt)}</span></div>
           <dl className="monitoring-resource-list">{[
             ["CPU", selected.cpuPercent, "%"], ["Memória", selected.memoryGb, "GB"], ["Disco", selected.diskGb, "GB"], ["Rede", selected.networkGb, "GB"], ["Intervalo da amostra", selected.collectionIntervalSeconds ?? null, "s"],
-          ].map(([label, value, unit]) => <div key={String(label)}><dt>{label}</dt><dd>{formatNumber(value as number | null)} <span>{unit}</span></dd></div>)}</dl><p className="monitoring-explanation">Valores ausentes são exibidos como “—”. Métricas antigas preservam o estado de desatualização da aplicação.</p>
-        </section> : detailTab === "evolucao" ? <Evolution history={selectedHistory} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} /> : null}
-        </section> : <section className="monitoring-applications"><div className="monitoring-section-heading"><h2>Aplicações</h2><label className="monitoring-sort">Ordenar:<select aria-label="Ordenar aplicações" value={metric} onChange={event => update({ ordem: event.target.value })}><option value="emissions">Emissões</option><option value="energy">Energia</option></select><ChevronDown size={17} aria-hidden="true" /></label></div>
-            <div className="monitoring-table-scroll">
-              <table className="monitoring-app-table"><thead><tr><th scope="col">Aplicação</th><th scope="col">{analysis.observedAt ? "Estado observado" : "Estado atual"}</th><th scope="col">{metric === "energy" ? "Energia" : "CO₂e"} {analysis.observedAt ? "até este instante" : filtered ? "no período" : "na sessão"}</th></tr></thead>
+          ].map(([label, value, unit]) => <div key={String(label)}><dt>{label}</dt><dd>{formatNumber(value as number | null)} <span>{unit}</span></dd></div>)}</dl>{selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}<p className="monitoring-explanation">Valores ausentes são exibidos como “—”. Métricas antigas preservam o estado de desatualização da aplicação.</p>
+        </section> : detailTab === "evolucao" ? <EvolutionPanel collectionEvents={analysis.collectionEvents} history={selectedHistory} services={[selected]} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} timeline={timeline} compact loading={loading} observedAt={analysis.observedAt} onOpenService={openService} /> : null}
+        </section> : <section className="monitoring-applications"><div className="monitoring-section-heading"><div><h2>Aplicações</h2><p>{analysis.periodLabel} · amostras desta sessão</p></div><label className="monitoring-sort">Ordenar:<select aria-label="Ordenar aplicações" value={metric} onChange={event => update({ ordem: event.target.value })}><option value="emissions">Emissões</option><option value="energy">Energia</option></select><ChevronDown size={17} aria-hidden="true" /></label></div>
+            <div className="monitoring-table-scroll" tabIndex={0} role="region" aria-label="Lista de aplicações">
+              <table className="monitoring-app-table"><caption className="sr-only">Aplicações na seleção e estimativas das amostras disponíveis.</caption><thead><tr><th scope="col">Aplicação</th><th scope="col">{analysis.observedAt ? "Estado observado" : "Estado atual"}</th><th scope="col">{metric === "energy" ? "Energia" : "CO₂e"} {analysis.observedAt ? "até este instante" : filtered ? "no período" : "na sessão"}</th></tr></thead>
                 <tbody>{impacts.map(({ service, value, summary }) => <tr key={service.id} data-highlighted={highlightedIds.includes(service.id)} onMouseEnter={() => setHoveredServiceId(service.id)} onMouseLeave={() => setHoveredServiceId("")}><td><button id={"application-" + service.id} onFocus={() => { if (!restoringListFocus.current) setFocusedServiceId(service.id); }} onBlur={() => setFocusedServiceId("")} onClick={() => openService(service.id)}><span className="monitoring-application-name"><CountryFlag country={service.country} /><span>{service.name}</span></span><ArrowUpRight size={15} aria-hidden="true" /></button></td><td><ServiceStatus service={service} /></td><td title={metric === "emissions" && summary.emissionCount < summary.count ? "Faltam fatores de carbono para completar as emissões deste serviço." : undefined}><span key={service.lastCollectionAt ?? service.id} className="monitoring-sample-value">{formatNumber(value)}{value !== null && (metric === "energy" ? " kWh" : " g")}</span></td></tr>)}</tbody>
               </table>
             </div>
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <Evolution history={history} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} cumulative />}
+      {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} timeline={timeline} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
     </section>
   </>;
-}
-
-function Evolution({ history, metric, onMetric, period, onPeriod, cumulative = false }: {
-  history: CollectionPoint[]; metric: DashboardMetric; onMetric: (metric: string) => void;
-  period: string; onPeriod: (period: string) => void; cumulative?: boolean;
-}) {
-  return <section className="monitoring-evolution"><div className="monitoring-section-heading"><div><h2>Evolução {cumulative ? "do ambiente" : "da aplicação"}</h2><p>Somente as amostras registradas nesta sessão.</p></div><div className="evolution-controls"><label>Métrica<select value={metric} onChange={event => onMetric(event.target.value)}><option value="emissions">Emissões</option><option value="energy">Energia</option></select></label><label>Período<select value={period} onChange={event => onPeriod(event.target.value)}><option value="24h">Até 24 horas</option><option value="7d">Até 7 dias</option></select></label></div></div><HistoryChart history={history} metric={metric} cumulative={cumulative} /></section>;
 }

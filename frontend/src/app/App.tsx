@@ -10,6 +10,7 @@ import {
 import { PageBoundary } from "@/shared/ui/PageBoundary";
 import { deferredPages } from "@/app/routes/deferredPages";
 import { UnderConstructionPage } from "@/app/pages/UnderConstructionPage";
+import { dashboardLocation } from "@/app/routes/dashboardLocation";
 
 const AppLayout = lazy(() =>
   import("@/app/layouts/AppLayout").then((module) => ({
@@ -32,6 +33,7 @@ const DashboardPage = lazy(() =>
     default: module.DashboardPage,
   })),
 );
+const ComparisonPage = lazy(() => import("@/features/monitoring/pages/ComparisonPage").then(module => ({ default: module.ComparisonPage })));
 
 const titles: Record<string, string> = {
   "/": "Entendendo o hoje",
@@ -96,7 +98,11 @@ export function App() {
           <Route path="/cadastro" element={<LoginPage register />} />
           <Route element={<AppLayout />}>
             <Route path="/pesquisa" element={<LegacyMapRedirect />} />
+            <Route path="/servicos" element={<LegacyMapRedirect />} />
+            <Route path="/energia" element={<LegacyMapRedirect metric="energy" />} />
+            <Route path="/emissoes" element={<LegacyMapRedirect metric="emissions" />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/comparar" element={<ComparisonPage />} />
             {deferredPages.map(({ path, title }) => (
               <Route key={path} path={path} element={<UnderConstructionPage title={title} />} />
             ))}
@@ -109,15 +115,13 @@ export function App() {
   );
 }
 
-function LegacyMapRedirect() {
+function LegacyMapRedirect({ metric }: { metric?: "energy" | "emissions" }) {
   const { search } = useLocation();
-  return <Navigate to={"/dashboard" + search} replace />;
+  return <Navigate to={dashboardLocation(search, { metric })} replace />;
 }
 
 function LegacyServiceRedirect() {
   const { id } = useParams();
   const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  if (id) params.set("servico", id);
-  return <Navigate to={"/dashboard?" + params.toString()} replace />;
+  return <Navigate to={dashboardLocation(search, { serviceId: id })} replace />;
 }

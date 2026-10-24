@@ -29,6 +29,41 @@
   background: transparent;
   pointer-events: auto;
 }
+.monitoring-summary { pointer-events: auto; display: grid; grid-template-columns: minmax(0, 1fr) 44px; column-gap: 12px; margin-bottom: 12px; color: var(--monitoring-muted); font-size: 13px; }
+.monitoring-update { display: contents; }
+.monitoring-update > span { grid-column: 1; text-align: right; align-self: center; font-variant-numeric: tabular-nums; }
+.monitoring-summary > details { grid-column: 1; grid-row: 2; min-width: 0; }
+.monitoring-summary > details > summary { width: fit-content; margin-left: auto; }
+.monitoring-refresh { grid-column: 2; grid-row: 1; align-self: center; width: 44px; min-height: 44px; display: grid; place-items: center; padding: 0; border-radius: 50%; color: var(--monitoring-green); }
+.monitoring-shell .monitoring-refresh:hover:not(:disabled) { background: #eef8f3; }
+.monitoring-refresh:disabled { cursor: progress; }
+.monitoring-refresh-icon { transform-origin: center; }
+.monitoring-summary summary { padding: 7px 0; min-height: 36px; }
+.monitoring-summary details[open] { padding-bottom: 12px; border-bottom: 1px solid var(--monitoring-line); }
+.monitoring-summary-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.monitoring-summary-facts dt { display: flex; align-items: center; gap: 3px; }
+.monitoring-summary-facts dd { margin: 4px 0 0; color: var(--monitoring-ink); font-size: 15px; }
+.monitoring-summary p { margin-top: 8px; max-width: 100ch; line-height: 1.6; }
+.monitoring-location > .monitoring-explanation { pointer-events: auto; margin-top: 12px; }
+.comparison-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin: 12px 0; }
+.comparison-toolbar label { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.comparison-content { padding: 20px 0 40px; min-width: 0; }
+.comparison-content > p { margin-top: 14px; }
+.comparison-selection { border: 0; padding: 0; margin: 24px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 24px; }
+.comparison-selection label { display: flex; align-items: center; gap: 10px; padding: 12px 0; min-height: 52px; cursor: pointer; overflow-wrap: anywhere; }
+.comparison-selection input { accent-color: var(--monitoring-green); width: 18px; height: 18px; flex-shrink: 0; }
+.comparison-selection small { display: block; margin-top: 2px; color: var(--monitoring-muted); }
+.comparison-range { font-size: 14px; color: var(--monitoring-muted); }
+.comparison-table { min-width: 960px; margin-block: 16px; font-variant-numeric: tabular-nums; }
+.comparison-table a { text-decoration: underline; text-underline-offset: 4px; }
+.monitoring-table-scroll:focus-visible { outline-offset: -3px; }
+@media (max-width: 900px) {
+  .monitoring-summary-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comparison-selection { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .monitoring-summary-facts, .comparison-selection { grid-template-columns: 1fr; }
+}
 .monitoring-shell button { background: transparent; }
 .monitoring-header {
   width: min(1464px, calc(100% - 96px)); min-height: 80px; margin: auto;
@@ -38,7 +73,7 @@
 .monitoring-header .brand img { width: 44px; height: 40px; object-fit: contain; }
 .monitoring-header .brand > span { color: var(--monitoring-ink); font-size: inherit; letter-spacing: inherit; white-space: nowrap; }
 .monitoring-header .brand > span > span { color: #078654; }
-.monitoring-header nav { display: flex; gap: 42px; align-items: center; }
+.monitoring-header nav { display: flex; gap: clamp(16px, 2.5vw, 42px); align-items: center; flex-wrap: wrap; }
 .monitoring-header nav a { padding: 8px 3px; font-size: 18px; border-bottom: 2px solid transparent; }
 .monitoring-header nav a.active { border-color: var(--monitoring-green); font-weight: 700; }
 .monitoring-home { justify-self: end; display: inline-flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 650; }
@@ -88,8 +123,8 @@
 .monitoring-status i { display: inline-block; width: 13px; height: 13px; flex: 0 0 13px; border-radius: 50%; }
 .monitoring-shell summary { cursor: pointer; }
 .monitoring-filters { display: flex; flex-wrap: wrap; gap: 18px; padding: 20px 0; border-top: 1px solid var(--monitoring-line); }
-.monitoring-filters label, .evolution-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
-.monitoring-filters select, .monitoring-filters input, .evolution-controls select { border: 1px solid #c6d6dc; border-radius: 5px; padding: 9px 11px; min-height: 44px; background: #fff; color: var(--monitoring-ink); font-size: 14px; }
+.monitoring-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.monitoring-filters select, .monitoring-filters input { border: 1px solid #c6d6dc; border-radius: 5px; padding: 9px 11px; min-height: 44px; background: #fff; color: var(--monitoring-ink); font-size: 14px; }
 .monitoring-text-button { min-height: 44px; padding: 8px 0; color: var(--monitoring-green); display: inline-flex; gap: 7px; align-items: center; text-decoration: underline; text-underline-offset: 4px; }
 .monitoring-filters > button { align-self: end; }
 .monitoring-notice { padding: 14px 0; border-top: 1px solid var(--monitoring-line); font-size: 14px; color: #6f591a; }
@@ -116,16 +151,6 @@
 .monitoring-resource-list dd { margin: 0; font-size: 24px; font-variant-numeric: tabular-nums; }
 .monitoring-resource-list dd span { font-size: 16px; color: var(--monitoring-muted); }
 .monitoring-explanation { color: var(--monitoring-muted); font-size: 14px; }
-.evolution-controls { display: flex; gap: 16px; }
-.monitoring-chart { margin: 24px 0 0; }
-.monitoring-chart figcaption { font-size: 14px; color: var(--monitoring-muted); }
-.monitoring-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
-.monitoring-chart svg text { font-size: 13px; fill: #617781; }
-.chart-grid { stroke: #e2e9ec; stroke-width: 1; }
-.chart-line { stroke: #138467; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.chart-point { fill: #138467; }
-.monitoring-chart > p, .chart-data { font-size: 14px; color: var(--monitoring-muted); margin-top: 12px; }
-.chart-data table { max-width: 700px; margin-top: 12px; }
 .monitoring-app-table tr[data-highlighted="true"] { background: #eaf5f0; }
 .monitoring-app-table tr[data-highlighted="true"] td { border-bottom-color: #77b49f; }
 .monitoring-sample-value { display: inline-block; animation: sampleArrived 900ms ease-out; }
@@ -248,11 +273,6 @@
   .monitoring-filters select, .monitoring-filters input { width: 100%; min-width: 0; }
   .detail-heading h1 { font-size: 36px; }
   .service-overview .monitoring-service-summary { margin-top: 25px; }
-  .evolution-controls { width: 100%; }
-  .evolution-controls label { flex: 1; }
-  .evolution-controls select { min-width: 0; width: 100%; }
-  .monitoring-chart { margin-top: 30px; }
-  .monitoring-chart svg { min-height: 175px; }
   .monitoring-resource-list dt { font-size: 17px; }
 }
 
@@ -274,13 +294,10 @@
   overflow: auto;
 }
 .monitoring-main > :not(.monitoring-view) { flex-shrink: 0; }
-.monitoring-main > .monitoring-view { flex: 1; min-height: 0; }
+.monitoring-main > .monitoring-view { flex: 1; min-height: 320px; }
 .monitoring-view:has(> .monitoring-evolution) { overflow: auto; }
 .monitoring-service-summary { min-height: 0; overflow: auto; }
 .monitoring-service-summary .monitoring-section-heading { flex-wrap: wrap; align-items: flex-start; gap: 12px; }
-.monitoring-service-summary .evolution-controls { width: 100%; }
-.monitoring-service-summary .evolution-controls label { flex: 1; min-width: 0; }
-.monitoring-service-summary .evolution-controls select { width: 100%; min-width: 0; }
 .monitoring-location { display: flex; flex-direction: column; min-height: 0; }
 .monitoring-location .monitoring-map { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .monitoring-location .monitoring-map .globe-stage { flex: 1; min-height: 0; height: 100%; max-height: none; aspect-ratio: auto; }

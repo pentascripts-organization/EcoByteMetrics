@@ -2,9 +2,9 @@ export const content = {
   pt: {
     hero: {
       eyebrow: "SUSTENTABILIDADE EM SOFTWARE",
-      line1: "Seu software.",
-      line2: "Uma pegada",
-      line3: "mais consciente.",
+      line1: "Entenda o impacto",
+      line2: "ambiental das suas",
+      line3: "aplicações.",
       description:
         "Descubra a energia por trás das suas aplicações. Acompanhe serviços e entenda suas estimativas de emissão de carbono em um só lugar.",
       primary: "Explorar monitoramento",

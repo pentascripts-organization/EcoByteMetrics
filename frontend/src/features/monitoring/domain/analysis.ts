@@ -4,6 +4,7 @@ import { isPeriod } from "@/shared/lib/period";
 import { matchesRegion } from "@/features/monitoring/domain/region";
 import { summarizeCollections } from "@/features/monitoring/domain/history";
 import { observationHistory } from "./observatory";
+import { filterApplications } from "./dashboard";
 
 export function parseLocalDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
@@ -27,7 +28,7 @@ export function parseLocalDate(value: string) {
 export function analysisQuery(search: string) {
   const input = new URLSearchParams(search);
   const result = new URLSearchParams();
-  for (const key of ["pais", "cidade", "regiao", "periodo", "ate", "instante"]) {
+  for (const key of ["pais", "cidade", "regiao", "periodo", "ate", "instante", "busca", "estado"]) {
     const value = input.get(key);
     if (value && (key !== "periodo" || isPeriod(value))) result.set(key, value);
   }
@@ -36,13 +37,10 @@ export function analysisQuery(search: string) {
 
 export function analysisLink(path: string, search: string) {
   const params = analysisQuery(search);
-  if (path.startsWith("/servicos")) {
-    const input = new URLSearchParams(search);
-    for (const key of ["busca", "estado", "ordem"]) {
-      const value = input.get(key);
-      if (value) params.set(key, value);
-    }
-  }
+  const input = new URLSearchParams(search);
+  if (input.get("ordem")) params.set("ordem", input.get("ordem")!);
+  if (input.get("serie") === "acumulado") params.set("serie", "acumulado");
+  for (const id of new Set(input.getAll("app"))) if (id) params.append("app", id);
   const query = params.toString();
   return path + (query ? "?" + query : "");
 }
@@ -67,11 +65,12 @@ export function getAnalysis(
   const city = selectedRegion?.city ?? params.get("cidade") ?? "";
   const date = params.get("ate") ?? "";
   const regional = Boolean(regionCode || country || city);
-  const services = environmentServices.filter((service) =>
+  const regionalServices = environmentServices.filter((service) =>
     regionCode
       ? service.regionCode === regionCode
       : matchesRegion(service, country, city),
   );
+  const services = filterApplications(regionalServices, params.get("busca") ?? "", params.get("estado") ?? "");
   const end = date
     ? parseLocalDate(date)
     : Date.parse(observation?.observedAt ?? snapshot.lastCollectionAt ?? "");
@@ -80,6 +79,7 @@ export function getAnalysis(
   const days = period === "24h" ? 1 : 7;
   const start = end - days * 86400_000;
   const recordedHistory = sourceHistory.filter((point) => {
+    if (!serviceIds.has(point.serviceId)) return false;
     if (!regional) return true;
     if (regionCode)
       return point.regionCode
@@ -133,6 +133,9 @@ export function getAnalysis(
     warning: observation ? observation.warning : observationMissing ? undefined : snapshot.warning,
     services,
     history,
+    collectionEvents: observationMissing ? [] : (snapshot.collectionEvents ?? []).filter(event =>
+      (!event.serviceIds || event.serviceIds.some(id => serviceIds.has(id))) &&
+      (!observedAt || Date.parse(event.to) <= Date.parse(observedAt))),
     regions,
     country,
     city,
