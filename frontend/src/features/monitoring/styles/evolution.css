@@ -72,8 +72,7 @@
 .evolution-samples table { table-layout: fixed; }
 .monitoring-shell .evolution-samples th, .monitoring-shell .evolution-samples td { padding: 12px 8px; font-size: 13px; overflow-wrap: anywhere; }
 .evolution-samples thead th:first-child { width: 62%; }
-.evolution-history > h3, .evolution-details > h3 { padding: 8px 0 12px; }
-.evolution-history .observation-timeline { max-height: none; overflow: visible; border: 0; margin: 0; padding: 8px 0; }
+.evolution-details > h3 { padding: 8px 0 12px; }
 .evolution-details-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 24px; margin: 4px 0 20px; }
 .evolution-details-grid dt { color: #60766a; font-size: 12px; }
 .evolution-details-grid dd { margin: 5px 0 0; font-size: 15px; font-weight: 550; font-variant-numeric: tabular-nums; }

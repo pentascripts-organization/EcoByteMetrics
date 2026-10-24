@@ -16,7 +16,6 @@ export function AppLayout() {
         <nav aria-label="Navegação principal">
           <NavLink to={analysisLink("/dashboard", search)}>Monitoramento</NavLink>
           <NavLink to={analysisLink("/comparar", search)}>Comparar</NavLink>
-          <Link to="/#projeto">Projeto</Link>
         </nav>
         <Link className="monitoring-home" to="/"><ArrowLeft size={20} /> <span>Voltar ao início</span></Link>
       </header>

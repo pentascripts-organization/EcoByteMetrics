@@ -14,7 +14,7 @@ export function ImpactJourney() {
   return <section className="impact-journey" id="solucoes" aria-labelledby="journey-heading">
     <div className="journey-intro" data-reveal>
       <div><p className="chapter-label">Por trás de cada execução</p><h2 id="journey-heading">O digital também<br />faz parte do mundo real.</h2></div>
-      <p>Uma aplicação parece invisível. Os recursos que ela utiliza, não. A EcoByteMetrics conecta essas duas perspectivas para ajudar você a enxergar o impacto do seu software.</p>
+      <p>Uma aplicação pode parecer invisível, mas a infraestrutura que a sustenta consome recursos reais. A EcoByteMetrics conecta o uso de hardware ao consumo elétrico e à pegada de carbono, tornando visível o impacto ambiental do seu software.</p>
     </div>
     <div className="resource-explorer" data-reveal>
       <div className="resource-tabs" role="tablist" aria-label="Recursos da aplicação">

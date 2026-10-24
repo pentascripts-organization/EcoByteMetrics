@@ -15,7 +15,7 @@ node --experimental-strip-types scripts/benchmark-monitoring.mjs
 
 Os testes HTTP não acessam as APIs reais. Usam respostas controladas para conferir descoberta inicial, dados inválidos, catálogo indisponível, ausência de coordenadas, serviço incorreto, 404, intervalo inválido, limites de concorrência e cancelamento. Os testes de renderização verificam abas, posições relativas do conteúdo, avisos, filtros, cobertura e links. Eles não provam a aparência no navegador.
 
-Resultado local desta revisão: **117 testes passaram**, sem falhas. Lint, build de produção (incluindo TypeScript), verificação de espaços do diff e configuração do Compose passaram. O build continua informando o tamanho elevado do chunk do globo, carregado separadamente; a biblioteca 3D ainda exige conferência em hardware real.
+Resultado local desta revisão: **118 testes passaram**, sem falhas. Lint, build de produção (incluindo TypeScript), verificação de espaços do diff e configuração do Compose passaram. O build continua informando o tamanho elevado do chunk do globo, carregado separadamente; a biblioteca 3D ainda exige conferência em hardware real.
 
 Os testes da evolução também cobrem variações de horário perto da virada de 30 segundos, lacunas reais, estimativas ausentes, pausas da interface, respostas repetidas e diagnósticos limitados à aplicação e ao instante selecionados. A renderização verifica a seção Lacunas com um trecho por página e tooltips que preservam valores zero. A API atual não permite reconstruir causas históricas que a interface não registrou.
 

@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChartNoAxesCombined, Globe2, ScanLine } from "lucide-react";
+import { ChartNoAxesCombined, Globe2, ScanLine } from "lucide-react";
 import { DashboardLink } from "./DashboardLink";
 
 export function MonitoringOverview() {
@@ -8,7 +8,13 @@ export function MonitoringOverview() {
         <p className="chapter-label">Seu software em perspectiva</p>
         <h2 id="monitoring-heading">Uma visão ampla.<br /><span>Um olhar preciso.</span></h2>
         <p>Do lugar onde sua aplicação roda aos recursos que ela utiliza. Conecte os pontos e descubra o que os dados revelam sobre o seu impacto.</p>
-        <DashboardLink className="monitoring-preview__link">Conhecer o dashboard<ArrowUpRight size={20} strokeWidth={1.5} aria-hidden="true" /></DashboardLink>
+        <DashboardLink className="hero-border-button">
+          <svg viewBox="0 0 290 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <rect x="1" y="1" width="288" height="58" rx="29" className="hero-border-button__base" vectorEffect="non-scaling-stroke" />
+            <rect x="1" y="1" width="288" height="58" rx="29" className="hero-border-button__highlight" pathLength="100" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <span>Conhecer o dashboard</span>
+        </DashboardLink>
         <span className="monitoring-preview__caption">Explore o mundo. Entenda cada serviço.</span>
       </div>
       <ol className="monitoring-preview__steps" aria-label="O que explorar no monitoramento">

@@ -1,5 +1,4 @@
 import { useId, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Clock3, Leaf, Zap } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import type { CollectionEvent, CollectionPoint, MonitoredService } from "../types";
@@ -14,10 +13,10 @@ import { MonitoringTabs } from "./MonitoringTabs";
 import { formatNumber } from "@/shared/lib/format";
 import "../styles/evolution.css";
 
-export function EvolutionPanel({ history, services, collectionEvents, metric, onMetric, period, onPeriod, mode, onMode, timeline, compact = false, loading, observedAt, impacts = [], onOpenService }: {
+export function EvolutionPanel({ history, services, collectionEvents, metric, onMetric, period, onPeriod, mode, onMode, compact = false, loading, observedAt, impacts = [], onOpenService }: {
   history: CollectionPoint[]; services: MonitoredService[]; metric: DashboardMetric; onMetric: (metric: string) => void;
   period: string; onPeriod: (period: string) => void; mode: EvolutionMode; onMode: (mode: EvolutionMode) => void;
-  timeline?: ReactNode; compact?: boolean; loading: boolean; observedAt: string;
+  compact?: boolean; loading: boolean; observedAt: string;
   impacts?: ReturnType<typeof applicationImpacts>; onOpenService: (id: string) => void;
   collectionEvents?: CollectionEvent[];
 }) {
@@ -42,7 +41,6 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
     ...(!compact ? [{ value: "aplicacoes", label: "Aplicações" }] : []),
     { value: "coletas", label: "Coletas" },
     { value: "lacunas", label: "Lacunas" + (gapCount ? " (" + gapCount + ")" : "") },
-    { value: "historico", label: "Histórico" },
     { value: "detalhes", label: "Detalhes" },
   ];
   const section = sections.find(entry => entry.value === params.get("painel"))?.value ?? "grafico";
@@ -81,8 +79,6 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
 
       {section === "coletas" && <EvolutionSamples points={data.points} metric={metric} mode={mode} />}
       {section === "lacunas" && <EvolutionGaps data={chartData} />}
-
-      {section === "historico" && <section className="evolution-history"><h3>Revisar instantes da sessão</h3>{timeline || <p className="evolution-section-empty">A linha do tempo estará disponível após a primeira consulta.</p>}</section>}
 
       {section === "detalhes" && <section className="evolution-details">
         <h3>Dados do período</h3>

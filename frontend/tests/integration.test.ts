@@ -147,7 +147,10 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const details = render("/dashboard?aba=evolucao&painel=detalhes");
       assert.match(details, /evolution-details-grid/);
       assert.ok(!details.includes('class="evolution-chart-panel"'));
-      assert.match(render("/dashboard?aba=evolucao&painel=historico"), /evolution-history/);
+      const legacyHistory = render("/dashboard?aba=evolucao&painel=historico");
+      assert.match(legacyHistory, /monitoring-filter-history/);
+      assert.match(legacyHistory, /evolution-chart-panel/);
+      assert.doesNotMatch(markup, />Histórico<\/button>/);
       assert.match(render("/dashboard?aba=evolucao&painel=aplicacoes"), /evolution-contributors/);
       assert.match(render("/dashboard?aba=evolucao&serie=acumulado"), /aria-pressed="true">Acumulado<\/button>/);
       assert.match(render("/dashboard?aba=evolucao&ordem=energy"), /kWh/);
@@ -158,6 +161,22 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(incomplete, /Visualizar energia/);
       assert.ok(!incomplete.includes("NaN"));
       assert.match(render("/dashboard?servico=a&detalhe=evolucao&painel=aplicacoes"), /evolution-chart-panel/);
+    });
+
+    await t.test("o histórico fica dentro dos filtros, inclusive nos detalhes, sem duplicar a linha do tempo", () => {
+      const observed = { ...snapshot, observations: [{ observedAt: at, services: snapshot.services, samples: snapshot.history }] };
+      for (const path of ["/dashboard?aba=evolucao", "/dashboard?servico=a&detalhe=evolucao", "/dashboard?servico=a&detalhe=resumo"]) {
+        const markup = render(path + "&instante=" + encodeURIComponent(at), DashboardPage, { snapshot: observed });
+        const filters = markup.indexOf('id="monitoring-filters"');
+        const timeline = markup.indexOf('class="observation-timeline"');
+        assert.ok(filters >= 0 && timeline > filters);
+        assert.ok(timeline < markup.indexOf('id="monitoring-content"'));
+        assert.equal((markup.match(/class="observation-timeline"/g) ?? []).length, 1);
+        assert.match(markup, /aria-expanded="true" aria-controls="monitoring-filters"/);
+        assert.match(markup, /Voltar ao vivo/);
+        assert.ok(!markup.includes('class="evolution-history"'));
+      }
+      assert.ok(!render("/dashboard?aba=evolucao").includes('class="observation-timeline"'));
     });
 
     await t.test("Recharts substitui o gráfico manual nos dois modos e preserva zero e unidades", () => {

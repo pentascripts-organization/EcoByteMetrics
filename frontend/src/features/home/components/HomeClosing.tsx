@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUpRight, Plus } from "lucide-react";
 import { DashboardLink } from "./DashboardLink";
 import { HomeBrand } from "./HomeBrand";
+import { GithubIcon } from "@/shared/ui/GithubIcon";
 
 const questions = [
   { title: "Preciso criar uma conta para explorar?", body: "Não. Você pode abrir o monitoramento diretamente e consultar as aplicações que o ambiente disponibiliza. A busca e os filtros ajudam a encontrar um serviço específico." },
@@ -20,12 +21,47 @@ export function HomeClosing() {
       <div className="questions-list" data-reveal>{questions.map(({ title, body }) => <details key={title}><summary><span>{title}</span><Plus size={20} strokeWidth={1.3} aria-hidden="true" /></summary><p>{body}</p></details>)}</div>
     </section>
     <section className="home-invitation" aria-labelledby="invitation-heading">
-      <div className="invitation-copy" data-reveal><p>O próximo passo começa com um novo olhar.</p><h2 id="invitation-heading">Veja o seu software<br />sob uma nova luz.</h2><DashboardLink className="home-explore"><span>Explorar monitoramento</span><span className="home-explore__arrow"><ArrowUpRight size={22} strokeWidth={1.6} aria-hidden="true" /></span></DashboardLink></div>
+      <div className="invitation-copy" data-reveal>
+        <p>O próximo passo começa com um novo olhar.</p>
+        <h2 id="invitation-heading">Veja o seu software<br />sob uma nova luz.</h2>
+        <DashboardLink className="hero-border-button hero-border-button--dark">
+          <svg viewBox="0 0 290 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <rect x="1" y="1" width="288" height="58" rx="29" className="hero-border-button__base" vectorEffect="non-scaling-stroke" />
+            <rect x="1" y="1" width="288" height="58" rx="29" className="hero-border-button__highlight" pathLength="100" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <span>Explorar monitoramento</span>
+        </DashboardLink>
+      </div>
     </section>
     <footer className="home-footer">
-      <div className="footer-top"><HomeBrand /><p>Tecnologia em perspectiva.<br />Escolhas mais conscientes.</p><a className="footer-back" href="#inicio">Voltar ao início<ArrowUpRight size={17} aria-hidden="true" /></a></div>
-      <div className="footer-links"><nav aria-label="Navegação do rodapé"><DashboardLink>Monitoramento</DashboardLink><a href="#solucoes">Como funciona</a><a href="#projeto">O projeto</a></nav><a href="https://github.com/pentascripts-organization/EcoByteMetrics" target="_blank" rel="noreferrer">Código do projeto<ArrowUpRight size={14} aria-hidden="true" /></a></div>
-      <div className="footer-bottom"><span>EcoByteMetrics · Energia e carbono em software.</span></div>
+      <div className="footer-top">
+        <HomeBrand />
+        <a className="footer-back" href="#inicio">
+          <span>Voltar ao início</span>
+          <ArrowUpRight size={16} aria-hidden="true" />
+        </a>
+      </div>
+      <div className="footer-links">
+        <nav aria-label="Navegação do rodapé">
+          <DashboardLink>Monitoramento</DashboardLink>
+          <a href="#solucoes">Como funciona</a>
+          <a href="#projeto">O projeto</a>
+        </nav>
+        <a
+          className="footer-github-link"
+          href="https://github.com/pentascripts-organization/EcoByteMetrics"
+          target="_blank"
+          rel="noreferrer"
+          title="Acessar repositório no GitHub"
+        >
+          <span className="footer-github-label">github:</span>
+          <span className="footer-github-pill">
+            <GithubIcon size={15} className="github-logo" />
+            <span className="footer-github-text">pentascripts-organization/EcoByteMetrics</span>
+            <ArrowUpRight size={13} className="github-arrow" aria-hidden="true" />
+          </span>
+        </a>
+      </div>
     </footer>
   </>;
 }

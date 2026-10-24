@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, ChevronDown, ListFilter, Search, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ListFilter, Search, X } from "lucide-react";
+import { SortSelect } from "../components/SortSelect";
 import { useSearchParams } from "react-router-dom";
 import { RegionMap } from "../components/map/RegionMap";
 import { MonitoringTabs } from "../components/MonitoringTabs";
@@ -29,7 +30,7 @@ export function DashboardPage() {
   const { snapshot, loading, error, refresh, period } = useMonitoring();
   const analysis = useAnalysis();
   const [params, setParams] = useSearchParams();
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico" || Boolean(params.get("instante")));
   const [hoveredServiceId, setHoveredServiceId] = useState("");
   const [focusedServiceId, setFocusedServiceId] = useState("");
   const [mapHighlightedIds, setMapHighlightedIds] = useState<string[]>([]);
@@ -86,31 +87,31 @@ export function DashboardPage() {
     update({ servico: id, detalhe: "" });
   }, [update]);
   const back = () => update({ servico: "", detalhe: "" });
-  const clearFilters = () => update({ busca: "", estado: "", pais: "", cidade: "", regiao: "", ate: "", periodo: "24h" });
+  const clearFilters = () => update({ busca: "", estado: "", pais: "", cidade: "", regiao: "", ate: "", instante: "", periodo: "24h" });
   const goLive = () => update({ instante: "", ate: "" });
-  const showTimeline = Boolean(analysis.observedAt) || (selectedId ? detailTab === "evolucao" : tab === "evolucao");
   const discovering = !snapshot.observations?.length && !snapshot.discoveryUpdatedAt && !error;
-  const timeline = showTimeline && <ObservationTimeline observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} onExplore={!selectedId && tab === "evolucao" ? () => update({ aba: mobile ? "mapa" : "" }) : undefined} />;
+  const filterButton = <button className="monitoring-filter-button" aria-expanded={filtersOpen} aria-controls="monitoring-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={22} />Filtrar{(filtered || analysis.observedAt) && <span className="filter-indicator" aria-label="Filtros ativos" />}</button>;
   return <>
     <TopographicSides key="topography" />
     {selectedId ? <div className="monitoring-heading detail-heading">
-      <button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>
+      <div className="monitoring-detail-toolbar"><button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>{filterButton}</div>
       <h1 ref={heading} tabIndex={-1}>{selected?.name ?? "Aplicação não encontrada"}</h1>
       {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
     </div> : <div className="monitoring-heading">
       <div><h1>Monitoramento</h1></div>
       <div className="monitoring-tools">
         <label className="monitoring-search"><Search size={21} aria-hidden="true" /><input type="search" aria-label="Buscar aplicação" placeholder="Buscar aplicação..." value={search} onChange={event => update({ busca: event.target.value }, true)} /></label>
-        <button className="monitoring-filter-button" aria-expanded={filtersOpen} aria-controls="monitoring-filters" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={22} />Filtrar{filtered && <span className="filter-indicator" aria-label="Filtros ativos" />}</button>
+        {filterButton}
       </div>
     </div>}
-    {!selectedId && filtersOpen && <div className="monitoring-filters" id="monitoring-filters">
+    {filtersOpen && <div className="monitoring-filters" id="monitoring-filters">
       <label>País<select value={params.get("pais") ?? ""} onChange={event => update({ pais: event.target.value, cidade: "", regiao: "" })}><option value="">Todos os países</option>{countries.map(country => <option key={country}>{country}</option>)}</select></label>
       <label>Região<select value={params.get("regiao") ?? ""} onChange={event => update({ regiao: event.target.value, cidade: "" })}><option value="">Todas as regiões</option>{regionOptions.map(service => <option key={service.regionCode} value={service.regionCode}>{[service.city, service.region].filter(Boolean).join(" · ") || service.regionCode}</option>)}</select></label>
       <label>Estado<select value={status} onChange={event => update({ estado: event.target.value })}><option value="">Todos os estados</option>{Object.entries(serviceStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label>Período<select value={period} onChange={event => update({ periodo: event.target.value })}><option value="24h">Até 24 horas</option><option value="7d">Até 7 dias</option></select></label>
       <label>Coletas até<input aria-label="Coletas até" type="datetime-local" value={analysis.invalidDate ? "" : analysis.date} onChange={event => update({ ate: event.target.value })} /></label>
       <button className="monitoring-text-button" onClick={clearFilters}><X size={16} />Limpar filtros</button>
+      <div className="monitoring-filter-history"><h3>Histórico da sessão</h3><ObservationTimeline observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} onExplore={!selectedId && tab === "evolucao" ? () => update({ aba: mobile ? "mapa" : "" }) : undefined} /></div>
     </div>}
     {analysis.invalidDate && <p className="monitoring-notice" role="alert">A data na URL é inválida. <button onClick={() => update({ ate: "" })}>Voltar para agora</button></p>}
     {analysis.observationMissing && <p className="monitoring-notice" role="alert">Este instante não está mais disponível nesta sessão. <button onClick={goLive}>Voltar ao vivo</button></p>}
@@ -118,7 +119,6 @@ export function DashboardPage() {
     {analysis.warning && <details className="monitoring-notice"><summary>Há informações indisponíveis nesta consulta</summary><p>{analysis.warning}</p></details>}
     {selectedId ? selected && <MonitoringTabs label="Informações da aplicação" value={detailTab} tabs={[{ value: "resumo", label: "Resumo" }, { value: "recursos", label: "Recursos" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ detalhe: value })} /> : <MonitoringTabs label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
     {!selectedId && <MonitoringSummary showDetails={tab !== "evolucao"} services={services} history={history} periodLabel={analysis.periodLabel} refreshedAt={snapshot.refreshedAt} lastCollectionAt={snapshot.lastCollectionAt} observedAt={analysis.observedAt} loading={loading} onRefresh={() => void refresh()} />}
-    {!selectedId && tab !== "evolucao" && timeline}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
       <div className={"monitoring-overview" + (selected ? " service-overview" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao"}>
         <section className="monitoring-location" aria-label="Localização dos serviços">
@@ -127,7 +127,6 @@ export function DashboardPage() {
           <RegionMap key="world" services={mapServices} selectedServiceId={selected?.id} onSelectService={openService} history={selected ? analysis.history : history} lens={lens} highlightedServiceIds={highlightedIds} focusServiceId={selected ? undefined : focusServiceId} onHighlightServices={setMapHighlightedIds} />
         </section>
         {selected ? <section className="monitoring-service-summary">
-          {detailTab !== "evolucao" && timeline}
           {detailTab === "resumo" ? <><h2>Impacto nas amostras</h2><p className="monitoring-explanation">{analysis.periodLabel} · amostras desta sessão. Emissões disponíveis em {selectedSummary.emissionCount} de {selectedSummary.count} amostras.</p><dl className="monitoring-facts">
             <div><dt>Energia estimada</dt><dd>{formatNumber(selectedSummary.energyKwh)} <small>kWh</small></dd></div>
             <div><dt>Emissões estimadas</dt><dd>{formatNumber(selectedSummary.emissionCount === selectedSummary.count ? selectedSummary.emissionsG : null)} <small>g CO₂e</small></dd></div>
@@ -137,8 +136,8 @@ export function DashboardPage() {
           <dl className="monitoring-resource-list">{[
             ["CPU", selected.cpuPercent, "%"], ["Memória", selected.memoryGb, "GB"], ["Disco", selected.diskGb, "GB"], ["Rede", selected.networkGb, "GB"], ["Intervalo da amostra", selected.collectionIntervalSeconds ?? null, "s"],
           ].map(([label, value, unit]) => <div key={String(label)}><dt>{label}</dt><dd>{formatNumber(value as number | null)} <span>{unit}</span></dd></div>)}</dl>{selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}<p className="monitoring-explanation">Valores ausentes são exibidos como “—”. Métricas antigas preservam o estado de desatualização da aplicação.</p>
-        </section> : detailTab === "evolucao" ? <EvolutionPanel collectionEvents={analysis.collectionEvents} history={selectedHistory} services={[selected]} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} timeline={timeline} compact loading={loading} observedAt={analysis.observedAt} onOpenService={openService} /> : null}
-        </section> : <section className="monitoring-applications"><div className="monitoring-section-heading"><div><h2>Aplicações</h2><p>{analysis.periodLabel} · amostras desta sessão</p></div><label className="monitoring-sort">Ordenar:<select aria-label="Ordenar aplicações" value={metric} onChange={event => update({ ordem: event.target.value })}><option value="emissions">Emissões</option><option value="energy">Energia</option></select><ChevronDown size={17} aria-hidden="true" /></label></div>
+        </section> : detailTab === "evolucao" ? <EvolutionPanel collectionEvents={analysis.collectionEvents} history={selectedHistory} services={[selected]} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} compact loading={loading} observedAt={analysis.observedAt} onOpenService={openService} /> : null}
+        </section> : <section className="monitoring-applications"><div className="monitoring-section-heading"><div><h2>Aplicações</h2><p>{analysis.periodLabel} · amostras desta sessão</p></div><SortSelect value={metric} onChange={nextMetric => update({ ordem: nextMetric })} /></div>
             <div className="monitoring-table-scroll" tabIndex={0} role="region" aria-label="Lista de aplicações">
               <table className="monitoring-app-table"><caption className="sr-only">Aplicações na seleção e estimativas das amostras disponíveis.</caption><thead><tr><th scope="col">Aplicação</th><th scope="col">{analysis.observedAt ? "Estado observado" : "Estado atual"}</th><th scope="col">{metric === "energy" ? "Energia" : "CO₂e"} {analysis.observedAt ? "até este instante" : filtered ? "no período" : "na sessão"}</th></tr></thead>
                 <tbody>{impacts.map(({ service, value, summary }) => <tr key={service.id} data-highlighted={highlightedIds.includes(service.id)} onMouseEnter={() => setHoveredServiceId(service.id)} onMouseLeave={() => setHoveredServiceId("")}><td><button id={"application-" + service.id} onFocus={() => { if (!restoringListFocus.current) setFocusedServiceId(service.id); }} onBlur={() => setFocusedServiceId("")} onClick={() => openService(service.id)}><span className="monitoring-application-name"><CountryFlag country={service.country} /><span>{service.name}</span></span><ArrowUpRight size={15} aria-hidden="true" /></button></td><td><ServiceStatus service={service} /></td><td title={metric === "emissions" && summary.emissionCount < summary.count ? "Faltam fatores de carbono para completar as emissões deste serviço." : undefined}><span key={service.lastCollectionAt ?? service.id} className="monitoring-sample-value">{formatNumber(value)}{value !== null && (metric === "energy" ? " kWh" : " g")}</span></td></tr>)}</tbody>
@@ -147,7 +146,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} timeline={timeline} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
     </section>
   </>;
 }
