@@ -33,7 +33,7 @@ Após iniciar o Docker Desktop, foi criado um PostgreSQL 18 isolado e descartáv
 
 A persistência real dos serviços e das métricas também foi aprovada: 8 serviços e 8 amostras recebidos das APIs públicas foram gravados no banco. As rotas de estatísticas e ranking responderam a partir desses registros; as ordenações por energia e emissões foram verificadas. Os dados e credenciais do ambiente do time não foram utilizados.
 
-Esses resultados validam a API de autenticação. A tela de login do frontend continua explicitamente desativada; integrar sessão, expiração e saída permanece uma etapa do plano do frontend. A conferência visual ainda depende de um navegador conectado ou de revisão manual: a ferramenta retornou inventário vazio e não disponibilizou o navegador interno. A versão integrada foi disponibilizada localmente em `http://localhost:5174`, com backend de teste e banco isolado.
+Esses resultados validam a API de autenticação. A tela de login do frontend continua explicitamente desativada; integrar sessão, expiração e saída permanece uma etapa do plano do frontend. Como a ferramenta retornou inventário vazio e não disponibilizou o navegador interno, a versão integrada foi disponibilizada localmente em `http://localhost:5174`, com backend de teste e banco isolado. Em 24/10/2026, o usuário confirmou a revisão manual da página inicial, do dashboard, dos filtros e da evolução com o resultado: “Conferi e está correto”.
 
 ### Servidores locais e cache de desenvolvimento
 
@@ -51,9 +51,9 @@ O script geométrico confirmou duas partes de desenho para países e contornos, 
 
 O globo já limita a resolução ao orçamento de pixels e reduz a resolução durante a interação. Vídeos inativos usam `preload="none"`; o vídeo ativo pausa fora da seção ou com a aba oculta. O globo pausa com a aba oculta e com seu espaço oculto. As preferências de movimento reduzido continuam respeitadas.
 
-## Conferência visual ainda necessária
+## Conferência visual e testes em dispositivos
 
-Nenhum navegador estava conectado às ferramentas nesta revisão. Verificar manualmente em `npm run dev` ou `npm run preview`:
+O usuário aprovou a revisão visual geral da versão integrada em 24/10/2026. Nenhum navegador estava conectado às ferramentas, portanto não foram automatizadas capturas nem interações. A matriz específica de tamanhos, zoom, teclado, movimento reduzido e FPS abaixo continua como verificação complementar em `npm run dev` ou `npm run preview`:
 
 1. Desktop em 1920×1080, 1366×768 e janela baixa: lista alcançável por rolagem, filtros abertos sem cortar o conteúdo, globo ancorado à esquerda.
 2. Celular em 320, 390 e 680 px: cabeçalho e campos sem rolagem horizontal da página, alternância Serviços/Mapa e detalhes legíveis.

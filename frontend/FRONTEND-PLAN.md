@@ -1,6 +1,6 @@
 # Plano do frontend — Dashboardsp2
 
-Trabalho exclusivo em `frontend/`, sem merge com `develop` nesta fase. As partes que exigem o backend atualizado ficam pendentes. A validação com respostas controladas não substitui a integração real.
+Plano do frontend desenvolvido na `Dashboardsp2` e validado junto à develop na branch de integração. As funcionalidades que ainda exigem contratos ou integração de APIs permanecem indicadas na tabela. A validação com respostas controladas não substitui a integração real.
 
 | Etapa | Entrega | Situação |
 | --- | --- | --- |
@@ -9,7 +9,7 @@ Trabalho exclusivo em `frontend/`, sem merge com `develop` nesta fase. As partes
 | 3 | Histórico persistido via API | Gravação e estatísticas do backend validadas; pendente de contrato de consulta de histórico para o frontend |
 | 4 | Período, cobertura, totais, estados e última atualização | Implementada em resumo expansível e nas aplicações |
 | 5 | Filtros e ranking coerentes | Implementada e testada: mesma seleção, remoções ao final, valores incompletos explícitos |
-| 6 | Detalhes, localização e gráficos | Implementada e testada por domínio/renderização; aparência a conferir no navegador |
+| 6 | Detalhes, localização e gráficos | Implementada e testada por domínio/renderização; revisão visual geral aprovada pelo usuário |
 | 7 | Comparação de aplicações no mesmo intervalo | Implementada para amostras desta sessão; histórico persistido depende da etapa 3 |
 | 8 | Login, expiração e sessão reais | API de login e JWT validada; pendente de integração da sessão no frontend |
 | 9 | Configurações do sistema pela API | Pendente do backend atualizado |
