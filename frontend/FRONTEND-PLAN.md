@@ -6,18 +6,18 @@ Trabalho exclusivo em `frontend/`, sem merge com `develop` nesta fase. As partes
 | --- | --- | --- |
 | 1 | Comunicação HTTP, contratos e erros consistentes | Implementada e testada com respostas controladas |
 | 2 | Atualização, cancelamento e preservação dos últimos dados válidos | Implementada; testes de transporte e transições de dados |
-| 3 | Histórico persistido via API | Pendente do backend atualizado |
+| 3 | Histórico persistido via API | Gravação e estatísticas do backend validadas; pendente de contrato de consulta de histórico para o frontend |
 | 4 | Período, cobertura, totais, estados e última atualização | Implementada em resumo expansível e nas aplicações |
 | 5 | Filtros e ranking coerentes | Implementada e testada: mesma seleção, remoções ao final, valores incompletos explícitos |
 | 6 | Detalhes, localização e gráficos | Implementada e testada por domínio/renderização; aparência a conferir no navegador |
 | 7 | Comparação de aplicações no mesmo intervalo | Implementada para amostras desta sessão; histórico persistido depende da etapa 3 |
-| 8 | Login, expiração e sessão reais | Pendente do backend atualizado |
+| 8 | Login, expiração e sessão reais | API de login e JWT validada; pendente de integração da sessão no frontend |
 | 9 | Configurações do sistema pela API | Pendente do backend atualizado |
 | 10 | Navegação e rotas consistentes | Implementada: comparador, filtros preservados e rotas antigas redirecionadas |
 | 11 | Responsividade e acessibilidade | Ajustes implementados; conferência visual, teclado e zoom pendentes de navegador conectado |
 | 12 | Desempenho e medição reproduzível | CPU e geometria medidas; séries otimizadas e desenho limitado; FPS entre dispositivos pendente |
 | 13 | Testes dos fluxos e das falhas | Suíte ampliada com HTTP, contratos, transições, comparação, navegação e renderização |
-| 14 | Distribuição e documentação do frontend | Build e configuração Compose verificados; execução da imagem pendente do Docker Desktop |
+| 14 | Distribuição e documentação do frontend | Imagem do frontend, Nginx e proxy verificados; Compose completo pendente no ambiente de destino |
 
 Não serão simulados login, persistência ou operações administrativas. O histórico observado no navegador será identificado como dados desta sessão.
 

@@ -27,6 +27,14 @@ Na cópia isolada, a instalação limpa do frontend (`npm ci`) passou. Os 118 te
 
 Nessa checagem, a persistência foi substituída por funções sem gravação usando o ponto de teste existente no backend. Nenhuma escrita no banco foi executada. Isso verifica a comunicação e a interpretação das respostas; persistência real, autenticação completa, interface no navegador e desempenho gráfico continuam pendentes de validação. Esta branch de integração não publica o frontend na develop.
 
+### Validação de banco e autenticação — 24/10/2026
+
+Após iniciar o Docker Desktop, foi criado um PostgreSQL 18 isolado e descartável, inicializado com `database/DDL.sql` e `database/statistics.sql`. A aplicação compilada do backend foi exercitada contra esse banco, com credenciais e usuários exclusivos do teste. Foram aprovados cadastro com senha armazenada como hash, login válido, rejeição de credenciais incorretas e campos ausentes, leitura do próprio perfil, bloqueio de acesso a outro usuário, ausência de token, token inválido e token expirado.
+
+A persistência real dos serviços e das métricas também foi aprovada: 8 serviços e 8 amostras recebidos das APIs públicas foram gravados no banco. As rotas de estatísticas e ranking responderam a partir desses registros; as ordenações por energia e emissões foram verificadas. Os dados e credenciais do ambiente do time não foram utilizados.
+
+Esses resultados validam a API de autenticação. A tela de login do frontend continua explicitamente desativada; integrar sessão, expiração e saída permanece uma etapa do plano do frontend. A conferência visual ainda depende de um navegador conectado ou de revisão manual: a ferramenta retornou inventário vazio e não disponibilizou o navegador interno. A versão integrada foi disponibilizada localmente em `http://localhost:5174`, com backend de teste e banco isolado.
+
 ### Servidores locais e cache de desenvolvimento
 
 Na conferência em execução, o frontend em `localhost:5173`, o backend em `127.0.0.1:3000`, `/health`, a descoberta pelo proxy e as métricas das oito aplicações responderam com HTTP 200. Isso verifica disponibilidade e comunicação; não comprova banco, autenticação ou histórico persistido da `develop`.
@@ -60,7 +68,9 @@ Não é possível garantir uma taxa de FPS para todos os computadores apenas com
 
 ## Docker
 
-A configuração do Compose pode ser validada sem iniciar os serviços. O Docker CLI está instalado, mas o mecanismo Linux do Docker Desktop estava indisponível nesta revisão. A imagem e o Nginx em execução ainda precisam ser verificados:
+O Docker Desktop foi iniciado na validação de 24/10/2026. A imagem foi construída a partir de `frontend/Dockerfile`, com instalação limpa e build de produção, e executada com Nginx em uma rede Docker isolada. Foram aprovados HTTP 200 para a página inicial, dashboard, comparador, login, fallback de rota e proxy `/backend/health` e `/backend/services`; revalidação do HTML com `Cache-Control: no-cache`; cache público dos assets; e HTTP 404 para `/assets/inexistente.js`. Isso valida o frontend em container com o backend compilado no host; a execução completa do Compose do time ainda precisa ser conferida no ambiente de destino.
+
+Com o ambiente do time devidamente configurado, a execução completa pode ser conferida com:
 
 ```powershell
 docker compose -f compose.yaml up --build -d
