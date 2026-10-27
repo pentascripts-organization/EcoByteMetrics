@@ -103,9 +103,28 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     const { DashboardPage } = await vite.ssrLoadModule("/src/features/monitoring/pages/DashboardPage.tsx");
     const { HistoryChart } = await vite.ssrLoadModule("/src/features/monitoring/components/HistoryChart.tsx");
     const { RechartsEvolutionChart, EvolutionTooltip } = await vite.ssrLoadModule("/src/features/monitoring/components/RechartsEvolutionChart.tsx");
-    const { ComparisonPage } = await vite.ssrLoadModule("/src/features/monitoring/pages/ComparisonPage.tsx");
     const { AppLayout } = await vite.ssrLoadModule("/src/app/layouts/AppLayout.tsx");
+    const { LoginPage } = await vite.ssrLoadModule("/src/features/auth/LoginPage.tsx");
     const render = (path: string, page = DashboardPage, changes = {}) => renderToString(h(MemoryRouter, { initialEntries: [path] }, h(MonitoringContext.Provider, { value: { snapshot, period: "24h", loading: false, error: null, refresh: async () => null, setPeriod: () => {}, ...changes } }, h(AnalysisProvider, null, h(page)))));
+
+    await t.test("telas de acesso preservam os formulários desativados e o caminho público ao monitoramento", () => {
+      for (const register of [false, true]) {
+        const markup = renderToString(h(MemoryRouter, null, h(LoginPage, { register })));
+        const inputs = markup.match(/<input\b[^>]*>/g) ?? [];
+        assert.equal(inputs.length, register ? 3 : 2);
+        assert.ok(inputs.every(input => input.includes('disabled=""')));
+        assert.match(markup, /class="login-submit"[^>]*type="submit"/);
+        assert.match(markup, /<button disabled="" class="login-submit"/);
+        assert.ok(markup.includes('href="/dashboard"'));
+        assert.ok(markup.includes('href="' + (register ? "/login" : "/cadastro") + '"'));
+        const currentLinks = markup.match(/<a\b[^>]*aria-current="page"[^>]*>/g) ?? [];
+        assert.equal(currentLinks.length, 1);
+        assert.ok(currentLinks[0].includes('href="' + (register ? "/cadastro" : "/login") + '"'));
+        assert.equal((markup.match(/<h1\b/g) ?? []).length, 1);
+        assert.ok(!markup.includes("login-availability"));
+        assert.ok(!markup.includes("Prévia visual"));
+      }
+    });
 
     await t.test("detalhes mantêm globo à esquerda e conteúdo das três abas à direita", () => {
       for (const [tab, text] of [["resumo", "Impacto nas amostras"], ["recursos", "Recursos da última coleta"], ["evolucao", "Evolução da aplicação"]]) {
@@ -250,15 +269,52 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(tooltip({ timestamp: Date.parse(at), value: 0 }), /0 kWh/);
     });
 
+    await t.test("administração oferece apenas uma prévia visual, independente dos avisos de consulta", () => {
+      const markup = render("/dashboard?aba=administracao&painel=historico", DashboardPage, { error: "Sem conexão" });
+      assert.match(markup, /role="tab"[^>]*aria-selected="true"[^>]*>Administração<\/button>/);
+      assert.ok(markup.indexOf('>Comparar</button>') < markup.indexOf('>Administração</button>'));
+      assert.ok(!markup.includes('class="monitoring-tab-access"'));
+      assert.ok(markup.includes('data-view="administracao" hidden=""'));
+      assert.ok(markup.includes('aria-label="Administração do ambiente"'));
+      assert.ok(!markup.includes("Prévia visual"));
+      assert.match(markup, /id="administration-interval"[^>]*disabled=""/);
+      assert.match(markup, /<button[^>]*disabled=""[^>]*>[\s\S]*?Salvar alterações<\/button>/);
+      assert.ok(!markup.includes("Ainda não conectada"));
+      assert.ok(markup.includes('aria-label="Configurações do ambiente"'));
+      assert.match(markup, /aria-pressed="true"[^>]*aria-controls="administration-settings"/);
+      assert.match(markup, /Automática/);
+      const access = render("/dashboard?aba=administracao&configuracao=acesso");
+      assert.match(access, /Ainda não conectada/);
+      assert.match(access, /Acesso livre/);
+      assert.ok(access.includes('href="/login"'));
+      assert.ok(!access.includes('id="administration-interval"'));
+      assert.ok(!markup.includes('role="alert"'));
+      assert.ok(!markup.includes('class="monitoring-summary"'));
+      assert.ok(!markup.includes('class="monitoring-filters"'));
+      assert.ok(!markup.includes('class="monitoring-tools"'));
+      assert.ok(!render("/dashboard").includes('class="administration-panel"'));
+      assert.ok(!render("/dashboard?servico=a&aba=administracao").includes('class="administration-panel"'));
+    });
+
     await t.test("comparador exige duas seleções e mostra unidades, período, cobertura e limitação da sessão", () => {
-      assert.match(render("/comparar", ComparisonPage), /Selecione pelo menos duas/);
-      const markup = render("/comparar?app=a&app=b", ComparisonPage);
+      assert.match(render("/dashboard?aba=comparar"), /Selecione pelo menos duas/);
+      const markup = render("/dashboard?aba=comparar&app=a&app=b");
       for (const text of ["comparison-table", "Mesmo intervalo de consulta", "Energia (kWh)", "Emissões (g CO₂e)", "Duração somada (s)", "Um total menor não indica maior eficiência"])
         assert.ok(markup.includes(text));
-      assert.match(render("/comparar?app=a&app=missing", ComparisonPage), /seleção\(ões\) não está/);
-      const layout = render("/comparar?pais=Brazil", AppLayout);
-      assert.ok(layout.includes('/dashboard?pais=Brazil'));
-      assert.ok(layout.includes('aria-current="page"'));
+      assert.match(render("/dashboard?aba=comparar&app=a&app=missing"), /seleção\(ões\) não está/);
+      const layout = render("/dashboard?aba=comparar&pais=Brazil", AppLayout);
+      assert.ok(layout.includes('class="monitoring-home"'));
+      assert.ok(!layout.includes('aria-label="Navegação principal"'));
+      assert.ok(!layout.includes('href="/comparar'));
+      assert.equal((markup.match(/<h1/g) ?? []).length, 1);
+      assert.ok(!markup.includes("Voltar ao monitoramento"));
+      assert.ok(markup.includes('data-view="comparar" hidden=""'));
+      assert.ok(markup.includes('aria-label="Comparação de aplicações"'));
+      assert.ok(!markup.includes('class="evolution-chart-panel"'));
+      assert.match(markup, /role="tab"[^>]*aria-selected="true"[^>]*>Comparar<\/button>/);
+      assert.ok(markup.indexOf('>Evolução</button>') < markup.indexOf('>Comparar</button>'));
+      assert.ok(!render("/dashboard").includes('class="comparison-content"'));
+      assert.ok(!render("/dashboard?aba=evolucao").includes('class="comparison-content"'));
     });
   } finally {
     await vite.close();

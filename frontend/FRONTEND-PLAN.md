@@ -29,7 +29,7 @@ Não serão simulados login, persistência ou operações administrativas. O his
 5. Busca e estado agora entram na análise compartilhada, mantendo gráfico, lista e totais coerentes. Navegar entre telas não descarta a seleção.
 6. Detalhes continuam com o globo à esquerda; coordenadas ausentes têm aviso. Emissões incompletas não parecem completas, inclusive no gráfico acumulado.
 7. A tabela de comparação mostra energia, emissões, quantidade, duração e datas das amostras no mesmo intervalo, sem concluir eficiência a partir de totais diferentes.
-10. O comparador tem navegação própria. Endereços antigos levam à funcionalidade correspondente no dashboard, preservando os filtros.
+10. O comparador ocupa uma aba ao lado de Evolução no dashboard. Endereços antigos levam à funcionalidade correspondente no dashboard, preservando os filtros e as seleções.
 11. Regiões de tabela admitem foco e rolagem por teclado. Cabeçalho e seleção do comparador se reorganizam em telas estreitas; o conteúdo tem altura mínima para permanecer alcançável em janelas baixas.
 12. A evolução usa Recharts carregado sob demanda, com barras por intervalo e pontos no acumulado. Períodos longos são agrupados em 5 minutos ou 1 hora; cálculos de totais preservam as amostras originais. Lacunas e estimativas incompletas têm explicações próprias, sem interpolar valores.
 13. Testes cobrem falhas e dados parciais, não apenas respostas ideais. Testes React no servidor não substituem teste visual ou WebGL.

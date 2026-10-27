@@ -1,9 +1,9 @@
 /* Seções substituem o conteúdo. Em telas baixas, só o documento pode rolar. */
-.monitoring-shell:has(.monitoring-view):has(.evolution-panel) { height: auto; min-height: 100dvh; display: block; }
-.monitoring-shell:has(.monitoring-view):has(.evolution-panel) .monitoring-main { display: block; overflow: visible; }
-.monitoring-shell:has(.monitoring-view):has(.evolution-panel) .monitoring-view { min-height: 0; overflow: visible; }
+.monitoring-shell:has(.monitoring-view):has(:is(.evolution-panel, .comparison-content, .administration-panel)) { height: auto; min-height: 100dvh; display: block; }
+.monitoring-shell:has(.monitoring-view):has(:is(.evolution-panel, .comparison-content, .administration-panel)) .monitoring-main { display: block; overflow: visible; }
+.monitoring-shell:has(.monitoring-view):has(:is(.evolution-panel, .comparison-content, .administration-panel)) .monitoring-view { min-height: 0; overflow: visible; }
 .monitoring-shell:has(.monitoring-view):has(.evolution-panel) .service-overview { height: auto; min-height: 350px; overflow: visible; }
-.monitoring-shell:has(.evolution-panel) :is(.monitoring-filters, .monitoring-notice) { max-height: none; overflow: visible; }
+.monitoring-shell:has(:is(.evolution-panel, .comparison-content)) :is(.monitoring-filters, .monitoring-notice) { max-height: none; overflow: visible; }
 .monitoring-service-summary:has(.evolution-panel) { overflow: visible; }
 .evolution-panel { --evolution-plot-height: clamp(100px, calc(100dvh - 600px), 230px); padding: 4px 0 16px; color: var(--monitoring-ink); }
 .evolution-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px 24px; margin-bottom: 12px; }

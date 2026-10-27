@@ -5,6 +5,8 @@ import { useSearchParams } from "react-router-dom";
 import { RegionMap } from "../components/map/RegionMap";
 import { MonitoringTabs } from "../components/MonitoringTabs";
 import { EvolutionPanel } from "../components/EvolutionPanel";
+import { ComparisonPanel } from "../components/ComparisonPanel";
+import { AdministrationPanel } from "../components/AdministrationPanel";
 import { ObservationTimeline } from "../components/ObservationTimeline";
 import { MonitoringSummary } from "../components/MonitoringSummary";
 import { MonitoringState } from "../components/MonitoringState";
@@ -50,7 +52,8 @@ export function DashboardPage() {
   const status = params.get("estado") ?? "";
   const metric: DashboardMetric = params.get("ordem") === "energy" ? "energy" : "emissions";
   const lens: ImpactLens = params.get("lente") === "energy" ? "energy" : params.get("lente") === "emissions" ? "emissions" : "status";
-  const tab = params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
+  const tab = params.get("aba") === "administracao" ? "administracao" : params.get("aba") === "comparar" ? "comparar" : params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
+  const administration = !selectedId && tab === "administracao";
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
   const evolutionMode = params.get("serie") === "acumulado" ? "cumulative" : "intervals";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || period !== "24h");
@@ -99,12 +102,12 @@ export function DashboardPage() {
       {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
     </div> : <div className="monitoring-heading">
       <div><h1>Monitoramento</h1></div>
-      <div className="monitoring-tools">
+      {!administration && <div className="monitoring-tools">
         <label className="monitoring-search"><Search size={21} aria-hidden="true" /><input type="search" aria-label="Buscar aplicação" placeholder="Buscar aplicação..." value={search} onChange={event => update({ busca: event.target.value }, true)} /></label>
         {filterButton}
-      </div>
+      </div>}
     </div>}
-    {filtersOpen && <div className="monitoring-filters" id="monitoring-filters">
+    {!administration && filtersOpen && <div className="monitoring-filters" id="monitoring-filters">
       <label>País<select value={params.get("pais") ?? ""} onChange={event => update({ pais: event.target.value, cidade: "", regiao: "" })}><option value="">Todos os países</option>{countries.map(country => <option key={country}>{country}</option>)}</select></label>
       <label>Região<select value={params.get("regiao") ?? ""} onChange={event => update({ regiao: event.target.value, cidade: "" })}><option value="">Todas as regiões</option>{regionOptions.map(service => <option key={service.regionCode} value={service.regionCode}>{[service.city, service.region].filter(Boolean).join(" · ") || service.regionCode}</option>)}</select></label>
       <label>Estado<select value={status} onChange={event => update({ estado: event.target.value })}><option value="">Todos os estados</option>{Object.entries(serviceStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -113,14 +116,16 @@ export function DashboardPage() {
       <button className="monitoring-text-button" onClick={clearFilters}><X size={16} />Limpar filtros</button>
       <div className="monitoring-filter-history"><h3>Histórico da sessão</h3><ObservationTimeline observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} onExplore={!selectedId && tab === "evolucao" ? () => update({ aba: mobile ? "mapa" : "" }) : undefined} /></div>
     </div>}
+    {!administration && <>
     {analysis.invalidDate && <p className="monitoring-notice" role="alert">A data na URL é inválida. <button onClick={() => update({ ate: "" })}>Voltar para agora</button></p>}
     {analysis.observationMissing && <p className="monitoring-notice" role="alert">Este instante não está mais disponível nesta sessão. <button onClick={goLive}>Voltar ao vivo</button></p>}
     {error && <div className="monitoring-notice" role="alert"><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button><details><summary>Detalhes da conexão</summary><p>{error}</p></details></div>}
     {analysis.warning && <details className="monitoring-notice"><summary>Há informações indisponíveis nesta consulta</summary><p>{analysis.warning}</p></details>}
-    {selectedId ? selected && <MonitoringTabs label="Informações da aplicação" value={detailTab} tabs={[{ value: "resumo", label: "Resumo" }, { value: "recursos", label: "Recursos" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ detalhe: value })} /> : <MonitoringTabs label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
-    {!selectedId && <MonitoringSummary showDetails={tab !== "evolucao"} services={services} history={history} periodLabel={analysis.periodLabel} refreshedAt={snapshot.refreshedAt} lastCollectionAt={snapshot.lastCollectionAt} observedAt={analysis.observedAt} loading={loading} onRefresh={() => void refresh()} />}
-    <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
-      <div className={"monitoring-overview" + (selected ? " service-overview" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao"}>
+    </>}
+    {selectedId ? selected && <MonitoringTabs label="Informações da aplicação" value={detailTab} tabs={[{ value: "resumo", label: "Resumo" }, { value: "recursos", label: "Recursos" }, { value: "evolucao", label: "Evolução" }]} onChange={value => update({ detalhe: value })} /> : <MonitoringTabs label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração" }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
+    {!selectedId && !administration && <MonitoringSummary showDetails={tab === "geral" || tab === "mapa"} services={services} history={history} periodLabel={analysis.periodLabel} refreshedAt={snapshot.refreshedAt} lastCollectionAt={snapshot.lastCollectionAt} observedAt={analysis.observedAt} loading={loading} onRefresh={() => void refresh()} />}
+    <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : administration ? "Administração do ambiente" : tab === "comparar" ? "Comparação de aplicações" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
+      <div className={"monitoring-overview" + (selected ? " service-overview" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
         <section className="monitoring-location" aria-label="Localização dos serviços">
           {selected && <h2>Localização do serviço</h2>}
           {selected && (selected.latitude === undefined || selected.longitude === undefined) && <p className="monitoring-explanation">Sem coordenadas para marcar esta aplicação no globo. Os recursos e as estimativas continuam disponíveis ao lado.</p>}
@@ -147,6 +152,8 @@ export function DashboardPage() {
           </section>}
       </div>
       {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
+      {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
+      {administration && <AdministrationPanel />}
     </section>
   </>;
 }
