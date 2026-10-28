@@ -8,7 +8,7 @@ html:has(.ecobyte-home)::-webkit-scrollbar { display: none; }
   animation: homeFade 800ms ease 100ms backwards;
 }
 .ecobyte-home .brand { gap: 12px; }
-.ecobyte-home .brand > .brand__mark { width: 34px; height: 44px; }
+.ecobyte-home .brand > .brand__mark { width: 44px; height: 44px; }
 .ecobyte-home .brand > .brand__wordmark,
 .ecobyte-home .brand > .brand__wordmark > span { color: #f6faed; font-size: 23px; font-weight: 550; letter-spacing: -.9px; }
 .ecobyte-home .home-navigation { display: flex; gap: 30px; color: #e9f1e6; font-size: 14px; }
@@ -111,9 +111,10 @@ html:has(.ecobyte-home)::-webkit-scrollbar { display: none; }
   .ecobyte-home .hero-copy__actions { gap: 20px; }
 }
 @media (max-width: 900px) {
+  .ecobyte-home .hero { height: auto; min-height: 100svh; }
   .ecobyte-home .site-header { height: 96px; grid-template-columns: 1fr auto; }
   .ecobyte-home .home-navigation { display: none; }
-  .ecobyte-home .hero__content { grid-template-columns: 1fr; padding-top: 145px; padding-bottom: 48px; }
+  .ecobyte-home .hero__content { grid-template-columns: minmax(0, 1fr); min-height: 100svh; padding-top: 145px; padding-bottom: 48px; }
   .ecobyte-home .hero-copy { position: relative; z-index: 2; max-width: 650px; }
   .ecobyte-home .hero-copy h1 { font-size: clamp(58px, 8.5vw, 78px); }
   .ecobyte-home .hero-emblem { position: absolute; right: -70px; top: 130px; width: 330px; opacity: .18; }
@@ -123,12 +124,12 @@ html:has(.ecobyte-home)::-webkit-scrollbar { display: none; }
 @media (max-width: 600px) {
   .ecobyte-home .site-header { height: 90px; gap: 12px; }
   .ecobyte-home .brand { gap: 7px; }
-  .ecobyte-home .brand > .brand__mark { width: 26px; height: 34px; }
+  .ecobyte-home .brand > .brand__mark { width: 34px; height: 34px; }
   .ecobyte-home .brand > .brand__wordmark,
   .ecobyte-home .brand > .brand__wordmark > span { font-size: 17px; letter-spacing: -.7px; }
   .ecobyte-home .platform-link { min-height: 42px; padding: 0 13px; font-size: 12px; gap: 10px; }
   .ecobyte-home .platform-link svg { width: 15px; }
-  .ecobyte-home .hero { min-height: 730px; }
+  .ecobyte-home .hero { min-height: 100svh; }
   .ecobyte-home .hero__content { padding: 125px 24px 36px; }
   .ecobyte-home .hero-context { font-size: 11px; margin-bottom: 24px; }
   .ecobyte-home .hero-copy h1 { font-size: clamp(42px, 10.3vw, 60px); letter-spacing: -.06em; }

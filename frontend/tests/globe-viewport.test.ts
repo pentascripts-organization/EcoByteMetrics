@@ -1,7 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PerspectiveCamera, Vector3 } from "three";
-import { animateGlobeViewport, getGlobePixelRatio, getGlobeViewport, restoreGlobeViewport } from "../src/features/monitoring/components/map/globeViewport.ts";
+import { animateGlobeViewport, getGlobeClip, getGlobePixelRatio, getGlobeViewport, restoreGlobeViewport } from "../src/features/monitoring/components/map/globeViewport.ts";
+
+test("o recorte mobile mantém o canvas e seus alvos dentro da área do mapa", () => {
+  const viewport = { width: 390, height: 844 };
+  const anchor = { left: 18, top: 300, width: 354, height: 300 };
+  assert.equal(getGlobeClip(viewport, anchor), "inset(300px 18px 244px 18px)");
+  // Scrolling and opening filters move the map; browser edges cannot produce negative insets.
+  assert.equal(getGlobeClip(viewport, { ...anchor, top: -100 }), "inset(0px 18px 644px 18px)");
+  assert.equal(getGlobeClip(viewport, { ...anchor, top: 650 }), "inset(650px 18px 0px 18px)");
+  assert.equal(getGlobeClip({ width: 844, height: 390 }, { left: 24, top: 150, width: 796, height: 260 }), "inset(150px 24px 0px 24px)");
+});
 
 test("a projection reset cannot move the globe behind the applications", () => {
   const camera = new PerspectiveCamera();

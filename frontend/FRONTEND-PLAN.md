@@ -14,8 +14,8 @@ Plano do frontend desenvolvido na `Dashboardsp2` e validado junto à develop na 
 | 8 | Login, expiração e sessão reais | API de login e JWT validada; pendente de integração da sessão no frontend |
 | 9 | Configurações do sistema pela API | Pendente do backend atualizado |
 | 10 | Navegação e rotas consistentes | Implementada: comparador, filtros preservados e rotas antigas redirecionadas |
-| 11 | Responsividade e acessibilidade | Ajustes implementados; conferência visual, teclado e zoom pendentes de navegador conectado |
-| 12 | Desempenho e medição reproduzível | CPU e geometria medidas; séries otimizadas e desenho limitado; FPS entre dispositivos pendente |
+| 11 | Responsividade e acessibilidade | Corrigidos fluxo mobile, filtros, tabelas, gráfico, áreas de toque e recorte do globo; conferência visual, teclado e zoom pendentes de navegador conectado |
+| 12 | Desempenho e medição reproduzível | CPU, geometria e build medidos; CSS carregado por página e gzip HTTP validado; FPS entre dispositivos pendente |
 | 13 | Testes dos fluxos e das falhas | Suíte ampliada com HTTP, contratos, transições, comparação, navegação e renderização |
 | 14 | Distribuição e documentação do frontend | Imagem do frontend, Nginx e proxy verificados; Compose completo pendente no ambiente de destino |
 
@@ -31,7 +31,9 @@ Não serão simulados login, persistência ou operações administrativas. O his
 7. A tabela de comparação mostra energia, emissões, quantidade, duração e datas das amostras no mesmo intervalo, sem concluir eficiência a partir de totais diferentes.
 10. O comparador ocupa uma aba ao lado de Evolução no dashboard. Endereços antigos levam à funcionalidade correspondente no dashboard, preservando os filtros e as seleções.
 11. Regiões de tabela admitem foco e rolagem por teclado. Cabeçalho e seleção do comparador se reorganizam em telas estreitas; o conteúdo tem altura mínima para permanecer alcançável em janelas baixas.
+    Em até 900 px, o dashboard usa rolagem do documento e empilha mapa e detalhes. Em celulares, filtros e valores se reorganizam, campos usam fonte de 16 px e o gráfico mantém uma altura legível. O canvas fica recortado à área do mapa, permite rolagem vertical por toque e acompanha a página sem interpolar seu enquadramento. A abertura e o rodapé da página inicial se adaptam à altura e à largura disponíveis. O recorte tem teste de geometria; a aparência e os gestos em aparelho real ainda precisam de conferência.
 12. A evolução usa Recharts carregado sob demanda, com barras por intervalo e pontos no acumulado. Períodos longos são agrupados em 5 minutos ou 1 hora; cálculos de totais preservam as amostras originais. Lacunas e estimativas incompletas têm explicações próprias, sem interpolar valores.
+    A etapa sem alteração de assets retirou estilos legados do carregamento e adiou CSS por página. O código inicial da home diminuiu 13,0%; gzip no Nginx reduziu 70,6% da transferência dos arquivos JS/CSS/SVG testados, preservando seus bytes após descompressão. Vídeos e geometria permanecem intactos. Evidências e propostas da próxima etapa em [docs/BUILD-WEIGHT.md](docs/BUILD-WEIGHT.md).
 13. Testes cobrem falhas e dados parciais, não apenas respostas ideais. Testes React no servidor não substituem teste visual ou WebGL.
 14. README, ambiente e Docker descrevem o que funciona e o que depende do backend. O HTML da distribuição exige revalidação para reduzir a chance de servir uma versão antiga após atualização.
 

@@ -25,6 +25,10 @@ A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Moni
 
 A aba Administração abre diretamente a prévia em `/dashboard?aba=administracao`, sem exigir conta durante o desenvolvimento visual. As categorias Coleta e Acesso revelam seu conteúdo separadamente; `configuracao=acesso` abre a segunda categoria. Apresenta o intervalo ilustrativo de 30 segundos, com edição e salvamento desativados. Não lê nem altera configurações, não autentica e não aplica controle de acesso. O login e a proteção real das operações serão integrados em uma próxima etapa. Referências do layout em [ADMINISTRATION-DESIGN.md](src/features/monitoring/ADMINISTRATION-DESIGN.md).
 
+## Medir o peso
+
+Para medir o tamanho do build, execute `npm run measure:build`. O relatório distingue arquivos publicados, código inicial e estimativa de gzip. Medições, validação HTTP e próximos candidatos de otimização estão em [docs/BUILD-WEIGHT.md](docs/BUILD-WEIGHT.md).
+
 ## Rotas
 
 | Rota | Comportamento |

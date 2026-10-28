@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, Eye, LockKeyhole } from "lucide-re
 import { Link } from "react-router-dom";
 import { Brand } from "@/shared/ui/Brand";
 import { TopographicSides } from "@/features/monitoring/components/TopographicSides";
+import "./styles.css";
 
 export function LoginPage({ register = false }: { register?: boolean }) {
   return (

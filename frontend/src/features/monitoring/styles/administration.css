@@ -45,13 +45,14 @@
   .administration-heading { align-items: start; gap: 12px; margin-bottom: 20px; }
   .administration-heading p { font-size: 12px; }
   .administration-workspace { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 18px; }
-  .administration-navigation { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-right: 0; padding-right: 0; }
+  .administration-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; border-right: 0; padding-right: 0; }
   .administration-navigation > p { display: none; }
   .administration-navigation > button { min-height: 48px; padding: 10px 12px; }
   .administration-navigation > button + button { margin-top: 0; }
   .administration-navigation small { display: none; }
   .administration-section-heading { margin-bottom: 17px; }
   .administration-setting-row { padding: 19px; }
+  .monitoring-shell .administration-save, .administration-access-actions > a { min-height: 44px; }
 }
 @media (max-width: 440px) {
   .administration-heading { flex-wrap: wrap; }

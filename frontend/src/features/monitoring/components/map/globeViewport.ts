@@ -3,6 +3,10 @@ import type { PerspectiveCamera } from "three";
 interface Viewport { width: number; height: number }
 interface Anchor extends Viewport { left: number; top: number }
 
+export function getGlobeClip(viewport: Viewport, anchor: Anchor) {
+  return `inset(${Math.max(0, anchor.top)}px ${Math.max(0, viewport.width - anchor.left - anchor.width)}px ${Math.max(0, viewport.height - anchor.top - anchor.height)}px ${Math.max(0, anchor.left)}px)`;
+}
+
 const projections = new WeakMap<PerspectiveCamera, Viewport & { x: number; y: number; fov: number }>();
 
 export function restoreGlobeViewport(camera: PerspectiveCamera) {

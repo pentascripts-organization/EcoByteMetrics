@@ -1,3 +1,5 @@
+import "../styles/map.css";
+import "../styles/dashboard.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, ListFilter, Search, X } from "lucide-react";
 import { SortSelect } from "../components/SortSelect";

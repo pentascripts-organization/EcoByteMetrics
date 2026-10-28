@@ -3,9 +3,9 @@
 .login-page .monitoring-topography img { pointer-events: none; }
 .login-header { position: relative; width: min(1464px, calc(100% - 96px)); min-height: 84px; margin-inline: auto; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .login-header .brand { gap: 10px; }
-.login-header .brand img { width: 36px; height: 34px; }
+.login-header .brand img { width: 36px; height: 36px; }
 .login-header .brand > span { color: var(--login-ink); font-size: 22px; letter-spacing: -.7px; font-weight: 650; }
-.login-header .brand > span > span { color: #078654; }
+.login-header .brand > span > span { color: inherit; }
 .login-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 5px 0; font-size: 12px; color: #526e61; }
 .login-back:hover { color: #087e59; }
 .login-content { flex: 1; display: grid; place-items: center; padding: 24px 24px 40px; outline: none; }
@@ -39,12 +39,14 @@
 @media (max-width: 680px) {
   .login-header { width: calc(100% - 40px); min-height: 76px; gap: 12px; }
   .login-header .brand { gap: 7px; }
-  .login-header .brand img { width: 30px; height: 29px; }
+  .login-header .brand img { width: 30px; height: 30px; }
   .login-header .brand > span { font-size: 18px; }
   .login-back span { display: none; }
   .login-back { justify-content: center; width: 44px; border: 1px solid #dce6db; border-radius: 50%; background: #f8fbf7; }
   .login-content { padding: 16px 20px 30px; }
   .login-form-panel { padding: 24px; }
+  .login-input input { font-size: 16px; }
+  .login-view-tabs a { min-height: 44px; }
   .login-form-intro h1 { font-size: 27px; }
 }
 @media (max-width: 360px) {

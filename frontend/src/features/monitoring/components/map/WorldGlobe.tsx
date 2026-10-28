@@ -8,7 +8,7 @@ import { geoContains, geoDistance } from "d3-geo";
 import { countries } from "@/shared/geography/geography";
 import type { CountryFeature, GlobeCity } from "@/shared/geography/geography";
 import { useSettings } from "@/shared/preferences/useSettings";
-import { animateGlobeViewport, getGlobePixelRatio, getGlobeViewport, restoreGlobeViewport } from "./globeViewport";
+import { animateGlobeViewport, getGlobeClip, getGlobePixelRatio, getGlobeViewport, restoreGlobeViewport } from "./globeViewport";
 import { createGlobeRotation } from "./globeRotation";
 import { createGlobeSelection, INITIAL_GLOBE_POSITION, scheduleGlobeFocus } from "./globeFocus";
 import { countryObject, createCountryLayer, keepCountryObject } from "./countryLayer";
@@ -59,7 +59,7 @@ function WorldGlobe({
   const markerElements = useRef(new Map<string, HTMLButtonElement>());
   const touch = useRef<{ id: number; x: number; y: number } | null>(null);
   const [viewport, setViewport] = useState({
-    width: 0, height: 0, offset: [0, 0] as [number, number], fieldOfView: 50, visible: false,
+    width: 0, height: 0, offset: [0, 0] as [number, number], fieldOfView: 50, visible: false, clipPath: "",
     portalRoot: null as Element | null,
   });
   const [ready, setReady] = useState(false);
@@ -186,13 +186,14 @@ function WorldGlobe({
     const measure = () => {
       frame = 0;
       const anchor = element.getBoundingClientRect();
-      const visible = anchor.width > 0 && anchor.height > 0;
+      const visible = anchor.width > 0 && anchor.height > 0 && anchor.bottom > 0 && anchor.top < window.innerHeight;
       setViewport(previous => {
         if (!visible) return previous.visible ? { ...previous, visible: false } : previous;
-        const next = getGlobeViewport({ width: document.documentElement.clientWidth, height: window.innerHeight }, anchor);
+        const size = { width: document.documentElement.clientWidth, height: window.innerHeight };
+        const next = { ...getGlobeViewport(size, anchor), clipPath: getGlobeClip(size, anchor) };
         return previous.visible && previous.width === next.width && previous.height === next.height &&
           previous.offset[0] === next.offset[0] && previous.offset[1] === next.offset[1] &&
-          previous.fieldOfView === next.fieldOfView ? previous : { ...next, visible, portalRoot };
+          previous.fieldOfView === next.fieldOfView && previous.clipPath === next.clipPath ? previous : { ...next, visible, portalRoot };
       });
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
@@ -250,7 +251,7 @@ function WorldGlobe({
     const camera = globe.current?.camera();
     if (!ready || !(camera instanceof PerspectiveCamera)) return;
     const resized = camera.view?.fullWidth !== viewport.width || camera.view?.fullHeight !== viewport.height;
-    const duration = projectionInitialized.current && !resized && viewport.visible && motionAllowed && settings.parallaxEnabled ? 650 : 0;
+    const duration = projectionInitialized.current && !resized && viewport.width > 900 && viewport.visible && motionAllowed && settings.parallaxEnabled ? 650 : 0;
     projectionInitialized.current = true;
     return animateGlobeViewport(camera, viewport, duration, requestAnimationFrame, cancelAnimationFrame);
   }, [ready, viewport, motionAllowed, settings.parallaxEnabled]);
@@ -369,7 +370,7 @@ function WorldGlobe({
       className="globe-background"
       data-intro={painted && motionAllowed && settings.parallaxEnabled}
       data-mask={experiments.mask}
-      style={{ visibility: viewport.visible && (painted || lost) ? "visible" : "hidden" }}
+      style={{ visibility: viewport.visible && (painted || lost) ? "visible" : "hidden", clipPath: viewport.width <= 900 ? viewport.clipPath : undefined }}
       aria-label={readOnly ? "Globo 3D para visualização" : "Globo 3D interativo"}
       onPointerDownCapture={(event) => {
         cancelCameraMotion.current();

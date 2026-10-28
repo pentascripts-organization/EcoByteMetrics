@@ -12,7 +12,7 @@ export function AppLayout() {
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <header className="monitoring-header">
         <Brand />
-        <Link className="monitoring-home" to="/"><ArrowLeft size={20} /> <span>Voltar ao início</span></Link>
+        <Link className="monitoring-home" to="/" aria-label="Voltar ao início"><ArrowLeft size={20} aria-hidden="true" /> <span>Voltar ao início</span></Link>
       </header>
       <main tabIndex={-1} id="main-content" className="monitoring-main"><Outlet /></main>
     </div>
