@@ -21,7 +21,7 @@ export async function createMetricController(req: Request, res: Response, next: 
 }
 export async function getMetricByIdController(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const metric = await getMetricByIdService(Number(req.params.id));
+        const metric = await getMetricByIdService(Number(req.params.id_metric));
         res.status(200).json(metric);
     } catch (error) {
         handleError(error, res, next);

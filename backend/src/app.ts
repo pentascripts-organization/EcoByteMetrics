@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from "express";
+import express, { NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 
 import userRouter from "./modules/Users/user.router.js";
@@ -6,8 +6,10 @@ import metricRouter from "./modules/Metrics/metric.router.js";
 import carbonRouter from "./modules/Carbons/carbon.router.js";
 import serviceRouter from "./modules/Services/service.router.js";
 import locationRouter from "./modules/Locations/location.router.js";
+import statisticRouter from "./modules/Statistics/statistics.router.js"
 import authRouter from "./modules/Auth/auth.router";
-import statisticsRouter from "./modules/Statistics/statistics.router.js";
+import {start} from "./modules/Worker/worker.job.js";
+import { runWorker } from "./modules/Worker/worker.js";
 
 import {
   getDiscoveredServices,
@@ -15,6 +17,9 @@ import {
   getCollectedServiceMetrics,
   getCollectedMetricsByServiceId,
 } from "./modules/Services/services.service.js";
+
+runWorker();
+start();
 
 const app = express();
 
@@ -43,9 +48,8 @@ app.use("/api/metrics", metricRouter);
 app.use("/api/carbons",carbonRouter);
 //Rota do service
 app.use("/api/services", serviceRouter);
-// Rotas de estatísticas consolidadas e ranking
-app.use("/api/statistics", statisticsRouter);
-app.use("/api/dashboard", statisticsRouter);
+//rota da statistica
+app.use("/api/statistics", statisticRouter)
 //Rota da Localização
 app.use("/api/locations",locationRouter);
 // Retorna as métricas coletadas de todos os serviços.
@@ -77,5 +81,13 @@ app.get("/metrics/:serviceId", (req: Request, res: Response) => {
     res.json(serviceMetrics);
   }
 );
+//rota inexistente
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.status(404).json({
+    status: 404,
+    erro: 'Não Encontrado',
+    mensagem: `A rota não existe neste servidor.`
+  });
+});
 
 export default app;
