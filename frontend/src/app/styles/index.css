@@ -8,3 +8,6 @@
 @import "../../features/monitoring/styles/map.css";
 @import "./feedback.css";
 @import "./overrides.css";
+
+@import "../../features/monitoring/styles/dashboard.css";
+@import "./page-transition.css";

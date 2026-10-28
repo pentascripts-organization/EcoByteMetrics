@@ -4,7 +4,9 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 ARG VITE_BACKEND_URL=/backend
+ARG VITE_CARBON_URL=https://carbon.unilaunch.org
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+ENV VITE_CARBON_URL=$VITE_CARBON_URL
 RUN npm run build
 
 FROM nginx:stable-alpine

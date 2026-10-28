@@ -1,171 +1,109 @@
 # Frontend EcoByteMetrics
 
-Interface web em React, TypeScript, Vite e React Router, com pesquisa por região, dashboard e navegação responsiva.
+Interface em React e TypeScript, compilada com Vite. Esta branch mantém o frontend separado da `develop` até a conclusão das melhorias e da integração com o backend atualizado.
 
-O frontend consulta o backend para obter serviços e métricas e consulta diretamente a API de carbono para obter fatores regionais. Na implementação atual, as estimativas de energia e emissões são calculadas no frontend.
+## Executar
 
-## Organização
-
-```text
-public/assets/          # Logo única do projeto, também usada como favicon
-src/
-  app/                  # Composição da aplicação
-    App.tsx             # Definição das rotas e controle de foco entre páginas
-    layouts/            # Estrutura das telas de pesquisa e monitoramento
-    pages/              # Página não encontrada e telas em construção
-    providers/          # Composição dos dados e das preferências compartilhadas
-    routes/             # Lista de rotas das funcionalidades em construção
-    styles/             # Composição do CSS, navegação, feedback e ajustes finais
-  features/
-    home/               # Página inicial, conteúdo, carrossel e seções de apresentação
-    auth/               # Tela de entrada e cadastro, ainda sem autenticação integrada
-    monitoring/
-      api/              # Comunicação HTTP e validação dos contratos recebidos
-      components/       # Ranking, coletas, filtros, alertas e mapa
-      contexts/         # Definição dos dados compartilhados de monitoramento e análise
-      domain/           # Cálculos, histórico, análise, regiões e ordenação
-      hooks/            # Acesso aos contextos da funcionalidade
-      pages/            # Pesquisa regional e dashboard
-      providers/        # Atualização periódica dos dados e aplicação dos filtros
-      styles/           # Estilos do monitoramento e da visualização geográfica
-  shared/
-    assets/             # Fotografias compartilhadas entre a home e a tela de acesso
-    effects/            # Folhas e movimento do ponteiro
-    geography/          # Cartografia, traduções e tipos geográficos
-    lib/                # Formatação e períodos aceitos
-    preferences/        # Preferências locais do navegador
-    styles/             # Tokens, base e estilos de componentes genéricos
-    ui/                 # Componentes visuais independentes do monitoramento
-  main.tsx              # Inicialização do React
-  vite-env.d.ts         # Tipos do Vite utilizados pelo TypeScript
-```
-
-Esse é um resumo das pastas e dos arquivos de entrada. As configurações de npm, TypeScript, Vite, ESLint e Docker permanecem na raiz de `frontend/`.
-
-O alias `@/` aponta para `src/` no TypeScript e Vite. `app` compõe as funcionalidades; `features` reúne o código de cada área; `shared` contém código reutilizável e independente. O ESLint restringe imports pelo alias de `app` dentro de features e de `app` ou features dentro de shared. Não crie diretórios vazios para funcionalidades futuras.
-
-Os estilos globais entram por `src/app/styles/index.css`, com os ajustes de acessibilidade por último para manter sua precedência. Os estilos específicos da home continuam carregados com a página. A origem da cartografia está em [src/shared/geography/README.md](src/shared/geography/README.md).
-
-## Execução local
-
-Use Node.js 24, a mesma versão principal adotada no Dockerfile, e npm. A partir da raiz do projeto:
+Use Node.js 24 e npm. Na pasta `frontend/`:
 
 ```powershell
-cd frontend
 npm ci
-```
-
-`npm ci` instala as dependências nas versões registradas no `package-lock.json`. Execute novamente quando precisar reinstalá-las ou quando o lockfile for atualizado.
-
-Por padrão, o frontend espera o backend em `http://127.0.0.1:3000`. Para ajustar a conexão, crie `frontend/.env.local` a partir do exemplo, caso ainda não exista. Dentro de `frontend/`:
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-Os valores padrão são:
-
-```dotenv
-VITE_BACKEND_URL=/backend
-BACKEND_PROXY_TARGET=http://127.0.0.1:3000
-```
-
-O Vite encaminha as requisições de `/backend` para `BACKEND_PROXY_TARGET`, removendo o prefixo. Variáveis com prefixo `VITE_` são públicas no navegador e não devem conter credenciais.
-
-Mantenha o backend em execução em outro terminal, com as próprias variáveis de ambiente configuradas, incluindo `API_METRIC`. As variáveis acima configuram a conexão do frontend com esse processo.
-
-Para iniciar a interface, dentro de `frontend/`:
-
-```powershell
 npm run dev
 ```
 
-O endereço padrão é `http://localhost:5173`; confira a URL informada no terminal. A página inicial e as telas de acesso podem ser abertas sem o backend. A pesquisa e o dashboard precisam dele e das APIs externas para exibir dados atuais. Reinicie o servidor de desenvolvimento após alterar o arquivo `.env.local`.
+Se precisar configurar a conexão, crie `.env.local` a partir de `.env.example`, somente se ele ainda não existir. Não substitua configurações locais já existentes. O Vite usa a porta 5173; confira o endereço informado no terminal.
 
-## Build e visualização local
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `VITE_BACKEND_URL` | `/backend` | Endereço público da API no navegador |
+| `BACKEND_PROXY_TARGET` | `http://127.0.0.1:3000` | Destino do proxy do Vite |
+| `VITE_CARBON_URL` | `https://carbon.unilaunch.org` | Catálogo de fatores de carbono |
 
-Dentro de `frontend/`:
+O proxy remove `/backend` antes de encaminhar a consulta. Reinicie o Vite após mudar o ambiente. Variáveis `VITE_` são públicas e incorporadas no build; não use senhas ou tokens nelas.
+
+A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Monitoramento e comparação precisam de respostas da API para mostrar aplicações reais; não existe modo de demonstração automático.
+
+## Rotas
+
+| Rota | Comportamento |
+| --- | --- |
+| `/` | Landing page com quatro vídeos, seções explicativas e acesso ao dashboard |
+| `/dashboard` | Lista, filtros, estados, globo, resumo e evolução das amostras |
+| `/dashboard?servico=ID` | Resumo, recursos e evolução da aplicação; globo permanece à esquerda no desktop |
+| `/comparar` | Seleção de duas ou mais aplicações, tabela com o mesmo intervalo e cobertura por aplicação |
+| `/login`, `/cadastro` | Telas existentes com envio desativado; aguardam integração real |
+| `/gerenciamento` | Funcionalidade pendente do backend |
+| `/pesquisa`, `/servicos` | Redirecionam ao dashboard preservando a consulta |
+| `/servicos/:id` | Redireciona ao detalhe da aplicação |
+| `/energia`, `/emissoes` | Redirecionam à evolução com a métrica correspondente |
+| Outras | Página 404 |
+
+Busca, estado, país, região, cidade, período e data são mantidos na URL. A navegação entre monitoramento e comparação preserva esses filtros e as seleções de comparação. Os estados do serviço são os da consulta atual, ou da observação selecionada explicitamente na linha do tempo; escolher uma data limite de amostras não reconstrói estados passados do servidor.
+
+## Dados, cálculos e limites
+
+O adaptador `src/features/monitoring/api/monitoring.ts` consulta:
+
+| Consulta | Endpoint padrão |
+| --- | --- |
+| Descoberta de aplicações | `GET /backend/services` |
+| Recursos da aplicação | `GET /backend/metrics/:id` |
+| Fatores regionais | `GET https://carbon.unilaunch.org/regions` |
+
+O transporte compartilhado fica em `src/shared/lib/http.ts`: solicita JSON, impede cache das consultas, admite cancelamento e aplica um limite de 10 segundos por requisição, incluindo a leitura do corpo. Distingue falha de conexão, tempo limite, status HTTP e resposta inválida. As consultas de métricas são feitas em grupos de até seis.
+
+Contratos utilizados:
+
+- Descoberta: `{ services: [...], lastUpdatedAt: "ISO com fuso" }`. Data nula indica descoberta ainda não concluída. Cada serviço tem `id`, nome e localização opcionais.
+- Métricas em cache: `{ serviceId, metrics: { collection_interval_seconds, metrics: { cpu_percent, memory_gb, disk_gb, network_gb } }, updatedAt }`.
+- Também é aceito o formato direto `{ collection_interval_seconds, metrics: { ... }, collectedAt }`.
+- Horários precisam incluir o fuso. CPU deve ficar entre 0 e 100; recursos devem ser finitos e não negativos; o intervalo é um inteiro positivo.
+- Dados ausentes não viram zero. Erros `service_not_found` e `metrics_missing` distinguem remoção e ausência de métricas.
+
+As estimativas ainda são calculadas no frontend. O modelo em `domain/energy.ts` usa CPU de 100 W na utilização máxima, RAM de 0,375 W/GB, disco de 0,01 W/GB e rede de 0,02 W/GB, multiplicados pela duração da amostra. Energia é exibida em kWh; emissões em g CO₂e são a energia multiplicada pelo fator regional. São estimativas, não medições elétricas.
+
+- A consulta é repetida a cada 30 s enquanto a aba está visível no dashboard ou no comparador. Retornar à aba dispara nova consulta. Não há consultas simultâneas do mesmo ciclo.
+- Falhas preservam os dados válidos anteriores. Na falha individual, os recursos preservados têm aviso e horário da última coleta válida; eles não geram uma nova amostra no histórico.
+- Uma descoberta incompleta não permite inferir remoções. Aplicações removidas ficam ao final do ranking, inclusive quando possuem estimativas históricas maiores.
+- Amostras com mais de três intervalos de idade, com mínimo de 90 s, são sinalizadas como desatualizadas. Esse estado não confirma uma queda do serviço.
+- Falta de coordenadas impede somente o marcador. Lista, recursos e estimativas continuam disponíveis. Aplicações nas mesmas coordenadas são agrupadas, inclusive ao abrir seus detalhes.
+- Tabela, totais e gráficos usam a mesma seleção. Estimativas incompletas de emissão aparecem como “—” no ranking, detalhe e comparação. O resumo identifica totais parciais e informa a cobertura.
+- O histórico fica **somente na memória desta sessão**. Recarregar a página o apaga. A retenção de amostras observadas é de até 30 dias; a linha do tempo guarda até 3.000 observações. Selecionar 7 dias não recupera coletas anteriores à abertura da página.
+- A comparação usa o mesmo intervalo solicitado, mas informa a quantidade e a duração somada das amostras de cada aplicação. Um total menor não comprova maior eficiência.
+- O gráfico usa [Recharts](https://github.com/recharts/recharts), versão 3.10.1, sob licença MIT. Por intervalo mostra barras; Acumulado mostra pontos sem linhas de ligação, representando somente amostras recebidas. O eixo inclui segundos na resolução de 30 s. Eixos, tooltips e navegação por teclado usam os componentes da biblioteca. Os valores continuam disponíveis na seção Coletas, com paginação.
+- A evolução abre no gráfico. As seções Gráfico, Aplicações, Coletas, Lacunas e Detalhes substituem o conteúdo no mesmo espaço; os indicadores e a cobertura aparecem só em Detalhes. O histórico da sessão fica no painel Filtrar, abaixo dos campos, inclusive nos detalhes de uma aplicação. Selecionar um instante e voltar ao vivo continuam disponíveis ali; Limpar filtros também encerra a revisão do passado. As listas exibem cinco registros por página. As amostras são agrupadas em intervalos de 30 s (até uma hora observada), 5 min (até um dia) ou uma hora (acima de um dia). Mouse, toque e setas do teclado permitem explorar o gráfico, por intervalo ou acumulado. Não há rolagem vertical dentro do painel; em telas pequenas ou com zoom alto, o documento pode rolar para manter o conteúdo acessível. Nos detalhes de uma aplicação, o painel permanece à direita do globo no desktop.
+- A adaptação insere marcadores nulos e faixas em âmbar nos trechos sem registros; não cria valores zero nem interpola coletas. No agrupamento de 30 s, aplicações próximas pertencem à mesma rodada e uma tolerância de 15 s evita lacunas falsas por variação dos horários. Animações de redesenho foram desativadas para que novas consultas não façam o gráfico piscar. `react-is` está na mesma versão instalada de React, conforme orientação da biblioteca.
+- A seção Lacunas apresenta um trecho por página e distingue ausência de registros de estimativa de emissões incompleta. O frontend guarda até 3.000 eventos da sessão: pausas por aba oculta ou saída do monitoramento, falhas de consulta, respostas repetidas e aplicações indisponíveis/sem métricas. Os eventos são relacionados ao trecho, à aplicação e ao instante em revisão. Eles são contexto observado pela interface, não um diagnóstico do coletor. Não existe causa histórica fornecida pela API atual; trechos sem evidência ficam com motivo desconhecido. Recarregar a página reinicia esses registros junto com o histórico local.
+- A biblioteca de gráficos é carregada separadamente ao abrir o gráfico da evolução. Os avisos de licença das duas dependências diretas adicionadas estão em `public/licenses/`.
+
+Histórico persistido, autenticação e configurações administrativas continuam pendentes da integração com a `develop`. A interface não simula essas capacidades.
+
+## Verificar
 
 ```powershell
+npm test
+npm run lint
 npm run build
 npm run preview
 ```
 
-O build verifica os tipos e gera a pasta `dist/`. O preview serve esse resultado, por padrão em `http://localhost:4173`, e usa o mesmo proxy do Vite. Após mudar o código, gere o build novamente para conferir o resultado no preview.
+Os testes cobrem contratos HTTP com respostas controladas, erros, cancelamento, preservação de dados, agrupamento geográfico, filtros, ranking, comparação, gráficos, câmera, rotação, transição e reprodução de vídeos. Os testes de telas usam renderização React no servidor; não executam o navegador ou o WebGL.
 
-Para publicação, o Dockerfile gera `dist/` e o Nginx serve seus arquivos e encaminha `/backend/` para `BACKEND_PROXY_TARGET`. O `frontend/compose.yaml` inicia apenas a interface; o backend precisa estar disponível separadamente. Nesse Compose, o destino padrão é `http://host.docker.internal:3000`, enquanto o desenvolvimento com Vite usa `http://127.0.0.1:3000`. As variáveis do Compose são configuradas separadamente das variáveis de desenvolvimento em `.env.local`.
+Procedimentos e limites das verificações estão em [docs/VALIDATION.md](docs/VALIDATION.md). O andamento e as dependências estão em [FRONTEND-PLAN.md](FRONTEND-PLAN.md).
 
-## Integração
-
-Com `VITE_BACKEND_URL=/backend`, as consultas realizadas pelo navegador são:
-
-| Consulta | Endpoint |
-| --- | --- |
-| Serviços | `GET /backend/services` |
-| Métricas por serviço | `GET /backend/metrics/:id` |
-| Regiões e fatores de carbono | `GET https://carbon.unilaunch.org/regions` |
-
-O adaptador `src/features/monitoring/api/monitoring.ts` valida as respostas e converte os campos para os tipos utilizados pela interface:
-
-- A lista de serviços deve conter `services` e um `lastUpdatedAt` válido. Um valor nulo indica que a descoberta inicial do backend ainda não terminou.
-- Nas métricas retornadas pelo backend, o formato é `{ serviceId, metrics: { collection_interval_seconds, metrics: { ... } }, updatedAt }`.
-- Também é aceito o formato direto `{ collection_interval_seconds, metrics: { ... }, collectedAt }`.
-- Os campos de recursos são `cpu_percent`, `memory_gb`, `disk_gb` e `network_gb`. O horário da amostra deve ser válido e incluir o fuso horário.
-
-A fórmula de energia fica em `src/features/monitoring/domain/energy.ts`. Ela usa CPU, memória, disco, rede e duração da coleta para estimar energia em kWh. As emissões em gCO₂e resultam dessa energia multiplicada pelo fator de carbono da região.
-
-Cada amostra é identificada pelo serviço e pelo horário informado pelo backend. Consultas repetidas à mesma amostra não duplicam o histórico. Campos de localização ausentes continuam sem valor; o estado exibido depende das informações retornadas pelo servidor.
-
-## Telas e navegação
-
-| Rota | Conteúdo |
-| --- | --- |
-| `/` | Apresentação do projeto com carrossel de quatro paisagens |
-| `/login`, `/cadastro` | Telas de acesso com autenticação indisponível; campos e envio desativados |
-| `/pesquisa` | Seleção de país e cidade, associada ao código da região monitorada |
-| `/dashboard` | Indicadores, estado dos serviços, ranking, tabela da última coleta por serviço e mapa |
-| `/energia`, `/comparar`, `/gerenciamento`, `/emissoes`, `/servicos`, `/servicos/:id` | Telas em construção |
-
-Na tela de entrada, o link “Criar conta” abre a pesquisa sem realizar cadastro. A rota `/cadastro` pode ser acessada diretamente, mas o cadastro continua indisponível. A pesquisa atualiza os dados da região selecionada e encaminha para o dashboard quando a seleção permite continuar; situações de dados parciais ou indisponíveis geram avisos. O menu completo fica disponível no dashboard e nas telas em construção; na pesquisa, o cabeçalho é simplificado.
-
-O mapa do dashboard permite rotação e zoom. A troca de região é feita pelo link “Pesquisar outra região”. Endereços sem uma rota definida, incluindo `/configuracoes`, exibem a página 404.
-
-## Dados e atualização
-
-- A pesquisa e o dashboard iniciam consultas ao entrar na área de monitoramento, repetem a atualização a cada 30 segundos enquanto a aba está visível e consultam novamente ao voltar para a aba. Uma consulta já em andamento impede outra atualização simultânea.
-- Os filtros disponíveis são últimas 24 horas e últimos 7 dias. A data e hora opcionais definem o fim do intervalo; sem essa seleção, é usado o horário da última coleta válida.
-- O histórico é formado pelas amostras recebidas enquanto a aplicação está aberta. Ele fica em memória, é perdido ao recarregar a página e mantém uma janela de até 30 dias relativa à última coleta válida. Selecionar 7 dias não recupera automaticamente dados anteriores à abertura da aplicação.
-- Os filtros de período e data afetam os indicadores históricos e o ranking. A tabela “Localização e coleta”, o estado e a localização dos serviços seguem a última consulta, mesmo quando uma data histórica está selecionada.
-- Amostras com idade superior a três intervalos de coleta, com tolerância mínima de 90 segundos, recebem o aviso “Dados desatualizados”. Seus valores e horários são preservados para consulta; esse aviso não confirma uma queda do serviço. A verificação ocorre ao receber as métricas e ao preservar dados após uma consulta malsucedida.
-- Consultas repetidas à mesma amostra reaproveitam o índice e a lista do histórico. A limpeza dos registros antigos só percorre a lista quando há amostras fora da janela de retenção.
-- Os totais somam as estimativas das amostras disponíveis no intervalo selecionado. A cobertura pode ser menor que o período escolhido.
-- O ranking mostra até cinco serviços por energia ou emissões estimadas. Na ordenação por emissões, serviços com estimativas de emissão incompletas nas amostras do período são omitidos.
-- Quando uma consulta falha, os dados anteriores são preservados com uma mensagem de erro. Valores sem dados válidos são apresentados como indisponíveis; a interface sinaliza resultados parciais.
-- A interface respeita a preferência de movimento reduzido do dispositivo.
-
-## Validação
-
-Na pasta `frontend/`:
+## Distribuir somente o frontend
 
 ```powershell
-npm run lint
-npm run typecheck
-npm run build
+docker compose -f compose.yaml config --quiet
+docker compose -f compose.yaml up --build -d
 ```
 
-A conferência das telas é manual. Execute `npm run dev` e verifique no navegador:
+Este Compose inicia apenas o frontend na porta 5173 e encaminha `/backend/` para `http://host.docker.internal:3000`. Configure `BACKEND_PROXY_TARGET` no ambiente do Compose se o backend estiver em outro endereço. O backend precisa executar separadamente; esse arquivo não instala banco, migrações ou serviços do backend.
 
-- Página inicial: logo, fotografias e acesso à tela de login.
-- Pesquisa: seleção de país e cidade, avisos e abertura do dashboard.
-- Dashboard: indicadores, filtros e atualização dos dados, com o backend disponível.
-- Falhas de conexão: mensagens visíveis quando o backend estiver indisponível.
-- Amostras antigas: aviso de dados desatualizados, com os valores e horários preservados.
-- Alertas: “Tentar novamente” volta a mostrar o aviso quando o problema persiste.
-- Telas pequenas: navegação e conteúdo sem cortes ou rolagem horizontal indevida.
+`VITE_BACKEND_URL` e `VITE_CARBON_URL` são argumentos de build; mudanças exigem reconstruir a imagem. `BACKEND_PROXY_TARGET` é aplicado ao iniciar o Nginx. O fallback de rotas entrega `index.html` nos acessos diretos à SPA. O HTML exige revalidação de cache; arquivos de `/assets/` ausentes retornam 404.
 
-Lint, TypeScript e build verificam problemas no código e na compilação; não substituem essa conferência. Valide também o fluxo com o backend e as APIs externas disponíveis. Este frontend não possui uma suíte de testes automatizados configurada.
+## Organização
 
-## Design
+`app/` compõe rotas, layouts e providers. `features/home`, `features/auth` e `features/monitoring` contêm as funcionalidades. `shared/` reúne componentes, HTTP, preferências, estilos e geografia independentes das funcionalidades. O alias `@/` aponta para `src/`.
 
-- [Protótipo Figma](https://www.figma.com/design/ePuzwzqJXWtU6scgxSYcAd?node-id=1-2)
-- [FigJam](https://www.figma.com/board/2CB9smqpP1vdC1twg7oNSD)
+Não coloque credenciais no frontend nem implemente histórico fictício para contornar a ausência de endpoints. Validação de permissões e operações administrativas pertence ao servidor.

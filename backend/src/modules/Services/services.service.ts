@@ -132,7 +132,10 @@ export async function refreshDiscoveredServices(): Promise<void> {
         discoveredServices = services;
         lastUpdatedAt = new Date().toISOString();
     } catch (error: unknown) {
-        
+        console.error(
+            "Falha ao consultar serviços descobertos.",
+            error
+        );
     }
 }
 
