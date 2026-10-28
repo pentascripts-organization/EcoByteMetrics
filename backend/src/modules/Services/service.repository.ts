@@ -18,15 +18,16 @@ export async function createServiceRepository(serv: createServiceInput): Promise
         `INSERT INTO Services (
                 id_location,
                 name_service,
-                path_metric
+                path_metric,
+                active_service
             )
-            VALUES ($1, $2, $3)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT (name_service)
             DO UPDATE SET
                 id_location=EXCLUDED.id_location
                 path_metric = EXCLUDED.path_metric
             RETURNING *;`,
-        [serv.id_location, serv.name_service, serv.path_metric]
+        [serv.id_location, serv.name_service, serv.path_metric, true]
     );
     return result.rows[0] || null;
 }
