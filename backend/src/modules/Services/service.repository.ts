@@ -24,25 +24,26 @@ export async function createServiceRepository(serv: createServiceInput): Promise
             VALUES ($1, $2, $3, $4)
             ON CONFLICT (name_service)
             DO UPDATE SET
-                id_location=EXCLUDED.id_location
-                path_metric = EXCLUDED.path_metric
+                id_location=EXCLUDED.id_location,
+                path_metric = EXCLUDED.path_metric,
+                active_service = EXCLUDED.active_service
             RETURNING *;`,
-        [serv.id_location, serv.name_service, serv.path_metric, true]
+        [serv.id_location, serv.name_service, serv.path_metric, serv.active_service]
     );
     return result.rows[0] || null;
 }
 export async function updateServiceStatusRepository(service_names:string[]): Promise<void> {
-    await pool.query(
+    
+    const res= await pool.query(
     `UPDATE services
         SET active_service = FALSE,
             date_houry = NOW()
         WHERE active_service = TRUE
         AND NOT (
             name_service = ANY($1::text[])
-        )`,
-        [service_names]
-        
-    );
+        ) RETURNING *`,
+        [service_names]);
+        console.log(res.rows)
 }
 export async function getServiceByIdRepository(id_service: number): Promise<Service | null> {
     const result = await pool.query("SELECT * FROM services WHERE id_service = $1", [id_service]);

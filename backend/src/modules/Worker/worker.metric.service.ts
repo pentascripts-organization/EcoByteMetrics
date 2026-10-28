@@ -91,7 +91,7 @@ export class WorkerService {
           );
         } else {
           console.error(
-            `[Serviço: Erro desconhecido:`,
+            `Serviço: Erro desconhecido:`,
             error
           );
         }

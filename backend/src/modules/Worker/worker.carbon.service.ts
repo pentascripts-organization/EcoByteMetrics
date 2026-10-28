@@ -69,7 +69,7 @@ export class WorkerCarbons{
             
       }catch(error){
         if(error instanceof Error)
-          console.error(error.name);
+          console.error(error);
           console.error("Error não indenticado");
       }
     }

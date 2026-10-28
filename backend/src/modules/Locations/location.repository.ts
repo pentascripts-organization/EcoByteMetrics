@@ -21,17 +21,18 @@ export type createLocationInput = Omit<Location, "id_location">;
 //Função assíncrona createLocationRepository que insere uma nova localização no banco de dados e retorna a localização criada.
 export async function createLocationRepository(loc: createLocationInput): Promise<Location> {
     const result = await pool.query(
-        `INSERT INTO Services (
-            id_location,
-            name_service,
-            path_metric
+        `INSERT INTO Locations (
+            name_location,
+            country_location,
+            city_location,
+            region_location,
+            latitude_location,
+            longitude_location
         )
-        VALUES ($1, $2, $3)
-        ON CONFLICT (id_location, name_service)
-        DO UPDATE SET
-            path_metric = EXCLUDED.path_metric;`,
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *`,
         [
-            loc.name_location, 
+            loc.name_location,
             loc.country_location,
             loc.city_location,
             loc.region_location,
