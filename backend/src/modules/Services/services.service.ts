@@ -129,15 +129,24 @@ export async function refreshDiscoveredServices(): Promise<void> {
     try {
         const services = await fetchServices();
 
-    try {
-        await saveServices(services);
-    } catch (error: unknown) {
-        console.error("Falha ao persistir serviços descobertos.", error);
-    }
+        try {
+            await saveServices(services);
+        } catch (error: unknown) {
+            console.error(
+                "Falha ao persistir serviços descobertos.",
+                error
+            );
+        }
 
-    // Atualiza a lista somente após uma consulta bem-sucedida.
-    discoveredServices = services;
-    lastUpdatedAt = new Date().toISOString();
+        // Atualiza a lista somente após uma consulta bem-sucedida.
+        discoveredServices = services;
+        lastUpdatedAt = new Date().toISOString();
+    } catch (error: unknown) {
+        console.error(
+            "Falha ao consultar serviços descobertos.",
+            error
+        );
+    }
 }
 
 export function getDiscoveredServices(): AggregatorService[] {
