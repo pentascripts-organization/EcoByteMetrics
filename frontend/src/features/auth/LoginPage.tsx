@@ -110,11 +110,12 @@ export function LoginPage({ register = false }: { register?: boolean }) {
           </div>
           <Link
             className="button button-outline"
-            to={register ? "/login" : "/pesquisa"}
+            to={register ? "/login" : "/cadastro"}
           >
             {register ? "Fazer login" : "Criar conta"}
             <ArrowUpRight size={17} />
           </Link>
+          <Link className="monitoring-text-button" to="/dashboard">Explorar monitoramento <ArrowUpRight size={17} /></Link>
         </section>
       </main>
     </div>

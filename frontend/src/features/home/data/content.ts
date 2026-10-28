@@ -2,12 +2,12 @@ export const content = {
   pt: {
     hero: {
       eyebrow: "SUSTENTABILIDADE EM SOFTWARE",
-      line1: "Entendendo o hoje",
-      line2: "para um amanhã",
-      line3: "mais limpo.",
+      line1: "Entenda o impacto",
+      line2: "ambiental das suas",
+      line3: "aplicações.",
       description:
-        "CPU, memória, disco e rede contam uma história. A EcoByteMetrics transforma essas métricas em estimativas de energia e emissão de carbono por serviço.",
-      primary: "Explorar dashboard",
+        "Descubra a energia por trás das suas aplicações. Acompanhe serviços e entenda suas estimativas de emissão de carbono em um só lugar.",
+      primary: "Explorar monitoramento",
     },
     solutions: {
       eyebrow: "DO RECURSO AO IMPACTO",
