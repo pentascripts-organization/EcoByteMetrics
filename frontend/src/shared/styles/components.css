@@ -10,9 +10,9 @@
 .button-small { min-height: var(--eb-control-height); padding: var(--eb-space-2) var(--eb-space-4); gap: var(--eb-space-3); font-size: var(--eb-text-sm); border-radius: var(--eb-radius-md); }
 .button-icon { width: 44px; min-height: 44px; padding: 0; background: #ffffffe0; border-color: #ffffffeb; }
 .brand { display: inline-flex; align-items: center; gap: var(--eb-space-2); flex-shrink: 0; }
-.brand > img { width: 43px; height: 40px; object-fit: contain; }
+.brand > img { display: block; width: 44px; height: 44px; flex-shrink: 0; object-fit: contain; }
 .brand > span { font-family: var(--eb-font-body); font-size: var(--eb-text-xl); letter-spacing: -.9px; font-weight: var(--eb-weight-bold); color: var(--eb-ink); }
-.brand > span > span { color: var(--eb-green); font-weight: var(--eb-weight-semibold); }
+.brand > span > span { color: inherit; font-weight: inherit; }
 .eyebrow { font-size: var(--eb-text-xs); letter-spacing: 1.7px; font-weight: var(--eb-weight-bold); display: inline-block; color: var(--eb-ink-muted); line-height: var(--eb-leading-body); }
 .pill-label { display: inline-flex; align-items: center; gap: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid #41726b33; background: #f2ffff45; border-radius: var(--eb-radius-pill); font-size: var(--eb-text-xs); font-weight: var(--eb-weight-semibold); letter-spacing: 1.7px; backdrop-filter: none; }
 .neutral-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -73,7 +73,7 @@ button.text-link { background: transparent; padding: var(--eb-space-1) 0; }
 }
 @media (max-width: 680px) {
   .brand > span { font-size: var(--eb-text-lg); letter-spacing: -.7px; }
-  .brand > img { width: 35px; height: 32px; }
+  .brand > img { width: 34px; height: 34px; }
   .hero-copy h1 { font-size: clamp(41px, 10.6vw, 58px); letter-spacing: -2.3px; margin-block: 20px; }
   .hero-copy > p { font-size: var(--eb-text-base); max-width: 360px; }
   .hero-copy .pill-label { font-size: var(--eb-text-xs); padding: var(--eb-space-2) var(--eb-space-3); letter-spacing: 1.5px; }

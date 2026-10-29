@@ -23,6 +23,25 @@ O proxy remove `/backend` antes de encaminhar a consulta. Reinicie o Vite após 
 
 A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Monitoramento e comparação precisam de respostas da API para mostrar aplicações reais; não existe modo de demonstração automático.
 
+A aba Administração exige sessão em desenvolvimento e produção. Uma visita sem sessão vai ao login, preservando o destino e os filtros; a tela de login também oferece o caminho para cadastro. A administração contém a configuração de coleta, sem uma seção separada de Acesso. O intervalo ilustrativo de 30 segundos e o salvamento continuam desativados, pois ainda não existe endpoint de configuração integrado. Referências do layout em [ADMINISTRATION-DESIGN.md](src/features/monitoring/ADMINISTRATION-DESIGN.md).
+
+## Login e sessão
+
+O formulário de entrada envia `{ email, password }` para `POST /backend/auth/login`, usando o mesmo proxy do monitoramento. Espera a resposta `{ token, tokenType: "Bearer", expiresIn }`; o JWT precisa trazer `email` e um `exp` futuro. O payload é usado apenas para apresentar a conta e controlar o prazo na interface; assinatura e autorização das operações são responsabilidades do backend.
+
+- Campos e botão ficam desativados durante a consulta; envios duplicados são ignorados. E-mail é normalizado, a senha é enviada sem alterações e é apagada do formulário após a tentativa.
+- Credenciais incorretas, serviço indisponível, falha de conexão, tempo limite e resposta inválida têm mensagens próprias. Detalhes internos da API não são exibidos.
+- Sessão e token ficam somente em memória, sem `localStorage`, `sessionStorage` ou cookies. Recarregar a página ou fechar a aba exige nova entrada. Ainda não existe renovação de token integrada.
+- A sessão termina no prazo informado no JWT, inclusive após suspensão da aba. Consultas feitas por `useAuth().request` enviam Bearer; HTTP 401 encerra a sessão, enquanto 403 mantém a conta conectada. Respostas de uma sessão encerrada não são aplicadas a uma sessão nova.
+- Ao entrar, a interface retorna ao dashboard solicitado; destinos externos são descartados. A administração mostra a conta e permite sair. O dashboard permanece público; somente a aba Administração exige sessão, inclusive em desenvolvimento.
+- Cadastro continua desativado. Sem PostgreSQL disponível, o backend não consegue validar uma conta: a tela informa indisponibilidade e não cria sessão. Não há credenciais de demonstração nem autenticação simulada no aplicativo.
+
+A implementação do frontend foi testada com respostas controladas. Cadastro/login com usuário real, autorização das futuras operações administrativas e validação conjunta com PostgreSQL ficam para a próxima etapa.
+
+## Medir o peso
+
+Para medir o tamanho do build, execute `npm run measure:build`. O relatório distingue arquivos publicados, código inicial e estimativa de gzip. Medições, validação HTTP e próximos candidatos de otimização estão em [docs/BUILD-WEIGHT.md](docs/BUILD-WEIGHT.md).
+
 ## Rotas
 
 | Rota | Comportamento |
@@ -31,7 +50,8 @@ A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Moni
 | `/dashboard` | Lista, filtros, estados, globo, resumo e evolução das amostras |
 | `/dashboard?servico=ID` | Resumo, recursos e evolução da aplicação; globo permanece à esquerda no desktop |
 | `/comparar` | Seleção de duas ou mais aplicações, tabela com o mesmo intervalo e cobertura por aplicação |
-| `/login`, `/cadastro` | Telas existentes com envio desativado; aguardam integração real |
+| `/login` | Formulário conectado ao backend, retorno seguro e tratamento de erros; validação com banco real pendente |
+| `/cadastro` | Tela com envio desativado; integração de criação de contas pendente |
 | `/gerenciamento` | Funcionalidade pendente do backend |
 | `/pesquisa`, `/servicos` | Redirecionam ao dashboard preservando a consulta |
 | `/servicos/:id` | Redireciona ao detalhe da aplicação |
@@ -69,7 +89,7 @@ As estimativas ainda são calculadas no frontend. O modelo em `domain/energy.ts`
 - Falta de coordenadas impede somente o marcador. Lista, recursos e estimativas continuam disponíveis. Aplicações nas mesmas coordenadas são agrupadas, inclusive ao abrir seus detalhes.
 - Tabela, totais e gráficos usam a mesma seleção. Estimativas incompletas de emissão aparecem como “—” no ranking, detalhe e comparação. O resumo identifica totais parciais e informa a cobertura.
 - O histórico fica **somente na memória desta sessão**. Recarregar a página o apaga. A retenção de amostras observadas é de até 30 dias; a linha do tempo guarda até 3.000 observações. Selecionar 7 dias não recupera coletas anteriores à abertura da página.
-- A comparação usa o mesmo intervalo solicitado, mas informa a quantidade e a duração somada das amostras de cada aplicação. Um total menor não comprova maior eficiência.
+- Comparar é uma aba do dashboard, ao lado de Evolução, e substitui o globo e a lista no mesmo espaço. Filtros e aplicações selecionadas permanecem na URL ao alternar abas; o endereço antigo `/comparar` redireciona para essa visualização. A comparação usa o mesmo intervalo solicitado, mas informa a quantidade e a duração somada das amostras de cada aplicação. Um total menor não comprova maior eficiência.
 - O gráfico usa [Recharts](https://github.com/recharts/recharts), versão 3.10.1, sob licença MIT. Por intervalo mostra barras; Acumulado mostra pontos sem linhas de ligação, representando somente amostras recebidas. O eixo inclui segundos na resolução de 30 s. Eixos, tooltips e navegação por teclado usam os componentes da biblioteca. Os valores continuam disponíveis na seção Coletas, com paginação.
 - A evolução abre no gráfico. As seções Gráfico, Aplicações, Coletas, Lacunas e Detalhes substituem o conteúdo no mesmo espaço; os indicadores e a cobertura aparecem só em Detalhes. O histórico da sessão fica no painel Filtrar, abaixo dos campos, inclusive nos detalhes de uma aplicação. Selecionar um instante e voltar ao vivo continuam disponíveis ali; Limpar filtros também encerra a revisão do passado. As listas exibem cinco registros por página. As amostras são agrupadas em intervalos de 30 s (até uma hora observada), 5 min (até um dia) ou uma hora (acima de um dia). Mouse, toque e setas do teclado permitem explorar o gráfico, por intervalo ou acumulado. Não há rolagem vertical dentro do painel; em telas pequenas ou com zoom alto, o documento pode rolar para manter o conteúdo acessível. Nos detalhes de uma aplicação, o painel permanece à direita do globo no desktop.
 - A adaptação insere marcadores nulos e faixas em âmbar nos trechos sem registros; não cria valores zero nem interpola coletas. No agrupamento de 30 s, aplicações próximas pertencem à mesma rodada e uma tolerância de 15 s evita lacunas falsas por variação dos horários. Animações de redesenho foram desativadas para que novas consultas não façam o gráfico piscar. `react-is` está na mesma versão instalada de React, conforme orientação da biblioteca.

@@ -1,9 +1,9 @@
 /* Seções substituem o conteúdo. Em telas baixas, só o documento pode rolar. */
-.monitoring-shell:has(.monitoring-view):has(.evolution-panel) { height: auto; min-height: 100dvh; display: block; }
-.monitoring-shell:has(.monitoring-view):has(.evolution-panel) .monitoring-main { display: block; overflow: visible; }
-.monitoring-shell:has(.monitoring-view):has(.evolution-panel) .monitoring-view { min-height: 0; overflow: visible; }
+.monitoring-shell:has(.monitoring-view):has(:is(.evolution-panel, .comparison-content, .administration-panel)) { height: auto; min-height: 100dvh; display: block; }
+.monitoring-shell:has(.monitoring-view):has(:is(.evolution-panel, .comparison-content, .administration-panel)) .monitoring-main { display: block; overflow: visible; }
+.monitoring-shell:has(.monitoring-view):has(:is(.evolution-panel, .comparison-content, .administration-panel)) .monitoring-view { min-height: 0; overflow: visible; }
 .monitoring-shell:has(.monitoring-view):has(.evolution-panel) .service-overview { height: auto; min-height: 350px; overflow: visible; }
-.monitoring-shell:has(.evolution-panel) :is(.monitoring-filters, .monitoring-notice) { max-height: none; overflow: visible; }
+.monitoring-shell:has(:is(.evolution-panel, .comparison-content)) :is(.monitoring-filters, .monitoring-notice) { max-height: none; overflow: visible; }
 .monitoring-service-summary:has(.evolution-panel) { overflow: visible; }
 .evolution-panel { --evolution-plot-height: clamp(100px, calc(100dvh - 600px), 230px); padding: 4px 0 16px; color: var(--monitoring-ink); }
 .evolution-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px 24px; margin-bottom: 12px; }
@@ -88,18 +88,20 @@
   .evolution-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
+  .evolution-panel { --evolution-plot-height: 220px; }
   .evolution-toolbar { width: 100%; gap: 8px; justify-content: space-between; }
   .evolution-period { gap: 3px; }
   .evolution-period > svg { display: none; }
-  .evolution-period select { padding-inline: 6px; }
+  .evolution-period select { padding-inline: 6px; font-size: 16px; }
   .evolution-segmented button { padding-inline: 9px; }
   .evolution-sections { gap: 0 18px; }
   .evolution-sections button { font-size: 12px; }
   .evolution-chart-panel { padding-inline: 10px; }
   .evolution-chart-reading time { font-size: 10px; }
-  .evolution-contributors li { gap: 10px; }
-  .evolution-contributors li > button { font-size: 12px; gap: 5px; }
-  .evolution-contributors li > div { gap: 8px; font-size: 12px; }
+  .evolution-contributors li { gap: 8px 12px; flex-wrap: wrap; padding-block: 10px; }
+  .evolution-contributors li > button { min-width: 0; overflow-wrap: anywhere; font-size: 13px; gap: 5px; }
+  .evolution-contributors li > div { margin-left: auto; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+  .evolution-details-grid dd { overflow-wrap: anywhere; }
   .monitoring-shell .evolution-samples th, .monitoring-shell .evolution-samples td { font-size: 12px; padding-inline: 4px; }
 }
 @media (pointer: coarse) { .evolution-segmented button, .evolution-sections button { min-height: 44px; } }

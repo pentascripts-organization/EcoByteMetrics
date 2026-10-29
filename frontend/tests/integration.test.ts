@@ -103,9 +103,71 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     const { DashboardPage } = await vite.ssrLoadModule("/src/features/monitoring/pages/DashboardPage.tsx");
     const { HistoryChart } = await vite.ssrLoadModule("/src/features/monitoring/components/HistoryChart.tsx");
     const { RechartsEvolutionChart, EvolutionTooltip } = await vite.ssrLoadModule("/src/features/monitoring/components/RechartsEvolutionChart.tsx");
-    const { ComparisonPage } = await vite.ssrLoadModule("/src/features/monitoring/pages/ComparisonPage.tsx");
     const { AppLayout } = await vite.ssrLoadModule("/src/app/layouts/AppLayout.tsx");
-    const render = (path: string, page = DashboardPage, changes = {}) => renderToString(h(MemoryRouter, { initialEntries: [path] }, h(MonitoringContext.Provider, { value: { snapshot, period: "24h", loading: false, error: null, refresh: async () => null, setPeriod: () => {}, ...changes } }, h(AnalysisProvider, null, h(page)))));
+    const { LoginPage } = await vite.ssrLoadModule("/src/features/auth/LoginPage.tsx");
+    const { AuthProvider } = await vite.ssrLoadModule("/src/features/auth/AuthProvider.tsx");
+    const { AuthContext } = await vite.ssrLoadModule("/src/features/auth/AuthContext.ts");
+    const { createAuthStore } = await vite.ssrLoadModule("/src/features/auth/session.ts");
+    const { AdministrationAccess } = await vite.ssrLoadModule("/src/features/auth/AdministrationAccess.tsx");
+    const render = (path: string, page = DashboardPage, changes = {}) => renderToString(h(MemoryRouter, { initialEntries: [path] }, h(AuthProvider, null, h(MonitoringContext.Provider, { value: { snapshot, period: "24h", loading: false, error: null, refresh: async () => null, setPeriod: () => {}, ...changes } }, h(AnalysisProvider, null, h(page))))));
+
+    await t.test("login habilita o formulário, mantém cadastro desativado e preserva o monitoramento público", () => {
+      for (const register of [false, true]) {
+        const markup = renderToString(h(MemoryRouter, null, h(AuthProvider, null, h(LoginPage, { register }))));
+        const inputs = markup.match(/<input\b[^>]*>/g) ?? [];
+        assert.equal(inputs.length, register ? 3 : 2);
+        assert.ok(inputs.every(input => input.includes('disabled=""') === register));
+        assert.match(markup, /class="login-submit"[^>]*type="submit"/);
+        assert.equal(/<button disabled="" class="login-submit"/.test(markup), register);
+        assert.ok(markup.includes('href="/dashboard"'));
+        assert.ok(markup.includes('href="' + (register ? "/login" : "/cadastro") + '"'));
+        const currentLinks = markup.match(/<a\b[^>]*aria-current="page"[^>]*>/g) ?? [];
+        assert.equal(currentLinks.length, 1);
+        assert.ok(currentLinks[0].includes('href="' + (register ? "/cadastro" : "/login") + '"'));
+        assert.equal((markup.match(/<h1\b/g) ?? []).length, 1);
+        assert.ok(!markup.includes("login-availability"));
+        assert.ok(!markup.includes("Prévia visual"));
+      }
+    });
+
+    await t.test("login apresenta expiração e erros sem preencher a senha ou expor detalhes da API", async child => {
+      const store = createAuthStore();
+      child.after(store.dispose);
+      child.mock.method(globalThis, "fetch", async () => Response.json({ message: "SQL password internal" }, { status: 500 }));
+      await store.signIn({ email: "review@example.invalid", password: "secret-fixture" });
+      const markup = renderToString(h(MemoryRouter, { initialEntries: ["/login?motivo=expirada"] }, h(AuthContext.Provider, { value: store }, h(LoginPage))));
+      assert.match(markup, /Sua sessão expirou/);
+      assert.match(markup, /id="login-error" role="alert"/);
+      assert.match(markup, /indisponível no momento/);
+      assert.match(markup, /aria-describedby="login-error"/);
+      assert.ok(!markup.includes("SQL password internal"));
+      assert.ok(!markup.includes("secret-fixture"));
+      assert.ok(!markup.includes('aria-invalid="true"'));
+    });
+
+    await t.test("administração sempre exige sessão; uma sessão confirmada libera coleta e saída sem a seção Acesso", async child => {
+      const store = createAuthStore();
+      child.after(store.dispose);
+      const panel = () => renderToString(h(MemoryRouter, { initialEntries: ["/dashboard?aba=administracao"] }, h(AuthContext.Provider, { value: store }, h(AdministrationAccess, null, h("p", null, "Protected panel")))));
+      assert.equal(panel(), "");
+      const token = "header." + Buffer.from(JSON.stringify({ email: "review@example.invalid", exp: Math.floor(Date.now() / 1000) + 60 })).toString("base64url") + ".signature";
+      child.mock.method(globalThis, "fetch", async () => Response.json({ token, tokenType: "Bearer", expiresIn: "1m" }));
+      assert.equal(await store.signIn({ email: "review@example.invalid", password: "fixture" }), true);
+      assert.match(panel(), /Protected panel/);
+      const { AdministrationPanel } = await vite.ssrLoadModule("/src/features/monitoring/components/AdministrationPanel.tsx");
+      const markup = renderToString(h(MemoryRouter, { initialEntries: ["/dashboard?aba=administracao&configuracao=acesso"] }, h(AuthContext.Provider, { value: store }, h(AdministrationPanel))));
+      assert.match(markup, /review@example.invalid/);
+      assert.match(markup, /id="administration-interval"[^>]*disabled=""/);
+      assert.match(markup, /Sair/);
+      assert.ok(!markup.includes("Acesso livre"));
+      assert.ok(!markup.includes("Entrada na administração"));
+      assert.ok(!markup.includes("Acesso à administração"));
+      child.mock.method(globalThis, "fetch", async () => Response.json({}, { status: 401 }));
+      await assert.rejects(store.request("/api/users/1"));
+      assert.equal(panel(), "");
+      store.logout();
+      assert.equal(panel(), "");
+    });
 
     await t.test("detalhes mantêm globo à esquerda e conteúdo das três abas à direita", () => {
       for (const [tab, text] of [["resumo", "Impacto nas amostras"], ["recursos", "Recursos da última coleta"], ["evolucao", "Evolução da aplicação"]]) {
@@ -250,15 +312,46 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(tooltip({ timestamp: Date.parse(at), value: 0 }), /0 kWh/);
     });
 
+    await t.test("administração anônima não exibe configurações, inclusive por URL antiga e sem conexão com métricas", () => {
+      const markup = render("/dashboard?aba=administracao&painel=historico", DashboardPage, { error: "Sem conexão" });
+      assert.match(markup, /role="tab"[^>]*aria-selected="true"[^>]*>Administração<\/button>/);
+      assert.ok(markup.indexOf('>Comparar</button>') < markup.indexOf('>Administração</button>'));
+      assert.ok(!markup.includes('class="monitoring-tab-access"'));
+      assert.ok(markup.includes('data-view="administracao" hidden=""'));
+      assert.ok(markup.includes('aria-label="Administração do ambiente"'));
+      assert.ok(!markup.includes("Prévia visual"));
+      assert.ok(!markup.includes('class="administration-panel"'));
+      assert.ok(!markup.includes('id="administration-interval"'));
+      const access = render("/dashboard?aba=administracao&configuracao=acesso");
+      assert.ok(!access.includes('class="administration-panel"'));
+      assert.ok(!access.includes('id="administration-interval"'));
+      assert.ok(!markup.includes('role="alert"'));
+      assert.ok(!markup.includes('class="monitoring-summary"'));
+      assert.ok(!markup.includes('class="monitoring-filters"'));
+      assert.ok(!markup.includes('class="monitoring-tools"'));
+      assert.ok(!render("/dashboard").includes('class="administration-panel"'));
+      assert.ok(!render("/dashboard?servico=a&aba=administracao").includes('class="administration-panel"'));
+    });
+
     await t.test("comparador exige duas seleções e mostra unidades, período, cobertura e limitação da sessão", () => {
-      assert.match(render("/comparar", ComparisonPage), /Selecione pelo menos duas/);
-      const markup = render("/comparar?app=a&app=b", ComparisonPage);
+      assert.match(render("/dashboard?aba=comparar"), /Selecione pelo menos duas/);
+      const markup = render("/dashboard?aba=comparar&app=a&app=b");
       for (const text of ["comparison-table", "Mesmo intervalo de consulta", "Energia (kWh)", "Emissões (g CO₂e)", "Duração somada (s)", "Um total menor não indica maior eficiência"])
         assert.ok(markup.includes(text));
-      assert.match(render("/comparar?app=a&app=missing", ComparisonPage), /seleção\(ões\) não está/);
-      const layout = render("/comparar?pais=Brazil", AppLayout);
-      assert.ok(layout.includes('/dashboard?pais=Brazil'));
-      assert.ok(layout.includes('aria-current="page"'));
+      assert.match(render("/dashboard?aba=comparar&app=a&app=missing"), /seleção\(ões\) não está/);
+      const layout = render("/dashboard?aba=comparar&pais=Brazil", AppLayout);
+      assert.ok(layout.includes('class="monitoring-home"'));
+      assert.ok(!layout.includes('aria-label="Navegação principal"'));
+      assert.ok(!layout.includes('href="/comparar'));
+      assert.equal((markup.match(/<h1/g) ?? []).length, 1);
+      assert.ok(!markup.includes("Voltar ao monitoramento"));
+      assert.ok(markup.includes('data-view="comparar" hidden=""'));
+      assert.ok(markup.includes('aria-label="Comparação de aplicações"'));
+      assert.ok(!markup.includes('class="evolution-chart-panel"'));
+      assert.match(markup, /role="tab"[^>]*aria-selected="true"[^>]*>Comparar<\/button>/);
+      assert.ok(markup.indexOf('>Evolução</button>') < markup.indexOf('>Comparar</button>'));
+      assert.ok(!render("/dashboard").includes('class="comparison-content"'));
+      assert.ok(!render("/dashboard?aba=evolucao").includes('class="comparison-content"'));
     });
   } finally {
     await vite.close();
