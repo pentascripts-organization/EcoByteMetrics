@@ -32,16 +32,16 @@ function validateMetricInput(metricInput: CreateMetricInput): CreateMetricInput 
     if (metricInput.cpu_metric < 0 || metricInput.cpu_metric > 100) {
         throw new MetricError("Valor de CPU inválido", 400);
     }
-    if (metricInput.memory_metric < 0 || metricInput.memory_metric > 100) {
+    if (metricInput.ram_metric < 0 || metricInput.ram_metric > 100) {
         throw new MetricError("Valor de memória inválido", 400);
     }   
-    if (metricInput.disk_metric < 0 || metricInput.disk_metric > 100) {
+    if (metricInput.hd_metric < 0 || metricInput.hd_metric > 100) {
         throw new MetricError("Valor de disco inválido", 400);
     }
-    if (metricInput.collected_interval_metric <= 0) {
+    if (metricInput.colletion_interval_metric <= 0) {
         throw new MetricError("Intervalo de coleta inválido", 400);
     }
-    if (!metricInput.timestamp_metric || isNaN(new Date(metricInput.timestamp_metric).getTime())) {
+    if (!metricInput.date_houry || isNaN(new Date(metricInput.date_houry).getTime())) {
         throw new MetricError("Timestamp inválido", 400);
     }
     return metricInput;
@@ -73,6 +73,7 @@ export async function getMetricByIdService(id_metric: number): Promise<Metric | 
     }
     return metric;
 }
+
 
 export async function listMetricsByServiceIdService(id_service: number): Promise<Metric[]> {
     validateServiceId(id_service);

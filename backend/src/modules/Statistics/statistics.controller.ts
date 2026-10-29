@@ -1,34 +1,57 @@
-import { Router, type Request, type Response } from "express";
-import {
-  getServicesRanking,
-  getStatisticsSummary,
-} from "./statistics.service.js";
 
-const router = Router();
+import { type Request, type Response } from "express";
+import { StatisticService } from "./statistics.service.js";
 
-router.get("/summary", async (_req: Request, res: Response) => {
-    try {
-        const summary = await getStatisticsSummary();
-        res.json(summary);
-    } catch (error) {
-        console.error("Falha ao buscar indicadores consolidados:", error);
-        res.status(500).json({ error: "Erro ao calcular os indicadores consolidados." });
-    }
-});
+export class StatisticController {
+    private statisticService: StatisticService =
+        new StatisticService();
 
-router.get("/ranking", async (req: Request, res: Response) => {
-    try {
-        const requestedPeriod = req.query.periodo;
-        const requestedOrder = req.query.ordenarPor;
-        const ranking = await getServicesRanking(
-            typeof requestedPeriod === "string" ? requestedPeriod : "24h",
-            typeof requestedOrder === "string" ? requestedOrder : "co2e"
-        );
-        res.json(ranking);
-    } catch (error) {
-        console.error("Falha ao buscar ranking de serviços:", error);
-        res.status(500).json({ error: "Erro ao calcular o ranking de serviços." });
-    }
-});
+    summary = async (_req: Request, res: Response): Promise<void> => {
+        try {
+            const summary =
+                await this.statisticService.getStatisticsSummary();
 
-export default router;
+            res.status(200).json(summary);
+        } catch (error: unknown) {
+            console.error(
+                "Falha ao buscar indicadores consolidados:",
+                error
+            );
+
+            res.status(500).json({
+                error: "Erro ao calcular os indicadores consolidados."
+            });
+        }
+    };
+
+    ranking = async (
+        req: Request,
+        res: Response
+    ): Promise<void> => {
+        try {
+            const requestedPeriod = req.query.periodo;
+            const requestedOrder = req.query.ordenarPor;
+
+            const ranking =
+                await this.statisticService.getServicesRanking(
+                    typeof requestedPeriod === "string"
+                        ? requestedPeriod
+                        : "24h",
+                    typeof requestedOrder === "string"
+                        ? requestedOrder
+                        : "co2e"
+                );
+
+            res.status(200).json(ranking);
+        } catch (error: unknown) {
+            console.error(
+                "Falha ao buscar ranking de serviços:",
+                error
+            );
+
+            res.status(500).json({
+                error: "Erro ao calcular o ranking de serviços."
+            });
+        }
+    };
+}

@@ -4,6 +4,7 @@ import {
     Location,
     createLocationInput,
     createLocationRepository,
+    getLocationByExistRepository,
     getLocationByIdRepository,
     listLocationsRepository
 } from "./location.repository";
@@ -29,7 +30,7 @@ function validateLocationId(id:number):void{
 /*Função validadeLocationInput que valida os dados de entrada para criar uma nova localização,
   lançando erros LocationError se algum campo for inválido ou ausente.
  */
-function validadeLocationInput(localInput:Omit<Location, "id_location">): Omit<Location, "id_location">{
+function validadeLocationInput(localInput:createLocationInput): createLocationInput{
     if(!localInput.name_location || localInput.name_location.trim()===""){
         throw new LocationError("Nome da Localização Invalido",400);
     }
@@ -56,14 +57,14 @@ propagando o erro original caso contrário.
 */
 function handleRepositoryError(error: unknown): never {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
-        throw new LocationError("Já existe um latitude com esse nome.", 409);
+        throw new LocationError("Já existe um Local com esse nome.", 409);
     }
     throw error; 
 }
 /*Função assíncrona createLocation que valida os dados de entrada,
   chama a função createLocationRepository para criar uma nova localização e trata erros do repositório.
 */
-export async function createLocation(local:Location):Promise<Location> {
+export async function createLocation(local:createLocationInput):Promise<Location> {
     const data = validadeLocationInput(local)
     try{
         const location = await createLocationRepository(data);
@@ -82,6 +83,14 @@ export async function getLocationById(id_location:number):Promise<Location> {
         throw new LocationError("Localização não encotrado", 404)
     }
     return location;
+}
+
+export async function getLocationByName(longitude_location:number, latitude_location:number):Promise<Location | null> {
+    const location = await getLocationByExistRepository(longitude_location,latitude_location)
+    if(location){
+        return location;
+    }
+    return null;
 }
 /*Função assíncrona listLocationALl que chama a função listLocationsRepository para buscar todas as localizações,
   lançando um erro LocationError se não houver localizações encontradas.

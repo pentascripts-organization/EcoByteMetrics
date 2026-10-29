@@ -10,6 +10,10 @@ COPY . .
 
 RUN npm run build
 
-EXPOSE 3000
+ARG PORT
+
+ENV PORT=$PORT
+
+EXPOSE $PORT
 
 CMD ["npm", "start"]

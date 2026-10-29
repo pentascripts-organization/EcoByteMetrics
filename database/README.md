@@ -15,24 +15,10 @@ Este repositório contém a modelagem de dados relacional, os scripts DDL de cri
 
 ```bash
 database/
-├── README.md       # Orientações para restauração, DML e volume Docker
-├── DDL.sql         # Estrutura principal do banco
-└── statistics.sql  # Serviços descobertos e snapshots usados no dashboard
+├── README.md       # Orientações para restauração, DML e volume Docker        
+└── DDL.sql         # Estrutura principal do banco
 ```
 
-O Compose monta esta pasta em `/docker-entrypoint-initdb.d`, então os dois
-scripts SQL são executados em ordem em um volume PostgreSQL vazio. Para um
-volume já existente, aplique a migração sem apagar os dados:
-
-```bash
-docker exec -i database_EcoByteMetrics psql -U ecobytemetrics -d ecobytemetrics < database/statistics.sql
-```
-
-O coletor grava os serviços descobertos em `aggregator_services` e cada coleta
-em `aggregator_metric_samples`. A API consolida energia e emissões dessas
-amostras; o fator regional é obtido de `API_CARBON` e registrado junto à coleta.
-
----
 
 ### 🛠️ Restaurando o Banco de Dados em um Ambiente Limpo
 
@@ -46,61 +32,71 @@ docker exec -i greener_postgres psql -U greener_user -d greener_db < database/DD
 
 ### 🗃️ Modelo DDL Oficial (`database/schema.sql`)
 
-O script `database/schema.sql` define a estrutura física relacional do sistema:
+O script `database/DDL.sql` define a estrutura física relacional do sistema:
 
 ```sql
-CREATE TABLE Users (
-	id_user INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_user VARCHAR(50) NOT NULL,
-	email_user VARCHAR(50) NOT NULL,
-	password_user VARCHAR(25) NOT NULL,
-	token_user VARCHAR(255) NOT NULL
+create table Users(
+	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	name_user varchar(50) not null,
+	email_user varchar(254) not null unique,
+	password_user varchar(255)not null
+);
+create table Locations(
+	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	name_location varchar(50)not null unique,
+	country_location varchar(50),
+	region_location varchar(50),
+	city_location varchar(50),
+	latitude_location double precision not null
+	CHECK (latitude_location BETWEEN -90 AND 90),
+	longitude_location double precision not null
+	CHECK (longitude_location BETWEEN -180 AND 180)
 );
 
-CREATE TABLE Locations (
-	id_location INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_location VARCHAR(50) NOT NULL,
-	county_location VARCHAR(50),
-	region_location VARCHAR(50),
-	city_location VARCHAR(50),
-	latitude_location DOUBLE PRECISION NOT NULL,
-	logitude_location DOUBLE PRECISION NOT NULL
+create table Services(
+	id_service int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_location int ,
+	name_service varchar(50)not null unique,
+	path_metric varchar(50) not null,
+	active_service BOOLEAN NOT NULL DEFAULT TRUE,
+	date_houry TIMESTAMP DEFAULT NOW(),
+	constraint fk_service 
+		foreign key (id_location)
+		references locations(id_location)
 );
 
-CREATE TABLE Services (
-	id_service INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_location INT,
-	name_service VARCHAR(50),
-	CONSTRAINT fk_service_location 
-		FOREIGN KEY (id_location)
-		REFERENCES Locations(id_location)
-);
-
-CREATE TABLE Metrics (
-	id_metric INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_service INT,
+create table Metrics (
+	id_metric bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_service int,
+	cpu_metric numeric not null
+	CHECK (cpu_metric BETWEEN 0 AND 100),
+	ram_metric numeric not null check(ram_metric>=0),
+	hd_metric numeric not null check(hd_metric>=0),
+	network_metric numeric not null check(hd_metric>=0),
 	date_houry TIMESTAMP NOT NULL,
-	path_metric VARCHAR(50) NOT NULL,
-	colletion_interval_metric INT NOT NULL,
-	cpu_metric NUMERIC NOT NULL,
-	ram_metric NUMERIC NOT NULL,
-	hd_metric NUMERIC NOT NULL,
-	network_metric NUMERIC NOT NULL,
-	CONSTRAINT fk_metric_service
-		FOREIGN KEY (id_service)
-		REFERENCES Services(id_service)
+	colletion_interval_metric numeric not null,
+	constraint fk_service
+		foreign key (id_service)
+		references services(id_service),
+	CONSTRAINT uq_metrics_service_date
+        UNIQUE (id_service, date_houry)
 );
 
-CREATE TABLE Cabons (
-	id_carbon INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_location INT,
-	date_houry TIMESTAMP NOT NULL,
-	intesity_co2e_kwh_carbon INT NOT NULL,
-	renewable_percent_carbon INT NOT NULL,
-	CONSTRAINT fk_carbon_location
-		FOREIGN KEY (id_location)
-		REFERENCES Locations(id_location)
+create table Carbons(
+	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_location int,
+	date_houry TIMESTAMP not null,
+	intesity_co2e_kwh_carbon int not null check(intesity_co2e_kwh_carbon>0),
+	renewable_percent_carbon int not null
+	CHECK (renewable_percent_carbon BETWEEN 0 AND 100),
+	constraint fk_service
+		foreign key(id_location)
+		references locations(id_location),
+	CONSTRAINT uq_metrics_Carbon_date
+        UNIQUE (id_location, date_houry)
 );
+
+
 ```
 
 ---
@@ -133,20 +129,84 @@ LIMIT $2;
 Query SQL utilizada pelo backend para consolidar os rankings de consumo e emissão por período:
 
 ```sql
-SELECT 
-    s.id_service,
-    s.name_service,
-    l.name_location,
-    l.region_location,
-    AVG(m.cpu_metric) AS media_cpu,
-    AVG(m.ram_metric) AS media_ram,
-    COUNT(m.id_metric) AS total_coletas
-FROM Services s
-JOIN Locations l ON s.id_location = l.id_location
-JOIN Metrics m ON s.id_service = m.id_service
-WHERE m.date_houry BETWEEN $1 AND $2
-GROUP BY s.id_service, s.name_service, l.name_location, l.region_location
-ORDER BY media_cpu DESC;
+const sortColumn =
+    orderBy === "kwh"
+    ? '"consumoKwh"'
+    : '"emissaoCo2e"';
+
+	WITH sample_energy AS (
+            SELECT
+                m.id_service AS service_id,
+                m.date_houry AS collected_at,
+                m.colletion_interval_metric AS collection_interval_seconds,
+
+                COALESCE(
+                    c.intesity_co2e_kwh_carbon,
+                    0
+                ) AS carbon_intensity_gco2e_per_kwh,
+
+                (
+                    (m.cpu_metric / 100.0 * 100) +
+                    (m.ram_metric * 0.375) +
+                    (m.hd_metric * 0.01) +
+                    (m.network_metric * 0.02)
+                ) * m.colletion_interval_metric / 3600000.0
+                    AS consumption_kwh
+
+            FROM Metrics AS m
+
+            INNER JOIN Services AS s
+                ON s.id_service = m.id_service
+
+            LEFT JOIN LATERAL (
+                SELECT
+                    cb.intesity_co2e_kwh_carbon
+                FROM Carbons AS cb
+                WHERE cb.id_location = s.id_location
+                  AND cb.date_houry <= m.date_houry
+                ORDER BY cb.date_houry DESC
+                LIMIT 1
+            ) AS c ON TRUE
+
+            WHERE s.active_service = TRUE
+        ),
+
+        sample_impact AS (
+            SELECT
+                service_id,
+                collected_at,
+                consumption_kwh,
+                consumption_kwh *
+                    carbon_intensity_gco2e_per_kwh AS emissions_co2e
+            FROM sample_energy
+        ),
+		SELECT
+            s.id_service AS id,
+            s.name_service AS nome,
+
+            COALESCE(
+                SUM(i.consumption_kwh), 0
+            )::float8 AS "consumoKwh",
+            COALESCE(
+                SUM(i.emissions_co2e), 0
+            )::float8 AS "emissaoCo2e"
+
+            FROM Services AS s
+
+            LEFT JOIN sample_impact AS i
+                ON i.service_id = s.id_service
+                AND i.collected_at >=
+                    NOW() - $1::interval
+
+            WHERE s.active_service = TRUE
+
+            GROUP BY
+                s.id_service,
+                s.name_service
+
+            ORDER BY
+                ${sortColumn} DESC,
+                nome ASC;
 ```
 
 ---
@@ -156,19 +216,30 @@ ORDER BY media_cpu DESC;
 A preservação dos registros após a reinicialização dos containers é garantida pelo volume nomeado `pgdata` configurado no arquivo `compose.yaml`:
 
 ```yaml
-services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: greener_postgres
-    environment:
-      POSTGRES_USER: \${DB_USER}
-      POSTGRES_PASSWORD: \${DB_PASSWORD}
-      POSTGRES_DB: \${DB_NAME}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+postgres:
+    build: ./database
+    
+    container_name: database_EcoByteMetrics
+    restart: unless-stopped
 
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    ports:
+      - "${POSTGRES_PORT_CONTEINER}:${POSTGRES_PORT}"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./database:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DATABASE\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 volumes:
-  pgdata:
+  postgres_data:
 ```

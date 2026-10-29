@@ -21,7 +21,6 @@ export async function createCarbonController(req: Request, res: Response, next: 
         handleError(error, res, next);
     }
 }
-
 export async function getCarbonByIdController(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
         const carbon = await getCarbonByIdService(Number(req.params.id_service));
