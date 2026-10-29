@@ -66,6 +66,14 @@ O usuário aprovou a revisão visual geral da versão integrada em 24/10/2026. N
 
 Não é possível garantir uma taxa de FPS para todos os computadores apenas com os testes de código.
 
+## Enquadramento do mapa mobile — 29/10/2026
+
+Após feedback visual sobre globo pequeno e cantos retangulares no zoom, a área inicial do mapa ficou quadrada em até 680 px e a escala foi ampliada. O canvas ocupa novamente a janela, com projeção centrada no mapa e sem recorte retangular; o zoom pode ultrapassar o espaço inicial. Pointerdown e wheel fora da área do mapa não iniciam interação com o globo. A projeção acompanha a rolagem e mudar entre desktop e mobile aplica novamente o enquadramento geral. O enquadramento de desktop permanece igual.
+
+Os testes com a câmera PerspectiveCamera verificam centro, ocupação inicial de mais de 90% da menor dimensão, zoom ultrapassando a área inicial e limites de início de interação em viewports de 320, 390, 680 e 844 px, incluindo paisagem. Os testes de projeção e zoom desktop também passam. A ferramenta retornou inventário sem navegadores conectados; aparência, toque e WebGL no aparelho do usuário continuam por conferir.
+
+Após esse ajuste, a suíte completa passou com **137 testes**, e lint e build de produção foram aprovados.
+
 ## Docker
 
 O Docker Desktop foi iniciado na validação de 24/10/2026. A imagem foi construída a partir de `frontend/Dockerfile`, com instalação limpa e build de produção, e executada com Nginx em uma rede Docker isolada. Foram aprovados HTTP 200 para a página inicial, dashboard, comparador, login, fallback de rota e proxy `/backend/health` e `/backend/services`; revalidação do HTML com `Cache-Control: no-cache`; cache público dos assets; e HTTP 404 para `/assets/inexistente.js`. Isso valida o frontend em container com o backend compilado no host; a execução completa do Compose do time ainda precisa ser conferida no ambiente de destino.
@@ -82,9 +90,21 @@ curl.exe -I http://localhost:5173/assets/inexistente.js
 
 Os dois primeiros acessos devem entregar a SPA, o HTML deve exigir revalidação, e o asset inexistente deve retornar 404. Conferir também `/backend/services` com o backend real iniciado.
 
-## Retomar após a correção da develop
+## Login preparado sem banco — 29/10/2026
+
+O formulário de login foi conectado a `POST /backend/auth/login`, com validação da resposta, sessão em memória, expiração, saída, cancelamento e retorno ao dashboard. Administração exige sessão tanto em desenvolvimento quanto em produção, sem uma seção separada de Acesso. Cadastro, alteração de intervalo e salvamento de configurações continuam desativados.
+
+Nesta revisão, **135 testes passaram**, com lint e build de produção aprovados. Os testes novos usam respostas controladas para validar POST e preservação da senha, normalização do e-mail, dados de sessão inválidos/expirados, indisponibilidade, envio duplicado, cancelamento, expiração automática, retomada após suspensão, saída, Bearer, HTTP 401/403, resposta de sessão anterior e rejeição de destinos externos. Os testes de renderização verificam formulário habilitado, cadastro desativado, mensagens acessíveis, ausência de senha/detalhes internos, bloqueio da administração sem sessão e painel de conta/saída sem a seção Acesso, inclusive com URL antiga.
+
+Esses resultados não comprovam credenciais reais nem persistência. A sessão em memória é intencional: recarregar a página exige entrar novamente. O payload do JWT orienta prazo e identificação na interface, sem substituir verificação da assinatura e autorização no backend. Não foram criados usuários, banco, credenciais de demonstração ou novas dependências.
+
+Também foi feita uma tentativa com credenciais fictícias pelo proxy do Vite ativo (`/backend/auth/login`) contra o backend local. Sem banco disponível, a interface apresentou a mensagem de serviço indisponível, sem criar sessão nem indicar que os campos eram inválidos. Essa consulta não criou usuário nem gravou dados.
+
+Para a validação com banco, iniciar PostgreSQL com o esquema e ambiente corretos da versão escolhida do backend, disponibilizar uma conta de teste com senha armazenada como hash e conferir no navegador: entrada válida/incorreta, retorno à administração, expiração, Sair, acesso sem token e falha/recuperação da conexão. A branch de persistência revisada em 28/10 ainda precisa preservar a proteção das rotas e o hash de senha existentes na develop antes de ser usada nessa integração.
+
+## Retomar com o backend e o banco disponíveis
 
 - **Histórico:** acordar o contrato de consulta por aplicações e intervalo, fuso, paginação/agregação, unidades, cobertura e amostras incompletas. Substituir o histórico de sessão pelo persistido, sem duplicar cálculos ou consultas.
-- **Login:** verificar o endpoint e o contrato de autenticação; integrar sessão, expiração, saída e tratamento de 401. A proteção real das operações deve estar no backend.
+- **Login:** validar o frontend já conectado com uma conta real e conferir token ausente/inválido/expirado nas operações protegidas. Integrar cadastro em uma etapa própria. A proteção real das operações deve estar no backend.
 - **Configurações:** confirmar quais operações existem e quais exigem autenticação. Implementar apenas ações reais com respostas e erros verificáveis.
 - **Integração final:** executar descoberta, remoção, retorno, falhas, fatores de carbono, histórico e comparação junto ao backend atualizado. Depois preparar o merge com `develop`.

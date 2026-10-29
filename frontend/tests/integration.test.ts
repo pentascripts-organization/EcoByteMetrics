@@ -105,16 +105,20 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     const { RechartsEvolutionChart, EvolutionTooltip } = await vite.ssrLoadModule("/src/features/monitoring/components/RechartsEvolutionChart.tsx");
     const { AppLayout } = await vite.ssrLoadModule("/src/app/layouts/AppLayout.tsx");
     const { LoginPage } = await vite.ssrLoadModule("/src/features/auth/LoginPage.tsx");
-    const render = (path: string, page = DashboardPage, changes = {}) => renderToString(h(MemoryRouter, { initialEntries: [path] }, h(MonitoringContext.Provider, { value: { snapshot, period: "24h", loading: false, error: null, refresh: async () => null, setPeriod: () => {}, ...changes } }, h(AnalysisProvider, null, h(page)))));
+    const { AuthProvider } = await vite.ssrLoadModule("/src/features/auth/AuthProvider.tsx");
+    const { AuthContext } = await vite.ssrLoadModule("/src/features/auth/AuthContext.ts");
+    const { createAuthStore } = await vite.ssrLoadModule("/src/features/auth/session.ts");
+    const { AdministrationAccess } = await vite.ssrLoadModule("/src/features/auth/AdministrationAccess.tsx");
+    const render = (path: string, page = DashboardPage, changes = {}) => renderToString(h(MemoryRouter, { initialEntries: [path] }, h(AuthProvider, null, h(MonitoringContext.Provider, { value: { snapshot, period: "24h", loading: false, error: null, refresh: async () => null, setPeriod: () => {}, ...changes } }, h(AnalysisProvider, null, h(page))))));
 
-    await t.test("telas de acesso preservam os formulários desativados e o caminho público ao monitoramento", () => {
+    await t.test("login habilita o formulário, mantém cadastro desativado e preserva o monitoramento público", () => {
       for (const register of [false, true]) {
-        const markup = renderToString(h(MemoryRouter, null, h(LoginPage, { register })));
+        const markup = renderToString(h(MemoryRouter, null, h(AuthProvider, null, h(LoginPage, { register }))));
         const inputs = markup.match(/<input\b[^>]*>/g) ?? [];
         assert.equal(inputs.length, register ? 3 : 2);
-        assert.ok(inputs.every(input => input.includes('disabled=""')));
+        assert.ok(inputs.every(input => input.includes('disabled=""') === register));
         assert.match(markup, /class="login-submit"[^>]*type="submit"/);
-        assert.match(markup, /<button disabled="" class="login-submit"/);
+        assert.equal(/<button disabled="" class="login-submit"/.test(markup), register);
         assert.ok(markup.includes('href="/dashboard"'));
         assert.ok(markup.includes('href="' + (register ? "/login" : "/cadastro") + '"'));
         const currentLinks = markup.match(/<a\b[^>]*aria-current="page"[^>]*>/g) ?? [];
@@ -124,6 +128,45 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
         assert.ok(!markup.includes("login-availability"));
         assert.ok(!markup.includes("Prévia visual"));
       }
+    });
+
+    await t.test("login apresenta expiração e erros sem preencher a senha ou expor detalhes da API", async child => {
+      const store = createAuthStore();
+      child.after(store.dispose);
+      child.mock.method(globalThis, "fetch", async () => Response.json({ message: "SQL password internal" }, { status: 500 }));
+      await store.signIn({ email: "review@example.invalid", password: "secret-fixture" });
+      const markup = renderToString(h(MemoryRouter, { initialEntries: ["/login?motivo=expirada"] }, h(AuthContext.Provider, { value: store }, h(LoginPage))));
+      assert.match(markup, /Sua sessão expirou/);
+      assert.match(markup, /id="login-error" role="alert"/);
+      assert.match(markup, /indisponível no momento/);
+      assert.match(markup, /aria-describedby="login-error"/);
+      assert.ok(!markup.includes("SQL password internal"));
+      assert.ok(!markup.includes("secret-fixture"));
+      assert.ok(!markup.includes('aria-invalid="true"'));
+    });
+
+    await t.test("administração sempre exige sessão; uma sessão confirmada libera coleta e saída sem a seção Acesso", async child => {
+      const store = createAuthStore();
+      child.after(store.dispose);
+      const panel = () => renderToString(h(MemoryRouter, { initialEntries: ["/dashboard?aba=administracao"] }, h(AuthContext.Provider, { value: store }, h(AdministrationAccess, null, h("p", null, "Protected panel")))));
+      assert.equal(panel(), "");
+      const token = "header." + Buffer.from(JSON.stringify({ email: "review@example.invalid", exp: Math.floor(Date.now() / 1000) + 60 })).toString("base64url") + ".signature";
+      child.mock.method(globalThis, "fetch", async () => Response.json({ token, tokenType: "Bearer", expiresIn: "1m" }));
+      assert.equal(await store.signIn({ email: "review@example.invalid", password: "fixture" }), true);
+      assert.match(panel(), /Protected panel/);
+      const { AdministrationPanel } = await vite.ssrLoadModule("/src/features/monitoring/components/AdministrationPanel.tsx");
+      const markup = renderToString(h(MemoryRouter, { initialEntries: ["/dashboard?aba=administracao&configuracao=acesso"] }, h(AuthContext.Provider, { value: store }, h(AdministrationPanel))));
+      assert.match(markup, /review@example.invalid/);
+      assert.match(markup, /id="administration-interval"[^>]*disabled=""/);
+      assert.match(markup, /Sair/);
+      assert.ok(!markup.includes("Acesso livre"));
+      assert.ok(!markup.includes("Entrada na administração"));
+      assert.ok(!markup.includes("Acesso à administração"));
+      child.mock.method(globalThis, "fetch", async () => Response.json({}, { status: 401 }));
+      await assert.rejects(store.request("/api/users/1"));
+      assert.equal(panel(), "");
+      store.logout();
+      assert.equal(panel(), "");
     });
 
     await t.test("detalhes mantêm globo à esquerda e conteúdo das três abas à direita", () => {
@@ -269,7 +312,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(tooltip({ timestamp: Date.parse(at), value: 0 }), /0 kWh/);
     });
 
-    await t.test("administração oferece apenas uma prévia visual, independente dos avisos de consulta", () => {
+    await t.test("administração anônima não exibe configurações, inclusive por URL antiga e sem conexão com métricas", () => {
       const markup = render("/dashboard?aba=administracao&painel=historico", DashboardPage, { error: "Sem conexão" });
       assert.match(markup, /role="tab"[^>]*aria-selected="true"[^>]*>Administração<\/button>/);
       assert.ok(markup.indexOf('>Comparar</button>') < markup.indexOf('>Administração</button>'));
@@ -277,16 +320,10 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.ok(markup.includes('data-view="administracao" hidden=""'));
       assert.ok(markup.includes('aria-label="Administração do ambiente"'));
       assert.ok(!markup.includes("Prévia visual"));
-      assert.match(markup, /id="administration-interval"[^>]*disabled=""/);
-      assert.match(markup, /<button[^>]*disabled=""[^>]*>[\s\S]*?Salvar alterações<\/button>/);
-      assert.ok(!markup.includes("Ainda não conectada"));
-      assert.ok(markup.includes('aria-label="Configurações do ambiente"'));
-      assert.match(markup, /aria-pressed="true"[^>]*aria-controls="administration-settings"/);
-      assert.match(markup, /Automática/);
+      assert.ok(!markup.includes('class="administration-panel"'));
+      assert.ok(!markup.includes('id="administration-interval"'));
       const access = render("/dashboard?aba=administracao&configuracao=acesso");
-      assert.match(access, /Ainda não conectada/);
-      assert.match(access, /Acesso livre/);
-      assert.ok(access.includes('href="/login"'));
+      assert.ok(!access.includes('class="administration-panel"'));
       assert.ok(!access.includes('id="administration-interval"'));
       assert.ok(!markup.includes('role="alert"'));
       assert.ok(!markup.includes('class="monitoring-summary"'));

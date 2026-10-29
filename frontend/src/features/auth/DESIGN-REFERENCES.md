@@ -6,4 +6,4 @@ O login e o cadastro mantêm o formulário centralizado e usam o mesmo component
 
 O fundo é estático, sem canvas, WebGL ou eventos de interação. Os SVGs e as regras de adaptação para telas menores são compartilhados com o monitoramento.
 
-Nenhum pacote adicional foi instalado. Os formulários permanecem desativados nesta prévia.
+Nenhum pacote adicional foi instalado. O formulário de login está conectado ao backend, com mensagens, carregamento e sessão em memória. O cadastro permanece desativado até sua integração em uma próxima etapa.

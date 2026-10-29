@@ -354,6 +354,7 @@
 }
 @media (max-width: 680px) {
   .monitoring-header { grid-template-columns: minmax(0, 1fr) auto; }
+  .monitoring-location .monitoring-map .globe-stage { height: auto; aspect-ratio: 1; }
   .monitoring-home { min-width: 44px; min-height: 44px; justify-content: center; }
   .monitoring-tabs { gap: 0 20px; }
   .monitoring-app-table { table-layout: fixed; }

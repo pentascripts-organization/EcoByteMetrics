@@ -26,8 +26,14 @@
 .login-input input { width: 100%; min-width: 0; border: 0; padding: 12px 0; outline: none; background: transparent; color: var(--login-ink); font-size: 14px; }
 .login-input input:disabled { color: #708072; -webkit-text-fill-color: #708072; background: transparent; }
 .login-input input::placeholder { color: #829080; opacity: 1; }
+.login-input:focus-within { border-color: #24704f; box-shadow: 0 0 0 3px #24704f18; }
+.login-input:has(input[aria-invalid='true']) { border-color: #a94735; }
 .login-input > button { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0; margin-right: -11px; color: #879380; background: transparent; }
 .login-field-help { margin-top: 7px; font-size: 11px; color: var(--login-muted); }
+.login-error, .login-notice { padding: 11px 13px; border: 1px solid #ecd4ce; border-radius: 8px; background: #fff7f4; color: #823a2b; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; margin-top: 18px; }
+.login-notice { background: #f3f8f2; border-color: #dce6db; color: #355646; }
+.login-submit:disabled { opacity: .65; }
+.login-submit:hover:not(:disabled) { background: #164632; }
 .login-submit { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 47px; border: 1px solid #22553f; border-radius: 8px; margin-top: 23px; padding: 11px 16px; background: #22553f; color: #f1f7ed; font-size: 14px; font-weight: 550; box-shadow: inset 0 1px 0 #ffffff14; }
 .login-public-access { padding-top: 18px; text-align: center; }
 .login-public-access > a { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-size: 13px; font-weight: 550; color: #2c6750; }

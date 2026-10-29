@@ -23,6 +23,7 @@ import type { MonitoredService } from "../types";
 import { formatNumber } from "@/shared/lib/format";
 import { CountryFlag } from "@/shared/ui/CountryFlag";
 import { TopographicSides } from "../components/TopographicSides";
+import { AdministrationAccess } from "@/features/auth/AdministrationAccess";
 
 const stamp = (value?: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "Ainda não realizada";
 
@@ -155,7 +156,7 @@ export function DashboardPage() {
       </div>
       {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "cumulative" ? "acumulado" : "" })} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
-      {administration && <AdministrationPanel />}
+      {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>
   </>;
 }

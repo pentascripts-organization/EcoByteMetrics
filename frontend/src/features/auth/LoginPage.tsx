@@ -1,10 +1,30 @@
-import { ArrowLeft, ArrowRight, ArrowUpRight, Eye, LockKeyhole } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Brand } from "@/shared/ui/Brand";
 import { TopographicSides } from "@/features/monitoring/components/TopographicSides";
+import { useAuth } from "./useAuth";
+import { safeReturnPath } from "./api";
 import "./styles.css";
 
 export function LoginPage({ register = false }: { register?: boolean }) {
+  const { session, pending, error, invalidCredentials, notice, signIn, cancelLogin } = useAuth();
+  const [params] = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const returnTo = safeReturnPath(params.get("retorno"));
+  const returnQuery = params.has("retorno") ? "?" + new URLSearchParams({ retorno: returnTo }) : "";
+  useEffect(() => cancelLogin, [cancelLogin]);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (register || pending) return;
+    await signIn({ email, password });
+    setPassword("");
+    setShowPassword(false);
+  }
+  if (session && !register) return <Navigate to={returnTo} replace />;
   return (
     <div className="login-page">
       <a className="skip-link" href="#login-content">Pular para o formulário</a>
@@ -21,8 +41,8 @@ export function LoginPage({ register = false }: { register?: boolean }) {
         <div className="login-shell">
           <section className="login-form-panel" aria-labelledby="login-title">
             <nav className="login-view-tabs" aria-label="Formulários de acesso">
-              <Link to="/login" aria-current={!register ? "page" : undefined}>Entrar</Link>
-              <Link to="/cadastro" aria-current={register ? "page" : undefined}>Criar conta</Link>
+              <Link to={"/login" + returnQuery} aria-current={!register ? "page" : undefined}>Entrar</Link>
+              <Link to={"/cadastro" + returnQuery} aria-current={register ? "page" : undefined}>Criar conta</Link>
             </nav>
 
             <div className="login-form-intro">
@@ -31,7 +51,8 @@ export function LoginPage({ register = false }: { register?: boolean }) {
               <p>{register ? "Prepare seu acesso à administração do ambiente." : "Entre para acessar as configurações do seu ambiente."}</p>
             </div>
 
-            <form aria-label={register ? "Cadastro de conta" : "Acesso à administração"} onSubmit={event => event.preventDefault()}>
+            {!register && (notice === "expired" || params.get("motivo") === "expirada") && <p className="login-notice" role="status">Sua sessão expirou. Entre novamente para continuar.</p>}
+            <form aria-label={register ? "Cadastro de conta" : "Acesso à administração"} aria-busy={pending} onSubmit={submit}>
               {register && <div className="login-field">
                 <label htmlFor="name">Nome</label>
                 <div className="login-input"><input disabled id="name" autoComplete="name" placeholder="Seu nome" required /></div>
@@ -39,20 +60,21 @@ export function LoginPage({ register = false }: { register?: boolean }) {
 
               <div className="login-field">
                 <label htmlFor="email">E-mail</label>
-                <div className="login-input"><input disabled id="email" type="email" autoComplete={register ? "email" : "username"} placeholder="voce@exemplo.com" required /></div>
+                <div className="login-input"><input disabled={register || pending} id="email" name="email" type="email" autoComplete={register ? "email" : "username"} autoCapitalize="none" spellCheck={false} placeholder="voce@exemplo.com" required value={email} onChange={event => setEmail(event.target.value)} aria-invalid={invalidCredentials} aria-describedby={error ? "login-error" : undefined} /></div>
               </div>
 
               <div className="login-field">
                 <label htmlFor="password">Senha</label>
                 <div className="login-input">
-                  <input disabled id="password" type="password" autoComplete={register ? "new-password" : "current-password"} placeholder="Sua senha" required minLength={register ? 8 : 1} />
-                  <button type="button" disabled aria-label="Mostrar senha"><Eye size={17} aria-hidden="true" /></button>
+                  <input disabled={register || pending} id="password" name="password" type={showPassword ? "text" : "password"} autoComplete={register ? "new-password" : "current-password"} placeholder="Sua senha" required minLength={register ? 8 : 1} value={password} onChange={event => setPassword(event.target.value)} aria-invalid={invalidCredentials} aria-describedby={error ? "login-error" : undefined} />
+                  <button type="button" disabled={register || pending} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} aria-pressed={showPassword} aria-controls="password" onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={17} aria-hidden="true" /> : <Eye size={17} aria-hidden="true" />}</button>
                 </div>
                 {register && <p className="login-field-help">Use pelo menos 8 caracteres.</p>}
               </div>
 
-              <button disabled className="login-submit" type="submit">
-                <span>{register ? "Criar conta" : "Entrar no ambiente"}</span><ArrowRight size={17} aria-hidden="true" />
+              {!register && error && <p className="login-error" id="login-error" role="alert">{error}</p>}
+              <button disabled={register || pending} className="login-submit" type="submit">
+                <span role="status">{register ? "Criar conta" : pending ? "Entrando…" : "Entrar no ambiente"}</span><ArrowRight size={17} aria-hidden="true" />
               </button>
 
             </form>

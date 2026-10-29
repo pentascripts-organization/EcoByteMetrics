@@ -23,7 +23,20 @@ O proxy remove `/backend` antes de encaminhar a consulta. Reinicie o Vite após 
 
 A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Monitoramento e comparação precisam de respostas da API para mostrar aplicações reais; não existe modo de demonstração automático.
 
-A aba Administração abre diretamente a prévia em `/dashboard?aba=administracao`, sem exigir conta durante o desenvolvimento visual. As categorias Coleta e Acesso revelam seu conteúdo separadamente; `configuracao=acesso` abre a segunda categoria. Apresenta o intervalo ilustrativo de 30 segundos, com edição e salvamento desativados. Não lê nem altera configurações, não autentica e não aplica controle de acesso. O login e a proteção real das operações serão integrados em uma próxima etapa. Referências do layout em [ADMINISTRATION-DESIGN.md](src/features/monitoring/ADMINISTRATION-DESIGN.md).
+A aba Administração exige sessão em desenvolvimento e produção. Uma visita sem sessão vai ao login, preservando o destino e os filtros; a tela de login também oferece o caminho para cadastro. A administração contém a configuração de coleta, sem uma seção separada de Acesso. O intervalo ilustrativo de 30 segundos e o salvamento continuam desativados, pois ainda não existe endpoint de configuração integrado. Referências do layout em [ADMINISTRATION-DESIGN.md](src/features/monitoring/ADMINISTRATION-DESIGN.md).
+
+## Login e sessão
+
+O formulário de entrada envia `{ email, password }` para `POST /backend/auth/login`, usando o mesmo proxy do monitoramento. Espera a resposta `{ token, tokenType: "Bearer", expiresIn }`; o JWT precisa trazer `email` e um `exp` futuro. O payload é usado apenas para apresentar a conta e controlar o prazo na interface; assinatura e autorização das operações são responsabilidades do backend.
+
+- Campos e botão ficam desativados durante a consulta; envios duplicados são ignorados. E-mail é normalizado, a senha é enviada sem alterações e é apagada do formulário após a tentativa.
+- Credenciais incorretas, serviço indisponível, falha de conexão, tempo limite e resposta inválida têm mensagens próprias. Detalhes internos da API não são exibidos.
+- Sessão e token ficam somente em memória, sem `localStorage`, `sessionStorage` ou cookies. Recarregar a página ou fechar a aba exige nova entrada. Ainda não existe renovação de token integrada.
+- A sessão termina no prazo informado no JWT, inclusive após suspensão da aba. Consultas feitas por `useAuth().request` enviam Bearer; HTTP 401 encerra a sessão, enquanto 403 mantém a conta conectada. Respostas de uma sessão encerrada não são aplicadas a uma sessão nova.
+- Ao entrar, a interface retorna ao dashboard solicitado; destinos externos são descartados. A administração mostra a conta e permite sair. O dashboard permanece público; somente a aba Administração exige sessão, inclusive em desenvolvimento.
+- Cadastro continua desativado. Sem PostgreSQL disponível, o backend não consegue validar uma conta: a tela informa indisponibilidade e não cria sessão. Não há credenciais de demonstração nem autenticação simulada no aplicativo.
+
+A implementação do frontend foi testada com respostas controladas. Cadastro/login com usuário real, autorização das futuras operações administrativas e validação conjunta com PostgreSQL ficam para a próxima etapa.
 
 ## Medir o peso
 
@@ -37,7 +50,8 @@ Para medir o tamanho do build, execute `npm run measure:build`. O relatório dis
 | `/dashboard` | Lista, filtros, estados, globo, resumo e evolução das amostras |
 | `/dashboard?servico=ID` | Resumo, recursos e evolução da aplicação; globo permanece à esquerda no desktop |
 | `/comparar` | Seleção de duas ou mais aplicações, tabela com o mesmo intervalo e cobertura por aplicação |
-| `/login`, `/cadastro` | Telas existentes com envio desativado; aguardam integração real |
+| `/login` | Formulário conectado ao backend, retorno seguro e tratamento de erros; validação com banco real pendente |
+| `/cadastro` | Tela com envio desativado; integração de criação de contas pendente |
 | `/gerenciamento` | Funcionalidade pendente do backend |
 | `/pesquisa`, `/servicos` | Redirecionam ao dashboard preservando a consulta |
 | `/servicos/:id` | Redireciona ao detalhe da aplicação |

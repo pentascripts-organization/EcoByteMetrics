@@ -93,8 +93,8 @@ export function App() {
       >
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/cadastro" element={<LoginPage register />} />
+          <Route path="/login" element={<LoginPage key="login" />} />
+          <Route path="/cadastro" element={<LoginPage key="register" register />} />
           <Route element={<AppLayout />}>
             <Route path="/pesquisa" element={<LegacyDashboardRedirect />} />
             <Route path="/servicos" element={<LegacyDashboardRedirect />} />
