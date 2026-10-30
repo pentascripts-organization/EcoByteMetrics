@@ -234,3 +234,7 @@ export function setCarbonRegionsFetcherForTesting(
     fetchCarbonFactors = fetcher;
 }
 
+export function resetCarbonRegionsFetcher(): void {
+    fetchCarbonFactors = fetchCarbonRegions;
+}
+
