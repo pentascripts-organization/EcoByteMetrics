@@ -76,27 +76,11 @@ export class WorkerService {
         continue;
       }
     }
-    try{
-    
-    }catch (error: unknown) {
-        if (error instanceof ServiceApiError ||error instanceof CarbonApiError) {
-          console.error(
-            `${error.name}: ${error.message}\n` +
-            `statusCode: ${error.statusCode}\n` +
-            `code: ${error.code}`
-          );
-        } else if (error instanceof Error) {
-          console.error(
-            `${error.name}: ${error.message}`
-          );
-        } else {
-          console.error(
-            `Serviço: Erro desconhecido:`,
-            error
-          );
-        }
-      }
-      this.atualizarService(servs);
+    try {
+      await this.atualizarService(servs);
+    } catch (error: unknown) {
+      console.error("Falha ao atualizar o estado dos serviços após a coleta:", error);
+    }
   }
 
   private async atualizarService(service_names: string[]){
