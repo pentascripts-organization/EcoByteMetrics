@@ -7,7 +7,7 @@ import {createLocation,getLocationByName} from "../Locations/location.service.js
 import { CreateMetricInput } from "../Metrics/metric.repository.js";
 import { createMetricService } from "../Metrics/metric.service.js";
 import { createServiceInput } from "../Services/service.repository.js";
-import {createService, getServiceByExist, updateServiceStatus} from "../Services/services.service.js";
+import {createService, getServiceByExist, updateServiceStatus, recordCollectedServiceMetrics} from "../Services/services.service.js";
 
 export class WorkerService {
 
@@ -51,7 +51,7 @@ export class WorkerService {
           service:service
         };
         servs.push(service.name_service);
-        await this.cadastrarServiceLocation(service,local,metric);
+        await this.cadastrarServiceLocation(service,local,metric,serv.id);
 
       } catch (error: unknown) {
         if (error instanceof ServiceApiError ||error instanceof CarbonApiError) {
@@ -103,7 +103,7 @@ export class WorkerService {
     await updateServiceStatus(service_names);
   }
 
-  private async cadastrarServiceLocation(service: createServiceInput,local: createLocationInput, metric: CreateMetricInput
+  private async cadastrarServiceLocation(service: createServiceInput,local: createLocationInput, metric: CreateMetricInput, externalServiceId: string
   ): Promise<void> {
     
     let lugar = await getLocationByName(
@@ -128,6 +128,15 @@ export class WorkerService {
     metric.id_service = servico.id_service;
 
     await createMetricService(metric);
+    recordCollectedServiceMetrics(externalServiceId, {
+      collection_interval_seconds: metric.colletion_interval_metric,
+      metrics: {
+        cpu_percent: metric.cpu_metric,
+        memory_gb: metric.ram_metric,
+        disk_gb: metric.hd_metric,
+        network_gb: metric.network_metric,
+      },
+    });
     console.log("Metric cadastrada");
   }
 }
