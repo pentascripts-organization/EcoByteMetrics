@@ -4,19 +4,18 @@ import {
     getMetricByIdController,
     listMetricsByServiceIdController,
 } from "./metric.controller";
-import { authMiddleware } from "../Auth/auth.middleware";
 
 const router = Router();
 
 router.get("/list/:id_service", listMetricsByServiceIdController);
-router.post("/", authMiddleware, createMetricController);
-router.get("/:id", getMetricByIdController);
+router.post("/", createMetricController);
+router.get("/:id_metric", getMetricByIdController);
 
 
 router.get("/", (req, res) => {
     res.set("Allow", "GET, HEAD, POST, OPTIONS").status(204).end();
 });
-router.post("/:id", (req, res) => {
+router.post("/:id_metric", (req, res) => {
     res.set("Allow", "GET, HEAD, PUT, DELETE, OPTIONS").status(204).end();
 });
 router.get("/list/:id_service", (req, res) => {
@@ -24,7 +23,7 @@ router.get("/list/:id_service", (req, res) => {
 });
 
 
-router.all("/:id", (req, res) => {
+router.all("/:id_metric", (req, res) => {
     res.set("Allow", "GET, HEAD, PUT, DELETE, OPTIONS")
     .status(405).json({ error: "Método não permitido" });
 });

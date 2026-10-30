@@ -1,28 +1,51 @@
 import pool from "../../db/connection";
 import { Carbon } from "../Carbons/carbon.repository";
-import { Service } from "../Services/service.repository";
+import { Service, createServiceInput } from "../Services/service.repository";
 
 
 export type Metric = {  
-    id_metric: number;
-    id_service: number;
-    cpu_metric: number;
-    memory_metric: number;
-    disk_metric: number;
-    collected_interval_metric: number;
-    timestamp_metric: Date;
+    id_metric : number,
+	id_service : number,
+	date_houry : string,
+	cpu_metric : number,
+	ram_metric : number,
+	hd_metric : number,
+	network_metric : number, 
+    colletion_interval_metric : number
 };
 
 export type CreateMetricInput = Omit<Metric, "id_metric">;
 
-export type createServiceInput = Omit<Service, "id_service">;
-
-
-
-export async function createMetricRepository({id_service, cpu_metric, memory_metric, disk_metric, collected_interval_metric, timestamp_metric}: CreateMetricInput): Promise<Metric> {
+export async function createMetricRepository(metric: CreateMetricInput): Promise<Metric> {
     const result = await pool.query(
-        "INSERT INTO metrics (id_service, cpu_metric, memory_metric, disk_metric, collected_interval_metric, timestamp_metric) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-        [id_service, cpu_metric, memory_metric, disk_metric, collected_interval_metric, timestamp_metric]
+        `INSERT INTO Metrics (
+            id_service,
+            cpu_metric,
+            ram_metric,
+            hd_metric,
+            network_metric,
+            date_houry,
+            colletion_interval_metric
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (id_service, date_houry)
+            DO UPDATE SET
+            cpu_metric = EXCLUDED.cpu_metric,
+            ram_metric = EXCLUDED.ram_metric,
+            hd_metric = EXCLUDED.hd_metric,
+            network_metric = EXCLUDED.network_metric,
+            colletion_interval_metric =
+                EXCLUDED.colletion_interval_metric
+            RETURNING *;`,
+        [
+         metric.id_service,
+         metric.cpu_metric,
+         metric.ram_metric,
+         metric.hd_metric,
+         metric.network_metric,
+         metric.date_houry,
+         metric.colletion_interval_metric
+        ]
     );
     return result.rows[0];
 }

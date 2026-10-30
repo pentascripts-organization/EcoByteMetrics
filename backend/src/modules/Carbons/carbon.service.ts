@@ -4,7 +4,8 @@ import{
     getCarbonByIdRepository,
     listCarbonsByLocationIdRepository,
     listCarbonsRepository,
-    createCarbonRepository
+    createCarbonRepository,
+    getCarbonByExistRepository
 }   from "./carbon.repository";
 //classe de erro personalizada para o módulo de carbono
 export class CarbonError extends Error {
@@ -30,10 +31,10 @@ function validateCarbonInput(carbonInput: CreateCarbonInput): CreateCarbonInput 
     if (!carbonInput.id_location || !Number.isSafeInteger(carbonInput.id_location) || carbonInput.id_location <= 0) {
         throw new CarbonError("ID da localização inválido", 400);
     }
-    if (carbonInput.intensity_carbon < 0) {
+    if (carbonInput.intesity_co2e_kwh_carbon < 0) {
         throw new CarbonError("Valor de intensidade de carbono inválido", 400);
     }
-    if (carbonInput.renewable_percentage_carbon < 0 || carbonInput.renewable_percentage_carbon > 100) {
+    if (carbonInput.renewable_percent_carbon < 0 || carbonInput.renewable_percent_carbon > 100) {
         throw new CarbonError("Valor de porcentagem de energia renovável inválido", 400);
     }
     return carbonInput;
@@ -62,6 +63,17 @@ export async function getCarbonByIdService(id_carbon: number): Promise<Carbon | 
     try{
         const carbon = await getCarbonByIdRepository(id_carbon);
         return carbon;
+    }catch (error) {
+        handleRepositoryError(error);
+    }
+}
+
+export async function getCarbonByExitsService(renewable_percent_carbon:number, intesity_co2e_kwh_carbon:number): Promise<boolean> {
+    try{
+        const carbon = await getCarbonByExistRepository(renewable_percent_carbon, intesity_co2e_kwh_carbon);
+        if(carbon)
+            return true;
+        return false;
     }catch (error) {
         handleRepositoryError(error);
     }

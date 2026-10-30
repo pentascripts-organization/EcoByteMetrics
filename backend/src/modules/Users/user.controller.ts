@@ -25,7 +25,7 @@ export async function createUserController(req: Request, res: Response, next: Ne
 }
 export async function getUserByIdController(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const id = Number(req.params.id)
+        const id = Number(req.params.id_user)
         const user = await getUserByIdService(id);
         res.status(200).json(user);
     } catch (error) {
@@ -35,7 +35,7 @@ export async function getUserByIdController(req: Request, res: Response, next: N
 
 export async function updateUserController(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const user = await updateUserService({id_user: Number(req.params.id), ...req.body});
+        const user = await updateUserService({id_user: Number(req.params.id_user), ...req.body});
         res.status(200).json(user);
     } catch (error) {
         handleError(error, res, next);
@@ -44,7 +44,7 @@ export async function updateUserController(req: Request, res: Response, next: Ne
 
 export async function deleteUserController(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-        const user = await deleteUserService(Number(req.params.id));
+        const user = await deleteUserService(Number(req.params.id_user));
         res.status(200).json(user);
     } catch (error) {
         handleError(error, res, next);

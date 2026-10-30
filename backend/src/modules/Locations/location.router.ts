@@ -13,13 +13,11 @@ import{
    Define as rotas para criar, buscar por ID e listar todas as localizações.
    Também lida com métodos HTTP não permitidos, enviando respostas apropriadas.
 */
-import { authMiddleware } from "../Auth/auth.middleware";
-
 const locationRouter = Router();
 // Rota para listar todas as localizações.
 locationRouter.get("/all", listLocationController);
-locationRouter.post("/", authMiddleware, createLocationController);
-locationRouter.get("/:id", getLocationByIdController);
+locationRouter.post("/", createLocationController);
+locationRouter.get("/:id_location", getLocationByIdController);
 /* Rota para lidar com métodos HTTP não permitidos para a rota "/all".
    Envia uma resposta HTTP com o status 405 (Método não permitido) e uma mensagem de erro.
 */

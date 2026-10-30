@@ -1,24 +1,20 @@
+import { CarbonRegionFactor, fetchCarbonRegions } from "../../integrations/carbon-api.js";
 import {
     fetchAvailableServices,
     fetchServiceMetrics,
     type AggregatorService,
     type ServiceMetrics,
 } from "../../integrations/metrics-api.js";
-import {
-    fetchCarbonRegions,
-    type CarbonRegionFactor,
-} from "../../integrations/carbon-api.js";
-import {
-    persistAggregatorServices,
-    persistMetricSample,
-} from "../Statistics/statistics.repository.js";
 
 import {
     Service,
+    createServiceInput,
     createServiceRepository,
+    getServiceByExistRepository,
     getServiceByIdRepository,
     listServicesByLocationIdRepository,
-    listServicesRepository
+    listServicesRepository,
+    updateServiceStatusRepository
 } from "./service.repository.js";
 
 export class ServicesError extends Error {
@@ -46,10 +42,10 @@ function validadeServiceInput(serviceInput: Omit<Service, "id_service">): Omit<S
     if (!serviceInput.name_service || serviceInput.name_service.trim() === "") {
         throw new ServicesError("Nome do serviço inválido", 400);
     }
-    if (!serviceInput.MatricPath_service || serviceInput.MatricPath_service.trim() === "") {
+    if (!serviceInput.path_metric || serviceInput.path_metric.trim() === "") {
         throw new ServicesError("Caminho da métrica inválido", 400);
     }
-    if (!serviceInput.MatricPath_service.startsWith("/")) {
+    if (!serviceInput.path_metric.startsWith("/")) {
         throw new ServicesError("Caminho da métrica deve começar com '/'", 400);
     }
     return serviceInput;
@@ -62,7 +58,7 @@ function handleRepositoryError(error: unknown): never {
     throw error; 
 }
 
-export async function createService(service:Service):Promise<Service> {
+export async function createService(service:createServiceInput):Promise<Service> {
     const data = validadeServiceInput(service)
     try{
         const service = await createServiceRepository(data)
@@ -71,7 +67,9 @@ export async function createService(service:Service):Promise<Service> {
         handleRepositoryError(error)
     }
 }
-
+export async function updateServiceStatus(services_name:string[]): Promise<void> {
+  await updateServiceStatusRepository(services_name);
+}
 export async function getServiceById(id_service:number):Promise<Service> {
     validateServiceId(id_service)
     const service = await getServiceByIdRepository(id_service)
@@ -79,6 +77,11 @@ export async function getServiceById(id_service:number):Promise<Service> {
         throw new ServicesError("Serviço não encotrado", 404)
     }
     return service;
+}
+
+export async function getServiceByExist(name_service:string):Promise<Service|null> {
+    const service = await getServiceByExistRepository(name_service)
+    return service||null;
 }
 
 export async function listServiceByLocation(id_location:number):Promise<Service> {
@@ -99,6 +102,7 @@ export async function listServices():Promise<Service[]> {
 }
 
 // função de agregação para criar um novo serviço
+// função de agregação para criar um novo serviço
 type ServicesFetcher = () => Promise<AggregatorService[]>;
 
 export interface CollectedServiceMetrics {
@@ -111,14 +115,10 @@ type MetricsFetcher = (
     serviceId: string
 ) => Promise<ServiceMetrics>;
 type CarbonRegionsFetcher = () => Promise<CarbonRegionFactor[]>;
-type ServicesPersister = typeof persistAggregatorServices;
-type MetricSamplePersister = typeof persistMetricSample;
 
 let fetchServices: ServicesFetcher = fetchAvailableServices;
 let fetchMetrics: MetricsFetcher = fetchServiceMetrics;
 let fetchCarbonFactors: CarbonRegionsFetcher = fetchCarbonRegions;
-let saveServices: ServicesPersister = persistAggregatorServices;
-let saveMetricSample: MetricSamplePersister = persistMetricSample;
 
 let discoveredServices: AggregatorService[] = [];
 let lastUpdatedAt: string | null = null;
@@ -128,18 +128,14 @@ const collectedMetrics = new Map<string, CollectedServiceMetrics>();
 export async function refreshDiscoveredServices(): Promise<void> {
     try {
         const services = await fetchServices();
-
-        try {
-            await saveServices(services);
-        } catch (error: unknown) {
-            console.error("Falha ao persistir serviços descobertos.", error);
-        }
-
         // Atualiza a lista somente após uma consulta bem-sucedida.
         discoveredServices = services;
         lastUpdatedAt = new Date().toISOString();
     } catch (error: unknown) {
-        console.error("Falha ao consultar serviços do Agregador.", error);
+        console.error(
+            "Falha ao consultar serviços descobertos.",
+            error
+        );
     }
 }
 
@@ -184,20 +180,6 @@ export async function refreshServiceMetrics(): Promise<void> {
             metrics,
             updatedAt: collectedAt.toISOString(),
         });
-
-        try {
-            await saveMetricSample(
-                service.id,
-                metrics,
-                carbonFactors.get(service.location.region_code) ?? null,
-                collectedAt
-            );
-        } catch (error: unknown) {
-            console.error(
-                `Falha ao persistir métricas do serviço "${service.id}".`,
-                error
-            );
-        }
     }
 }
 
@@ -234,19 +216,3 @@ export function setCarbonRegionsFetcherForTesting(
     fetchCarbonFactors = fetcher;
 }
 
-export function resetCarbonRegionsFetcher(): void {
-    fetchCarbonFactors = fetchCarbonRegions;
-}
-
-export function setPersistenceForTesting(
-    servicesPersister: ServicesPersister,
-    metricPersister: MetricSamplePersister
-): void {
-    saveServices = servicesPersister;
-    saveMetricSample = metricPersister;
-}
-
-export function resetPersistence(): void {
-    saveServices = persistAggregatorServices;
-    saveMetricSample = persistMetricSample;
-}
