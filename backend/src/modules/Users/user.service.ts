@@ -7,6 +7,7 @@ import{
     type CreateUserInput,
     type UpdateUser
 } from "./user.repository";
+import bcrypt from "bcryptjs";
 
 export class UserError extends Error {
     constructor(message: string, public readonly statusCode: number) {
@@ -43,11 +44,17 @@ function handleRepositoryError(error: unknown): never {
 
 export async function createUserService(user: CreateUserInput): Promise<User> {
     const data = validateUserInput(user);
+
     try {
-        return await createUserRepository(data);
+        const hashedPassword = await bcrypt.hash(data.password_user, 10);
+
+        return await createUserRepository({
+            ...data,
+            password_user: hashedPassword
+        });
     } catch (error) {
         handleRepositoryError(error);
-    } 
+    }
 }
 
 export async function getUserByIdService(id: number): Promise<User | null> {

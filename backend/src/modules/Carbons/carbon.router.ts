@@ -5,13 +5,14 @@ import {
     listCarbonsByLocationIdController,
     listCarbonsController
 } from "./carbon.controller";
+import { authMiddleware } from "../Auth/auth.middleware";
 
 const router = Router();
 
 // define rotas para lidar com os métodos permitidos
 router.get("/all", listCarbonsController);
 router.get("/loc/:id_location", listCarbonsByLocationIdController);
-router.post("/", createCarbonController);
+router.post("/", authMiddleware, createCarbonController);
 router.get("/:id_carbon", getCarbonByIdController);
 
 // define rotas para lidar com métodos não permitidos
