@@ -41,7 +41,6 @@ const checkoutService: AggregatorService = {
         region_code: "SA-SP",
         country: "Brasil",
         region: "São Paulo",
-        region: "São Paulo",
         city: "São Paulo",
         latitude: -23.55,
         longitude: -46.63,
