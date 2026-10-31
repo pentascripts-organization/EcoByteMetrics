@@ -22,13 +22,29 @@ import {
 } from "../src/modules/Services/services.service.js";
 
 const billingService: AggregatorService = {
-    id: "billing-api", name: "billing-api",
-    location: { region_code: "SA-SP", country: "Brasil", region: "São Paulo", city: "São Paulo", latitude: -23.55, longitude: -46.63 },
+    id: "billing-api",
+    name: "billing-api",
+    location: {
+        region_code: "SA-SP",
+        country: "Brasil",
+        region: "São Paulo",
+        city: "São Paulo",
+        latitude: -23.55,
+        longitude: -46.63,
+    },
     metrics_path: "/metrics/billing-api",
 };
 const checkoutService: AggregatorService = {
-    id: "checkout-worker", name: "checkout-worker",
-    location: { region_code: "SA-SP", country: "Brasil", region: "São Paulo", city: "São Paulo", latitude: -23.55, longitude: -46.63 },
+    id: "checkout-worker",
+    name: "checkout-worker",
+    location: {
+        region_code: "SA-SP",
+        country: "Brasil",
+        region: "São Paulo",
+        city: "São Paulo",
+        latitude: -23.55,
+        longitude: -46.63,
+    },
     metrics_path: "/metrics/checkout-worker",
 };
 const billingMetrics: ServiceMetrics = {
