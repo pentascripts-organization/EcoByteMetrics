@@ -13,7 +13,7 @@ export type UpdateUser = User;
 
 export async function createUserRepository({email_user, name_user, password_user}: CreateUserInput): Promise<User> {
     const result = await pool.query(
-        "INSERT INTO users (email_user, name_user, password_user) VALUES ($1, $2, $3) RETURNING id_user, name_user, email_user, password_user",
+        "INSERT INTO users (email_user, name_user, password_user) VALUES ($1, $2, $3) RETURNING id_user, name_user, email_user",
         [email_user, name_user, password_user]
     );
     return result.rows[0];

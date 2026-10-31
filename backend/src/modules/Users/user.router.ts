@@ -8,10 +8,12 @@ import {
 
 const userRouter = Router();
 
+import { authMiddleware } from "../Auth/auth.middleware";
+
 userRouter.post("/", createUserController);
-userRouter.get("/:id_user", getUserByIdController);
-userRouter.put("/:id_user", updateUserController);
-userRouter.delete("/:id_user", deleteUserController);
+userRouter.get("/:id_user", authMiddleware, getUserByIdController);
+userRouter.put("/:id_user", authMiddleware, updateUserController);
+userRouter.delete("/:id_user", authMiddleware, deleteUserController);
 
 userRouter.get("/", (req, res) => {
     res.set("Allow", "GET, HEAD, POST, OPTIONS").status(204).end();
