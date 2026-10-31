@@ -21,7 +21,7 @@ test("comparação usa o mesmo intervalo e expõe cobertura diferente sem duplic
 test("comparação distingue zero, ausência de coleta e emissões incompletas", () => {
   const rows = compareApplications([service("a"), service("b"), service("c")], [sample("a", 0, 0), sample("b", 0, 2), sample("b", 30, null)], ["a", "b", "c"], at(-1), at(60));
   assert.equal(rows[0]!.emissionsG, 0);
-  assert.equal(rows[1]!.emissionsG, null);
+  assert.equal(rows[1]!.emissionsG, 2);
   assert.equal(rows[1]!.emissionCount, 1);
   assert.equal(rows[2]!.energyKwh, null);
   assert.equal(rows[2]!.first, null);

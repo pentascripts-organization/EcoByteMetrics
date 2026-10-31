@@ -25,8 +25,7 @@ export function applicationImpacts(services: MonitoredService[], history: Collec
   }
   return services.map(service => {
     const summary = summarizeCollections(samples.get(service.id) ?? []);
-    const emissions = summary.emissionCount === summary.count ? summary.emissionsG : null;
-    return { service, summary, value: metric === "energy" ? summary.energyKwh : emissions };
+    return { service, summary, value: metric === "energy" ? summary.energyKwh : summary.emissionsG };
   }).sort((a, b) =>
     Number(a.service.status === "removed") - Number(b.service.status === "removed") ||
     (a.value === null ? b.value === null ? a.service.name.localeCompare(b.service.name, "pt-BR") : 1

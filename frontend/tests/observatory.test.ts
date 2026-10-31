@@ -93,6 +93,14 @@ test("a descoberta reutiliza o ranking da tabela sem mudar o resultado", () => {
   }
 });
 
+test("somas conhecidas da tabela não geram participações ou tamanhos completos quando faltam fatores", () => {
+  const services=[service("a"),service("b")];
+  const history=[sample("a",0,2),sample("a",30,null),sample("b",0,1)];
+  assert.equal(applicationImpacts(services,history,"emissions")[0]!.value,2);
+  assert.equal(impactInsight(services,history,"emissions"),null);
+  assert.equal(impactLocations(services,history,"emissions")[0]!.missingImpact,true);
+});
+
 test("a lente de estado preserva os pontos sem depender das estimativas", () => {
   const services = [service("a"), service("b", { status: "unavailable" }), service("c", { latitude: 40, longitude: -74 })];
   const without = impactLocations(services, [], "status");

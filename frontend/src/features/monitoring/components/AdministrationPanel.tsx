@@ -1,4 +1,4 @@
-import { Clock3, LogOut, Radar, Save } from "lucide-react";
+import { Clock3, LogOut, Radar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { InfoTooltip } from "@/shared/ui/InfoTooltip";
 import { useAuth } from "@/features/auth/useAuth";
@@ -24,29 +24,27 @@ export function AdministrationPanel() {
 
       <section className="administration-settings" id="administration-settings" aria-labelledby="administration-section-title">
         <header className="administration-section-heading">
-          <h3 id="administration-section-title">Coleta de métricas</h3>
-          <p>Organize a frequência de consulta às aplicações monitoradas.</p>
+          <h3 id="administration-section-title">Configuração atual da coleta</h3>
+          <p>O monitoramento consulta as aplicações automaticamente a cada 30 segundos.</p>
         </header>
 
-        <form onSubmit={event => event.preventDefault()} aria-label="Configuração da coleta">
+        <div className="administration-settings-body">
           <div className="administration-setting-group">
             <div className="administration-setting-row">
               <div>
-                <div className="administration-setting-label"><label htmlFor="administration-interval">Intervalo entre consultas</label><InfoTooltip label="intervalo entre consultas">Define quanto tempo o nosso servidor espera entre consultas. O período representado por cada amostra é informado pela API e pode ser diferente.</InfoTooltip></div>
+                <div className="administration-setting-label"><span id="administration-interval-label">Intervalo entre consultas</span><InfoTooltip label="intervalo entre consultas">Define quanto tempo o nosso servidor espera entre consultas. O período representado por cada amostra é informado pela API e pode ser diferente.</InfoTooltip></div>
                 <p id="administration-interval-help">Tempo de espera entre uma consulta e a próxima.</p>
               </div>
-              <div className="administration-interval"><input id="administration-interval" type="number" defaultValue={30} disabled aria-describedby="administration-interval-help" /><span>segundos</span></div>
+              <div className="administration-interval"><output id="administration-interval" aria-labelledby="administration-interval-label" aria-describedby="administration-interval-help">30</output><span>segundos</span></div>
             </div>
             <div className="administration-setting-row">
               <div><h4>Descoberta das aplicações</h4><p>As aplicações são identificadas pelo agregador de métricas.</p></div>
               <span className="administration-readonly"><Radar size={15} aria-hidden="true" />Automática</span>
             </div>
           </div>
-          <p className="administration-field-note">O intervalo de consulta não altera o período informado nas amostras.</p>
-          <footer className="administration-actions">
-            <button type="submit" className="administration-save" disabled><Save size={16} aria-hidden="true" />Salvar alterações</button>
-          </footer>
-        </form>
+          <p className="administration-field-note">O intervalo de consulta não altera o tempo representado por cada leitura.</p>
+          <p className="administration-field-note">Esta configuração é somente para consulta. A alteração do intervalo ainda não está disponível.</p>
+        </div>
       </section>
     </div>
   </section>;

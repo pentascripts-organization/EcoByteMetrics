@@ -14,11 +14,13 @@ export function evolutionChartData(points: EvolutionPoint[], intervalMs: number,
       result.push({
         timestamp: previous.timestamp + (point.timestamp - previous.timestamp) / 2, value: null, missing: true,
         from: previous.timestamp, to: point.timestamp,
-        reason: "Nenhuma amostra foi recebida pela interface entre estas coletas. O backend não informou o motivo da ausência.",
+        reason: "Não há amostras gravadas neste trecho do histórico consultado. O backend não informou o motivo da ausência.",
         events: events.filter(event => Date.parse(event.to) > previous.timestamp && Date.parse(event.from) < point.timestamp),
       });
     }
-    result.push({ timestamp: point.timestamp, value: point.value, ...(point.reason ? { reason: point.reason } : {}) });
+    result.push({ timestamp: point.timestamp, value: point.value,
+      ...(point.from !== undefined ? { from: point.from } : {}), ...(point.to !== undefined ? { to: point.to } : {}),
+      ...(point.reason ? { reason: point.reason } : {}) });
   }
   return result;
 }

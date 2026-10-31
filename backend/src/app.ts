@@ -8,8 +8,7 @@ import serviceRouter from "./modules/Services/service.router.js";
 import locationRouter from "./modules/Locations/location.router.js";
 import statisticRouter from "./modules/Statistics/statistics.router.js"
 import authRouter from "./modules/Auth/auth.router";
-import {start} from "./modules/Worker/worker.job.js";
-import { runWorker } from "./modules/Worker/worker.js";
+import monitoringRouter from "./modules/Monitoring/monitoring.router";
 
 import {
   getDiscoveredServices,
@@ -17,9 +16,6 @@ import {
   getCollectedServiceMetrics,
   getCollectedMetricsByServiceId,
 } from "./modules/Services/services.service.js";
-
-runWorker();
-start();
 
 const app = express();
 
@@ -42,6 +38,7 @@ app.get("/services", (_req: Request, res: Response) => {
 
 // Rotas do módulo de usuários.
 app.use("/api/users", userRouter);
+app.use("/api/monitoring", monitoringRouter);
 // Rotas do módulo de métricas.
 app.use("/api/metrics", metricRouter);
 //Rota do Carbon

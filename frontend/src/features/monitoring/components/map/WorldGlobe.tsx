@@ -119,7 +119,7 @@ function WorldGlobe({
     button.className = "globe-marker" + (count > 1 ? " globe-marker-cluster" : "") + (entry.id === cityId ? " is-selected" : "") + (entry.missingImpact ? " is-incomplete" : "");
     button.style.setProperty("--marker-color", entry.color ?? "#079e72");
     button.style.setProperty("--marker-size", (entry.size ?? (count > 1 ? 27 : 17)) + "px");
-    const label = entry.name + " · " + count + (count === 1 ? " serviço" : " serviços") + (entry.valueLabel ? " · " + entry.valueLabel : "");
+    const label = entry.name + " · " + count + (count === 1 ? " aplicação" : " aplicações") + (entry.valueLabel ? " · " + entry.valueLabel : "");
     button.setAttribute("aria-label", "Explorar " + label);
     button.disabled = readOnly;
     if (count > 1) button.append(document.createTextNode(String(count)));

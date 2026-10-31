@@ -42,7 +42,7 @@
 .monitoring-refresh-icon { transform-origin: center; }
 .monitoring-summary summary { padding: 12px 0; min-height: 44px; }
 .monitoring-summary details[open] { padding-bottom: 12px; border-bottom: 1px solid var(--monitoring-line); }
-.monitoring-summary-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.monitoring-summary-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .monitoring-summary-facts dt { display: flex; align-items: center; gap: 3px; }
 .monitoring-summary-facts dd { margin: 4px 0 0; color: var(--monitoring-ink); font-size: 15px; }
 .monitoring-summary p { margin-top: 8px; max-width: 100ch; line-height: 1.6; }

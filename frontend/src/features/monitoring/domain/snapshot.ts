@@ -28,6 +28,11 @@ function preserveSample(previous: MonitoredService | undefined, incoming: Monito
 }
 
 export function mergeMonitoringSnapshot(previous: MonitoringSnapshot, incoming: MonitoringSnapshot, observedAt: string, requestedAt = observedAt): MonitoringSnapshot {
+  if (incoming.source === "database") return {
+    ...incoming, refreshedAt: observedAt,
+    observations: incoming.selectedAt && previous.source === "database" && previous.historyPeriod === incoming.historyPeriod && previous.observations?.length
+      ? previous.observations : incoming.observations,
+  };
   const byId = new Map(previous.services.map(service => [service.id, service]));
   const ids = new Set(incoming.services.map(service => service.id));
   const services: MonitoredService[] = [

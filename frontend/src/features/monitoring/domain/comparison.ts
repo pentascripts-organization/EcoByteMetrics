@@ -1,5 +1,5 @@
 import type { CollectionPoint, MonitoredService } from "../types.ts";
-import { mergeCollectionHistory, summarizeCollections } from "./history.ts";
+import { collectionRange, mergeCollectionHistory, summarizeCollections } from "./history.ts";
 
 export function compareApplications(services: MonitoredService[], history: CollectionPoint[], ids: string[], start: number | null, end: number | null) {
   const selected = new Set(ids);
@@ -14,12 +14,11 @@ export function compareApplications(services: MonitoredService[], history: Colle
   return services.filter(service => selected.has(service.id)).map(service => {
     const points = samples.get(service.id) ?? [];
     const summary = summarizeCollections(points);
-    const times = points.map(point => Date.parse(point.collectedAt));
+    const range = collectionRange(points);
     return {
       service, ...summary,
-      emissionsG: summary.count > 0 && summary.emissionCount === summary.count ? summary.emissionsG : null,
-      first: times.reduce<number | null>((value, time) => value === null ? time : Math.min(value, time), null),
-      last: times.reduce<number | null>((value, time) => value === null ? time : Math.max(value, time), null),
+      first: range.first,
+      last: range.last,
     };
   });
 }

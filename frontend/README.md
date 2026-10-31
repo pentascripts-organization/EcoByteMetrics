@@ -17,7 +17,6 @@ Se precisar configurar a conexão, crie `.env.local` a partir de `.env.example`,
 | --- | --- | --- |
 | `VITE_BACKEND_URL` | `/backend` | Endereço público da API no navegador |
 | `BACKEND_PROXY_TARGET` | `http://127.0.0.1:3000` | Destino do proxy do Vite |
-| `VITE_CARBON_URL` | `https://carbon.unilaunch.org` | Catálogo de fatores de carbono |
 
 O proxy remove `/backend` antes de encaminhar a consulta. Reinicie o Vite após mudar o ambiente. Variáveis `VITE_` são públicas e incorporadas no build; não use senhas ou tokens nelas.
 
@@ -34,9 +33,11 @@ O formulário de entrada envia `{ email, password }` para `POST /backend/auth/lo
 - Sessão e token ficam somente em memória, sem `localStorage`, `sessionStorage` ou cookies. Recarregar a página ou fechar a aba exige nova entrada. Ainda não existe renovação de token integrada.
 - A sessão termina no prazo informado no JWT, inclusive após suspensão da aba. Consultas feitas por `useAuth().request` enviam Bearer; HTTP 401 encerra a sessão, enquanto 403 mantém a conta conectada. Respostas de uma sessão encerrada não são aplicadas a uma sessão nova.
 - Ao entrar, a interface retorna ao dashboard solicitado; destinos externos são descartados. A administração mostra a conta e permite sair. O dashboard permanece público; somente a aba Administração exige sessão, inclusive em desenvolvimento.
-- Cadastro continua desativado. Sem PostgreSQL disponível, o backend não consegue validar uma conta: a tela informa indisponibilidade e não cria sessão. Não há credenciais de demonstração nem autenticação simulada no aplicativo.
+- Cadastro envia nome, e-mail e senha para `POST /backend/api/users`. Valida nome, e-mail e senha conforme os limites do backend, bloqueia envio duplicado e distingue e-mail já cadastrado de falhas do serviço. Nome e e-mail são normalizados; a senha é enviada sem alterações.
+- Após confirmar a criação, volta ao login com o e-mail preenchido, a senha vazia e o destino original preservado. Cadastro não inicia sessão automaticamente. A confirmação e o e-mail ficam apenas em memória. Se a conexão cair sem confirmar o resultado do POST, a mensagem orienta tentar entrar antes de cadastrar novamente.
+- Sem PostgreSQL disponível, as telas informam indisponibilidade e não criam sessão. Não há credenciais de demonstração nem autenticação simulada no aplicativo.
 
-A implementação do frontend foi testada com respostas controladas. Cadastro/login com usuário real, autorização das futuras operações administrativas e validação conjunta com PostgreSQL ficam para a próxima etapa.
+A implementação foi testada com respostas controladas e com o backend e PostgreSQL reais pelo proxy do Vite, usando contas temporárias removidas ao terminar. A revisão visual do fluxo no navegador e a autorização das futuras operações administrativas continuam pendentes. Nesta configuração local, `BACKEND_PROXY_TARGET` aponta para `http://127.0.0.1:3001` para evitar colisão com containers antigos na porta 3000.
 
 ## Medir o peso
 
@@ -50,8 +51,8 @@ Para medir o tamanho do build, execute `npm run measure:build`. O relatório dis
 | `/dashboard` | Lista, filtros, estados, globo, resumo e evolução das amostras |
 | `/dashboard?servico=ID` | Resumo, recursos e evolução da aplicação; globo permanece à esquerda no desktop |
 | `/comparar` | Seleção de duas ou mais aplicações, tabela com o mesmo intervalo e cobertura por aplicação |
-| `/login` | Formulário conectado ao backend, retorno seguro e tratamento de erros; validação com banco real pendente |
-| `/cadastro` | Tela com envio desativado; integração de criação de contas pendente |
+| `/login` | Formulário conectado ao backend, sessão em memória, retorno seguro e tratamento de erros |
+| `/cadastro` | Criação de conta pela API, validação e retorno ao login com confirmação e e-mail preenchido |
 | `/gerenciamento` | Funcionalidade pendente do backend |
 | `/pesquisa`, `/servicos` | Redirecionam ao dashboard preservando a consulta |
 | `/servicos/:id` | Redireciona ao detalhe da aplicação |
@@ -62,41 +63,13 @@ Busca, estado, país, região, cidade, período e data são mantidos na URL. A n
 
 ## Dados, cálculos e limites
 
-O adaptador `src/features/monitoring/api/monitoring.ts` consulta:
+O adaptador `src/features/monitoring/api/monitoring.ts` consulta `GET /backend/api/monitoring?period=24h|7d`, com `until` ISO opcional para revisão de coletas. A resposta vem do PostgreSQL, incluindo catálogo, recursos da última coleta, fatores capturados, histórico, cobertura e diagnósticos do coletor. A interface não consulta diretamente as APIs externas nem monta o histórico a partir das visitas ao navegador.
 
-| Consulta | Endpoint padrão |
-| --- | --- |
-| Descoberta de aplicações | `GET /backend/services` |
-| Recursos da aplicação | `GET /backend/metrics/:id` |
-| Fatores regionais | `GET https://carbon.unilaunch.org/regions` |
+O backend coleta e grava a cada 30 segundos, mesmo com o navegador fechado, enquanto estiver ativo. Recarregar a página consulta novamente os dados gravados. Selecionar período ou data consulta o banco novamente; a interface não mostra uma resposta de outro recorte como se fosse o resultado novo. Em falha de rede, a última resposta permanece em memória, sem gerar amostras adicionais.
 
-O transporte compartilhado fica em `src/shared/lib/http.ts`: solicita JSON, impede cache das consultas, admite cancelamento e aplica um limite de 10 segundos por requisição, incluindo a leitura do corpo. Distingue falha de conexão, tempo limite, status HTTP e resposta inválida. As consultas de métricas são feitas em grupos de até seis.
+Horários chegam em ISO UTC e são apresentados no fuso do dispositivo. Períodos extensos são agrupados no banco, preservando energia, emissões disponíveis, duração, quantidade de amostras e cobertura. Emissão desconhecida permanece `null`, distinta de zero. As amostras antigas que não tinham fator capturado conservam energia, com emissão desconhecida.
 
-Contratos utilizados:
-
-- Descoberta: `{ services: [...], lastUpdatedAt: "ISO com fuso" }`. Data nula indica descoberta ainda não concluída. Cada serviço tem `id`, nome e localização opcionais.
-- Métricas em cache: `{ serviceId, metrics: { collection_interval_seconds, metrics: { cpu_percent, memory_gb, disk_gb, network_gb } }, updatedAt }`.
-- Também é aceito o formato direto `{ collection_interval_seconds, metrics: { ... }, collectedAt }`.
-- Horários precisam incluir o fuso. CPU deve ficar entre 0 e 100; recursos devem ser finitos e não negativos; o intervalo é um inteiro positivo.
-- Dados ausentes não viram zero. Erros `service_not_found` e `metrics_missing` distinguem remoção e ausência de métricas.
-
-As estimativas ainda são calculadas no frontend. O modelo em `domain/energy.ts` usa CPU de 100 W na utilização máxima, RAM de 0,375 W/GB, disco de 0,01 W/GB e rede de 0,02 W/GB, multiplicados pela duração da amostra. Energia é exibida em kWh; emissões em g CO₂e são a energia multiplicada pelo fator regional. São estimativas, não medições elétricas.
-
-- A consulta é repetida a cada 30 s enquanto a aba está visível no dashboard ou no comparador. Retornar à aba dispara nova consulta. Não há consultas simultâneas do mesmo ciclo.
-- Falhas preservam os dados válidos anteriores. Na falha individual, os recursos preservados têm aviso e horário da última coleta válida; eles não geram uma nova amostra no histórico.
-- Uma descoberta incompleta não permite inferir remoções. Aplicações removidas ficam ao final do ranking, inclusive quando possuem estimativas históricas maiores.
-- Amostras com mais de três intervalos de idade, com mínimo de 90 s, são sinalizadas como desatualizadas. Esse estado não confirma uma queda do serviço.
-- Falta de coordenadas impede somente o marcador. Lista, recursos e estimativas continuam disponíveis. Aplicações nas mesmas coordenadas são agrupadas, inclusive ao abrir seus detalhes.
-- Tabela, totais e gráficos usam a mesma seleção. Estimativas incompletas de emissão aparecem como “—” no ranking, detalhe e comparação. O resumo identifica totais parciais e informa a cobertura.
-- O histórico fica **somente na memória desta sessão**. Recarregar a página o apaga. A retenção de amostras observadas é de até 30 dias; a linha do tempo guarda até 3.000 observações. Selecionar 7 dias não recupera coletas anteriores à abertura da página.
-- Comparar é uma aba do dashboard, ao lado de Evolução, e substitui o globo e a lista no mesmo espaço. Filtros e aplicações selecionadas permanecem na URL ao alternar abas; o endereço antigo `/comparar` redireciona para essa visualização. A comparação usa o mesmo intervalo solicitado, mas informa a quantidade e a duração somada das amostras de cada aplicação. Um total menor não comprova maior eficiência.
-- O gráfico usa [Recharts](https://github.com/recharts/recharts), versão 3.10.1, sob licença MIT. Por intervalo mostra barras; Acumulado mostra pontos sem linhas de ligação, representando somente amostras recebidas. O eixo inclui segundos na resolução de 30 s. Eixos, tooltips e navegação por teclado usam os componentes da biblioteca. Os valores continuam disponíveis na seção Coletas, com paginação.
-- A evolução abre no gráfico. As seções Gráfico, Aplicações, Coletas, Lacunas e Detalhes substituem o conteúdo no mesmo espaço; os indicadores e a cobertura aparecem só em Detalhes. O histórico da sessão fica no painel Filtrar, abaixo dos campos, inclusive nos detalhes de uma aplicação. Selecionar um instante e voltar ao vivo continuam disponíveis ali; Limpar filtros também encerra a revisão do passado. As listas exibem cinco registros por página. As amostras são agrupadas em intervalos de 30 s (até uma hora observada), 5 min (até um dia) ou uma hora (acima de um dia). Mouse, toque e setas do teclado permitem explorar o gráfico, por intervalo ou acumulado. Não há rolagem vertical dentro do painel; em telas pequenas ou com zoom alto, o documento pode rolar para manter o conteúdo acessível. Nos detalhes de uma aplicação, o painel permanece à direita do globo no desktop.
-- A adaptação insere marcadores nulos e faixas em âmbar nos trechos sem registros; não cria valores zero nem interpola coletas. No agrupamento de 30 s, aplicações próximas pertencem à mesma rodada e uma tolerância de 15 s evita lacunas falsas por variação dos horários. Animações de redesenho foram desativadas para que novas consultas não façam o gráfico piscar. `react-is` está na mesma versão instalada de React, conforme orientação da biblioteca.
-- A seção Lacunas apresenta um trecho por página e distingue ausência de registros de estimativa de emissões incompleta. O frontend guarda até 3.000 eventos da sessão: pausas por aba oculta ou saída do monitoramento, falhas de consulta, respostas repetidas e aplicações indisponíveis/sem métricas. Os eventos são relacionados ao trecho, à aplicação e ao instante em revisão. Eles são contexto observado pela interface, não um diagnóstico do coletor. Não existe causa histórica fornecida pela API atual; trechos sem evidência ficam com motivo desconhecido. Recarregar a página reinicia esses registros junto com o histórico local.
-- A biblioteca de gráficos é carregada separadamente ao abrir o gráfico da evolução. Os avisos de licença das duas dependências diretas adicionadas estão em `public/licenses/`.
-
-Histórico persistido, autenticação e configurações administrativas continuam pendentes da integração com a `develop`. A interface não simula essas capacidades.
+O transporte compartilhado em `src/shared/lib/http.ts` solicita JSON, não usa cache de consultas, aceita cancelamento e limita cada requisição a 10 segundos. O contrato do histórico, a migração e os limites de volume estão em [backend/docs/HISTORY.md](../backend/docs/HISTORY.md).
 
 ## Verificar
 
@@ -120,7 +93,7 @@ docker compose -f compose.yaml up --build -d
 
 Este Compose inicia apenas o frontend na porta 5173 e encaminha `/backend/` para `http://host.docker.internal:3000`. Configure `BACKEND_PROXY_TARGET` no ambiente do Compose se o backend estiver em outro endereço. O backend precisa executar separadamente; esse arquivo não instala banco, migrações ou serviços do backend.
 
-`VITE_BACKEND_URL` e `VITE_CARBON_URL` são argumentos de build; mudanças exigem reconstruir a imagem. `BACKEND_PROXY_TARGET` é aplicado ao iniciar o Nginx. O fallback de rotas entrega `index.html` nos acessos diretos à SPA. O HTML exige revalidação de cache; arquivos de `/assets/` ausentes retornam 404.
+`VITE_BACKEND_URL` é um argumento de build; mudanças exigem reconstruir a imagem. `BACKEND_PROXY_TARGET` é aplicado ao iniciar o Nginx. O fallback de rotas entrega `index.html` nos acessos diretos à SPA. O HTML exige revalidação de cache; arquivos de `/assets/` ausentes retornam 404.
 
 ## Organização
 

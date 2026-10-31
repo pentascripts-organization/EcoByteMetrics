@@ -23,7 +23,7 @@ export function ServiceImpactRanking({ history, services, periodLabel }: {
   return (
     <Panel title="Impacto por serviço" eyebrow={periodLabel ? `PERÍODO: ${periodLabel}` : "PERÍODO SELECIONADO"} className="service-impact-ranking">
       <div className="service-impact-controls">
-        <p>Coletas disponíveis nesta sessão</p>
+        <p>Coletas gravadas no banco</p>
         <label>
           <span className="sr-only">Ordenar ranking por</span>
           <select value={metric} onChange={event => {

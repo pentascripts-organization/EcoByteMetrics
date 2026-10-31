@@ -125,6 +125,14 @@ let lastUpdatedAt: string | null = null;
 
 const collectedMetrics = new Map<string, CollectedServiceMetrics>();
 
+export function publishCollection(catalog: AggregatorService[], metrics: Map<string, ServiceMetrics>, at: string) {
+    discoveredServices = catalog;
+    lastUpdatedAt = at;
+    for (const [serviceId, sample] of metrics) collectedMetrics.set(serviceId, { serviceId, metrics: sample, updatedAt: at });
+    const ids = new Set(catalog.map(service => service.id));
+    for (const id of collectedMetrics.keys()) if (!ids.has(id)) collectedMetrics.delete(id);
+}
+
 export async function refreshDiscoveredServices(): Promise<void> {
     try {
         const services = await fetchServices();

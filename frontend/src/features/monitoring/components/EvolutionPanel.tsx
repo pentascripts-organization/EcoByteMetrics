@@ -10,7 +10,7 @@ import { EvolutionGaps } from "./EvolutionGaps";
 import { evolutionChartData } from "../domain/chartData";
 import { EvolutionSamples } from "./EvolutionSamples";
 import { MonitoringTabs } from "./MonitoringTabs";
-import { formatNumber } from "@/shared/lib/format";
+import { formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
 import "../styles/evolution.css";
 
 export function EvolutionPanel({ history, services, collectionEvents, metric, onMetric, period, onPeriod, mode, onMode, compact = false, loading, observedAt, impacts = [], onOpenService }: {
@@ -25,7 +25,7 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
     const ids = new Set(services.map(service => service.id));
     return evolutionChartData(data.points, data.intervalMs, collectionEvents?.filter(event => !event.serviceIds || event.serviceIds.some(id => ids.has(id))));
   }, [data, services, collectionEvents]);
-  const gapCount = chartData.filter(point => point.missing || point.value === null).length;
+  const gapCount = chartData.filter(point => point.missing || point.value === null || point.reason).length;
   const { summary } = data;
   const complete = summary.count > 0 && summary.emissionCount === summary.count;
   const coverage = summary.count ? Math.floor(summary.emissionCount / summary.count * 10_000) / 100 : null;
@@ -39,9 +39,9 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
   const sections = [
     { value: "grafico", label: "Gráfico" },
     ...(!compact ? [{ value: "aplicacoes", label: "Aplicações" }] : []),
-    { value: "coletas", label: "Coletas" },
-    { value: "lacunas", label: "Lacunas" + (gapCount ? " (" + gapCount + ")" : "") },
-    { value: "detalhes", label: "Detalhes" },
+    { value: "coletas", label: "Valores" },
+    { value: "lacunas", label: "Dados incompletos" },
+    { value: "detalhes", label: "Sobre os dados" },
   ];
   const section = sections.find(entry => entry.value === params.get("painel"))?.value ?? "grafico";
   const [applicationPage, setApplicationPage] = useState(0);
@@ -49,7 +49,7 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
   const page = Math.min(applicationPage, lastPage);
   return <section className={"monitoring-evolution evolution-panel" + (compact ? " evolution-panel--compact" : "")}>
     <div className="evolution-heading">
-      <div><h2>Evolução {compact ? "da aplicação" : "do ambiente"}</h2><span className="evolution-session-label">{observedAt ? "Instante em revisão" : "Dados desta sessão"}</span></div>
+      <div><h2>Evolução {compact ? "da aplicação" : "do ambiente"}</h2><span className="evolution-session-label">{observedAt && "Instante em revisão · "}{formatRecordedPeriod(data.first, data.last)}</span></div>
       <div className="evolution-toolbar">
         <div className="evolution-segmented" role="group" aria-label="Métrica da evolução"><button type="button" aria-pressed={metric === "emissions"} onClick={() => onMetric("emissions")}><Leaf size={15} aria-hidden="true" />Emissões</button><button type="button" aria-pressed={metric === "energy"} onClick={() => onMetric("energy")}><Zap size={15} aria-hidden="true" />Energia</button></div>
         <label className="evolution-period"><Clock3 size={16} aria-hidden="true" /><select aria-label="Período da evolução" value={period} onChange={event => onPeriod(event.target.value)}><option value="24h">Até 24 horas</option><option value="7d">Até 7 dias</option></select></label>
@@ -64,9 +64,9 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
 
     <div className="evolution-section" id={panelId} role="tabpanel" aria-label={sections.find(entry => entry.value === section)!.label}>
       {section === "grafico" && <section className="evolution-chart-panel" aria-label="Série de estimativas">
-        <div className="evolution-chart-heading"><span>Intervalos de {interval} · {unit}</span><div className="evolution-segmented evolution-mode" role="group" aria-label="Modo do gráfico"><button type="button" aria-pressed={mode === "intervals"} onClick={() => onMode("intervals")}>Por intervalo</button><button type="button" aria-pressed={mode === "cumulative"} onClick={() => onMode("cumulative")}>Acumulado</button></div></div>
+        <div className="evolution-chart-heading"><span>Agrupado em intervalos de {interval} · {unit}</span><div className="evolution-segmented evolution-mode" role="group" aria-label="Modo do gráfico"><button type="button" aria-pressed={mode === "intervals"} onClick={() => onMode("intervals")}>Ver por intervalo</button><button type="button" aria-pressed={mode === "cumulative"} onClick={() => onMode("cumulative")}>Total acumulado</button></div></div>
         <HistoryChart points={data.points} chartData={chartData} metric={metric} mode={mode} intervalMs={data.intervalMs} loading={loading} onEnergy={() => onMetric("energy")} />
-        {gapCount > 0 && <p className="evolution-chart-warning">{gapCount} trecho(s) com dados ausentes. As faixas em âmbar indicam intervalos sem registros; consulte Lacunas para entender cada trecho.</p>}
+        {gapCount > 0 && <p className="evolution-chart-warning">Existem leituras ausentes ou sem cálculo de carbono. A soma usa os valores disponíveis. As faixas em âmbar indicam períodos sem leituras. Veja Dados incompletos para entender.</p>}
       </section>}
 
       {section === "aplicacoes" && <section className="evolution-contributors">
@@ -85,15 +85,15 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
         <dl className="evolution-details-grid">
           <div><dt>Energia estimada</dt><dd>{formatNumber(summary.energyKwh)} kWh</dd></div>
           <div><dt>Emissões {complete || !summary.count ? "estimadas" : "parciais"}</dt><dd>{formatNumber(summary.emissionsG)} g CO₂e</dd></div>
-          <div><dt>Amostras no período</dt><dd>{summary.count.toLocaleString("pt-BR")}</dd></div>
+          <div><dt>Leituras registradas</dt><dd>{summary.count.toLocaleString("pt-BR")}</dd></div>
           <div><dt>Aplicações com coletas</dt><dd>{data.serviceCount} / {services.length}</dd></div>
-          <div><dt>Cobertura de emissões</dt><dd>{coverage === null ? "—" : formatNumber(coverage) + "%"}<small>{summary.emissionCount} de {summary.count} amostras</small></dd></div>
-          <div><dt>Primeira amostra</dt><dd>{stamp(data.first)}</dd></div>
-          <div><dt>Última amostra</dt><dd>{stamp(data.last)}</dd></div>
+          <div><dt>Leituras com cálculo de CO₂</dt><dd>{coverage === null ? "—" : formatNumber(coverage) + "%"}<small>{summary.emissionCount} de {summary.count} leituras</small></dd></div>
+          <div><dt>Primeira leitura</dt><dd>{stamp(data.first)}</dd></div>
+          <div><dt>Última leitura</dt><dd>{stamp(data.last)}</dd></div>
         </dl>
-        <p>O intervalo observado pode ser menor que o período escolhido. Recarregar a página reinicia este histórico.</p>
-        <p>As estimativas usam os recursos e a duração das amostras. Intervalos sem coletas não são preenchidos. Valores menores, isoladamente, não comprovam maior eficiência.</p>
-        <p>Na resolução de 30 segundos, aplicações com horários próximos são agrupadas e atrasos de até 15 segundos são tolerados antes de marcar uma lacuna. A seção Lacunas distingue ausência de registros de estimativas incompletas e mostra o contexto observado nesta sessão.</p>
+        <p>O banco pode conter menos dados que o período escolhido. Recarregar a página consulta novamente os registros persistidos.</p>
+        <p>As estimativas usam os recursos e a duração das leituras. Intervalos sem coletas não são preenchidos. Valores menores, isoladamente, não comprovam maior eficiência.</p>
+        <p>Na resolução de 30 segundos, aplicações com horários próximos são agrupadas e atrasos de até 15 segundos são tolerados antes de marcar uma lacuna. A seção Dados incompletos distingue ausência de registros de estimativas incompletas e mostra os diagnósticos registrados pelo coletor.</p>
       </section>}
     </div>
   </section>;

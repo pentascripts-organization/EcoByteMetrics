@@ -1,10 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { login, loginErrorMessage, loginLocation, parseSession, safeReturnPath } from "../src/features/auth/api.ts";
+import { login, loginErrorMessage, loginLocation, parseSession, registerAccount, registrationErrorMessage, safeReturnPath, validateRegistration } from "../src/features/auth/api.ts";
 import { createAuthStore } from "../src/features/auth/session.ts";
 import { RequestError } from "../src/shared/lib/http.ts";
 
 const credentials = { email: " Review@Example.invalid ", password: " Password with spaces " };
+const registration = { ...credentials, name: " Review User " };
+const createdAccount = { id_user: 1, name_user: "Review User", email_user: "review@example.invalid" };
 const response = (exp = Math.floor(Date.now() / 1000) + 3600) => ({
   tokenType: "Bearer", expiresIn: "1h",
   token: "eyJhbGciOiJIUzI1NiJ9." + Buffer.from(JSON.stringify({ email: "review@example.invalid", sub: "1", exp })).toString("base64url") + ".fixture",
@@ -166,4 +168,116 @@ test("retorno do login preserva filtros e recusa redirecionamento externo", () =
   assert.equal(new URL(loginLocation(next, true), "https://local.invalid").searchParams.get("retorno"), next);
   for (const value of ["https://external.invalid/dashboard", "//external.invalid/dashboard", "\\\\external.invalid/dashboard", "javascript:alert(1)", "/login", "/dashboard/../login"])
     assert.equal(safeReturnPath(value), "/dashboard?aba=administracao");
+});
+
+test("cadastro envia nome e e-mail normalizados, preserva a senha e recebe somente dados públicos", async t => {
+  t.mock.method(globalThis, "fetch", async (url: string, options: RequestInit) => {
+    assert.equal(url, "/backend/api/users");
+    assert.equal(options.method, "POST");
+    assert.equal(options.cache, "no-store");
+    assert.equal(new Headers(options.headers).get("Content-Type"), "application/json");
+    assert.deepEqual(JSON.parse(String(options.body)), {
+      name_user: "Review User", email_user: "review@example.invalid", password_user: registration.password,
+    });
+    return Response.json(createdAccount, { status: 201 });
+  });
+  assert.deepEqual(await registerAccount(registration, new AbortController().signal), {
+    id: 1, name: "Review User", email: "review@example.invalid",
+  });
+});
+
+test("validação do cadastro respeita nome, e-mail, caracteres Unicode e o limite de bytes da senha", () => {
+  assert.deepEqual(validateRegistration(registration), {});
+  assert.deepEqual(validateRegistration({ ...registration, name: "á".repeat(50), password: "😀".repeat(18) }), {});
+  assert(validateRegistration({ ...registration, name: "á".repeat(51) }).name);
+  for (const email of ["", "invalid", "a".repeat(243) + "@example.com"]) assert(validateRegistration({ ...registration, email }).email);
+  for (const password of ["short", " ".repeat(10), "a".repeat(73), "😀".repeat(19)]) assert(validateRegistration({ ...registration, password }).password);
+  assert(validateRegistration({ ...registration, password: "😀".repeat(7) }).password);
+});
+
+test("dados inválidos destacam os campos do cadastro sem enviar uma consulta", async t => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => { calls++; throw new Error("Unexpected request"); });
+  const store = createAuthStore();
+  t.after(store.dispose);
+  assert.equal(await store.signUp({ name: " ", email: "invalid", password: "short" }), false);
+  assert.deepEqual(Object.keys(store.getSnapshot().fieldErrors).sort(), ["email", "name", "password"]);
+  assert.equal(store.getSnapshot().pending, false);
+  assert.equal(calls, 0);
+});
+
+test("cadastro bloqueia envios duplicados e confirma a conta sem abrir sessão ou guardar a senha", async t => {
+  const store = createAuthStore();
+  t.after(store.dispose);
+  let resolve!: (value: Response) => void;
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", () => { calls++; return new Promise<Response>(done => { resolve = done; }); });
+  const first = store.signUp(registration);
+  assert.equal(store.getSnapshot().pending, true);
+  assert.equal(await store.signUp(registration), false);
+  assert.equal(await store.signIn(credentials), false);
+  assert.equal(calls, 1);
+  resolve(Response.json(createdAccount, { status: 201 }));
+  assert.equal(await first, true);
+  assert.equal(store.getSnapshot().session, null);
+  assert.equal(store.getSnapshot().pending, false);
+  assert.equal(store.getSnapshot().notice, "registered");
+  assert.equal(store.getSnapshot().registeredEmail, "review@example.invalid");
+  assert(!JSON.stringify(store.getSnapshot()).includes(registration.password));
+  t.mock.method(globalThis, "fetch", async () => Response.json(response()));
+  assert.equal(await store.signIn(credentials), true);
+  assert.equal(store.getSnapshot().notice, null);
+  assert.equal(store.getSnapshot().registeredEmail, null);
+});
+
+test("cadastro distingue e-mail duplicado e indisponibilidade sem expor detalhes do backend", async t => {
+  const store = createAuthStore();
+  t.after(store.dispose);
+  t.mock.method(globalThis, "fetch", async () => Response.json({ erro: "SQL password_user" }, { status: 409 }));
+  assert.equal(await store.signUp(registration), false);
+  assert.match(store.getSnapshot().fieldErrors.email!, /Já existe/);
+  assert.equal(store.getSnapshot().fieldErrors.password, undefined);
+  t.mock.method(globalThis, "fetch", async () => Response.json({ erro: "SQL password_user" }, { status: 500 }));
+  assert.equal(await store.signUp(registration), false);
+  assert.deepEqual(store.getSnapshot().fieldErrors, {});
+  assert.match(store.getSnapshot().error!, /indisponível/);
+  assert.doesNotMatch(store.getSnapshot().error!, /SQL|password_user/);
+  assert.equal(store.getSnapshot().notice, null);
+  for (const kind of ["network", "timeout", "format"] as const) assert.match(registrationErrorMessage(new RequestError(kind, "SQL")), /tente entrar antes/);
+  assert.match(registrationErrorMessage(new RequestError("http", "SQL", 400)), /Confira/);
+  assert.match(registrationErrorMessage(new RequestError("http", "SQL", 429)), /Aguarde/);
+});
+
+test("sair do cadastro cancela a consulta e ignora uma confirmação tardia", async t => {
+  for (const action of ["cancelLogin", "logout", "dispose"] as const) {
+    const store = createAuthStore();
+    let resolve!: (value: Response) => void;
+    let signal: AbortSignal | undefined;
+    t.mock.method(globalThis, "fetch", (_url: string, options: RequestInit) => {
+      signal = options.signal as AbortSignal;
+      return new Promise<Response>(done => { resolve = done; });
+    });
+    const pending = store.signUp(registration);
+    store[action]();
+    assert.equal(signal!.aborted, true);
+    resolve(Response.json(createdAccount, { status: 201 }));
+    assert.equal(await pending, false);
+    assert.equal(store.getSnapshot().notice, null);
+    assert.equal(store.getSnapshot().registeredEmail, null);
+    assert.equal(store.getSnapshot().pending, false);
+  }
+});
+
+test("resposta incompleta do cadastro não confirma a conta nem dispara outro POST automaticamente", async t => {
+  for (const body of [null, {}, { ...createdAccount, id_user: -1 }, { ...createdAccount, email_user: "other@example.invalid" }]) {
+    const store = createAuthStore();
+    let calls = 0;
+    t.mock.method(globalThis, "fetch", async () => { calls++; return Response.json(body, { status: 201 }); });
+    assert.equal(await store.signUp(registration), false);
+    assert.equal(store.getSnapshot().notice, null);
+    assert.equal(store.getSnapshot().session, null);
+    assert.match(store.getSnapshot().error!, /Não foi possível confirmar/);
+    assert.equal(calls, 1);
+    store.dispose();
+  }
 });

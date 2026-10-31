@@ -30,6 +30,7 @@
 .login-input:has(input[aria-invalid='true']) { border-color: #a94735; }
 .login-input > button { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0; margin-right: -11px; color: #879380; background: transparent; }
 .login-field-help { margin-top: 7px; font-size: 11px; color: var(--login-muted); }
+.login-field-error { margin-top: 7px; font-size: 12px; line-height: 1.5; color: #823a2b; overflow-wrap: anywhere; }
 .login-error, .login-notice { padding: 11px 13px; border: 1px solid #ecd4ce; border-radius: 8px; background: #fff7f4; color: #823a2b; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; margin-top: 18px; }
 .login-notice { background: #f3f8f2; border-color: #dce6db; color: #355646; }
 .login-submit:disabled { opacity: .65; }

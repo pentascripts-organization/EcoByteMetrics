@@ -10,6 +10,7 @@ import { isPeriod } from "@/shared/lib/period";
 import { DiscoveryError } from "@/features/monitoring/api/discoveryError";
 import { mergeMonitoringSnapshot, markStaleServices, isMonitoringPath, REFRESH_INTERVAL_MS } from "../domain/snapshot";
 import { appendCollectionEvents, createCollectionPauseTracker } from "../domain/collectionEvents";
+import { parseLocalDate } from "@/shared/lib/localDate";
 
 export function MonitoringProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
@@ -30,6 +31,10 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
   const queryPeriod = new URLSearchParams(search).get("periodo");
   const period = isPeriod(queryPeriod) ? queryPeriod : selectedPeriod;
   const monitoringActive = isMonitoringPath(pathname);
+  const filterParams = new URLSearchParams(search);
+  const dateFilter = filterParams.get("ate");
+  const untilTimestamp = dateFilter ? parseLocalDate(dateFilter) : Date.parse(filterParams.get("instante") ?? "");
+  const until = Number.isFinite(untilTimestamp) ? new Date(untilTimestamp).toISOString() : undefined;
 
   const refresh = useCallback(async () => {
     if (pending.current) return null;
@@ -41,7 +46,7 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
     try {
       const { getMonitoringSnapshot } = await import("@/features/monitoring/api/monitoring");
       controller.signal.throwIfAborted();
-      const next = await getMonitoringSnapshot(controller.signal);
+      const next = await getMonitoringSnapshot(controller.signal, { period, until });
       if (controller.signal.aborted) return null;
       const observedAt = new Date().toISOString();
       setLiveSnapshot(previous => mergeMonitoringSnapshot(previous, next, observedAt, requestedAt));
@@ -55,10 +60,10 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
           regions: discovery?.regions ?? previous.regions,
           warning: discovery ? discovery.catalogWarning : previous.warning,
           services: markStaleServices(previous.services),
-          collectionEvents: appendCollectionEvents(previous.collectionEvents, [{ from: requestedAt, to: failedAt, kind: "request-failed" }]),
+          collectionEvents: previous.source === "database" ? previous.collectionEvents : appendCollectionEvents(previous.collectionEvents, [{ from: requestedAt, to: failedAt, kind: "request-failed" }]),
         }));
         setError(
-          "Não foi possível consultar o agregador pelo backend. Os últimos dados recebidos foram preservados. Verifique a conexão e tente atualizar novamente. " +
+          "Não foi possível consultar o histórico no banco pelo backend. Os últimos dados recebidos foram preservados. Verifique a conexão e tente atualizar novamente. " +
             (cause instanceof Error ? cause.message : ""),
         );
       }
@@ -69,12 +74,12 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [period, until]);
 
   useEffect(() => {
     const updateIfVisible = () => {
       const events = trackPause.current(!monitoringActive ? "monitoring-inactive" : document.hidden ? "tab-hidden" : null, new Date().toISOString());
-      if (events.length) setLiveSnapshot(previous => ({ ...previous, collectionEvents: appendCollectionEvents(previous.collectionEvents, events) }));
+      if (events.length) setLiveSnapshot(previous => previous.source === "database" ? previous : ({ ...previous, collectionEvents: appendCollectionEvents(previous.collectionEvents, events) }));
       if (monitoringActive && !document.hidden) void refresh();
     };
     const initial = window.setTimeout(updateIfVisible, 0);

@@ -1,5 +1,5 @@
-import { authenticatedRequest, login, loginErrorMessage } from "./api.ts";
-import type { AuthSession, Credentials } from "./api.ts";
+import { authenticatedRequest, login, loginErrorMessage, registerAccount, registrationErrorMessage, validateRegistration } from "./api.ts";
+import type { AuthSession, Credentials, Registration, RegistrationErrors } from "./api.ts";
 import { RequestError } from "../../shared/lib/http.ts";
 
 export interface AuthState {
@@ -7,11 +7,14 @@ export interface AuthState {
   pending: boolean;
   error: string | null;
   invalidCredentials: boolean;
-  notice: "expired" | null;
+  notice: "expired" | "registered" | null;
+  registeredEmail: string | null;
+  fieldErrors: RegistrationErrors;
 }
 
 export function createAuthStore() {
-  const initial: AuthState = { session: null, pending: false, error: null, invalidCredentials: false, notice: null };
+  const initial: AuthState = { session: null, pending: false, error: null, invalidCredentials: false, notice: null,
+    registeredEmail: null, fieldErrors: {} };
   let state = initial;
   let pending: AbortController | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -55,9 +58,35 @@ export function createAuthStore() {
         if (pending === controller) pending = null;
       }
     },
+    async signUp(input: Registration): Promise<boolean> {
+      if (pending || state.session) return false;
+      const fieldErrors = validateRegistration(input);
+      if (Object.keys(fieldErrors).length) {
+        update({ ...initial, error: "Confira os campos indicados para criar sua conta.", fieldErrors });
+        return false;
+      }
+      const controller = new AbortController();
+      pending = controller;
+      update({ ...initial, pending: true });
+      try {
+        const account = await registerAccount(input, controller.signal);
+        if (pending !== controller || controller.signal.aborted) return false;
+        update({ ...initial, notice: "registered", registeredEmail: account.email });
+        return true;
+      } catch (error) {
+        if (pending === controller && !controller.signal.aborted) {
+          const message = registrationErrorMessage(error);
+          update({ ...initial, error: message,
+            fieldErrors: error instanceof RequestError && error.status === 409 ? { email: message } : {} });
+        }
+        return false;
+      } finally {
+        if (pending === controller) pending = null;
+      }
+    },
     cancelLogin() {
       pending?.abort(); pending = null;
-      if (state.pending || state.error) update({ ...state, pending: false, error: null, invalidCredentials: false });
+      if (state.pending || state.error) update({ ...state, pending: false, error: null, invalidCredentials: false, fieldErrors: {} });
     },
     logout: () => clear(),
     dispose: () => clear(),

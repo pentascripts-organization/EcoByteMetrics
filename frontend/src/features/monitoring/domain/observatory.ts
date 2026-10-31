@@ -20,7 +20,8 @@ export function impactLocations(services: MonitoredService[], history: Collectio
   if (lens === "status") return groupServiceLocations(services).map(group => ({
     ...group, value: null, size: group.count > 1 ? 27 : 17, missingImpact: false, valueLabel: "",
   }));
-  const values = new Map(applicationImpacts(services, history, lens).map(entry => [entry.service.id, entry.value]));
+  const values = new Map(applicationImpacts(services, history, lens).map(entry => [entry.service.id,
+    lens === "emissions" && entry.summary.emissionCount < entry.summary.count ? null : entry.value]));
   const groups = groupServiceLocations(services).map(group => {
     const entries = group.services.map(service => values.get(service.id) ?? null);
     const value = entries.some(entry => entry === null) ? null : entries.reduce<number>((sum, entry) => sum + entry!, 0);
@@ -38,7 +39,8 @@ export function impactLocations(services: MonitoredService[], history: Collectio
 export function impactInsight(services: MonitoredService[], history: CollectionPoint[], metric: DashboardMetric, impacts?: ReturnType<typeof applicationImpacts>) {
   if (services.length < 2) return null;
   const ranked = impacts ?? applicationImpacts(services, history, metric);
-  if (ranked.some(entry => entry.value === null || !Number.isFinite(entry.value))) return null;
+  if (ranked.some(entry => entry.value === null || !Number.isFinite(entry.value) ||
+    metric === "emissions" && entry.summary.emissionCount < entry.summary.count)) return null;
   const total = ranked.reduce((sum, entry) => sum + entry.value!, 0);
   if (!(total > 0)) return null;
   const first = ranked[0]!;

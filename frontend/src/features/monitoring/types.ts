@@ -53,9 +53,17 @@ export interface CollectionPoint {
   energyKwh: number;
   emissionsG: number | null;
   intervalSeconds?: number;
+  sampleCount?: number;
+  emissionCount?: number;
+  bucketSeconds?: number;
+  firstCollectedAt?: string;
 }
 
 export interface MonitoringSnapshot {
+  source?: "database";
+  historyPeriod?: "24h" | "7d";
+  historyUntil?: string;
+  selectedAt?: string | null;
   refreshedAt?: string;
   observations?: MonitoringObservation[];
   collectionEvents?: CollectionEvent[];
@@ -79,6 +87,7 @@ export interface CollectionEvent {
 
 export interface MonitoringObservation {
   observedAt: string;
+  collectionCount?: number;
   services: MonitoredService[];
   samples: CollectionPoint[];
   warning?: string;

@@ -25,7 +25,7 @@ export function RechartsEvolutionChart({ data, metric, mode, intervalMs, helpId 
       {data.filter(point => point.missing).map(point => <ReferenceArea key={point.timestamp} x1={point.from! + intervalMs / 2} x2={point.to! - intervalMs / 2} fill="#b78328" fillOpacity={.1} strokeOpacity={0} />)}
       <Tooltip isAnimationActive={false} filterNull={false}
         cursor={mode === "intervals" ? { fill: color, fillOpacity: .05 } : { stroke: color, strokeOpacity: .3, strokeDasharray: "4 4" }}
-        content={props => <EvolutionTooltip {...props} seriesLabel={seriesLabel} unit={unit} />} />
+        content={props => <EvolutionTooltip {...props} seriesLabel={seriesLabel} unit={unit} mode={mode} />} />
       {mode === "intervals"
         ? <Bar dataKey="value" name={seriesLabel} fill={color} fillOpacity={.85} radius={[4, 4, 0, 0]} isAnimationActive={false} activeBar={{ fill: color, fillOpacity: 1 }} />
         : <Line dataKey="value" name={seriesLabel} stroke="none" connectNulls={false} dot={{ r: 4, fill: color, stroke: "#fff", strokeWidth: 1.5 }} activeDot={{ r: 6, fill: color, stroke: "#fff", strokeWidth: 2 }} isAnimationActive={false} />}
@@ -39,16 +39,18 @@ function chartTicks(data: EvolutionChartPoint[]) {
   return [...new Set(Array.from({ length: count }, (_, index) => timestamps[Math.round(index * (timestamps.length - 1) / Math.max(1, count - 1))]!))];
 }
 
-export function EvolutionTooltip({ active, payload, seriesLabel, unit }: Pick<TooltipContentProps, "active" | "payload"> & { seriesLabel: string; unit: string }) {
+export function EvolutionTooltip({ active, payload, seriesLabel, unit, mode = "intervals" }: Pick<TooltipContentProps, "active" | "payload"> & { seriesLabel: string; unit: string; mode?: EvolutionMode }) {
   const point = payload[0]?.payload as EvolutionChartPoint | undefined;
   if (!active || !point) return null;
   const stamp = (timestamp: number) => new Date(timestamp).toLocaleString("pt-BR");
   const contexts = [...new Set(point.events?.map(event => collectionEventLabels[event.kind]) ?? [])];
   return <div className="evolution-tooltip" role="status">
-    <strong>{point.missing ? "Trecho sem registros" : stamp(point.timestamp)}</strong>
+    <strong>{point.missing ? "Trecho sem registros" : mode === "cumulative" ? "Acumulado no período" : "Total do intervalo"}</strong>
+    {!point.missing && <small>{point.from !== undefined && point.to !== undefined ? stamp(point.from) + " → " + stamp(point.to) : stamp(point.timestamp)}</small>}
     {point.missing && <small>{stamp(point.from!)} → {stamp(point.to!)}</small>}
     {point.value === null ? <p>{point.reason ?? "Estimativa indisponível para esta amostra."}</p> : <p>{seriesLabel}: <b>{formatNumber(point.value)} {unit}</b></p>}
-    {contexts.length > 0 && <><small>Contexto registrado pela interface</small>{contexts.map(text => <p key={text}>{text}</p>)}</>}
-    {point.missing && <small>Mais informações na seção Lacunas.</small>}
+    {point.value !== null && point.reason && <p>{point.reason}</p>}
+    {contexts.length > 0 && <><small>Informação registrada durante a coleta</small>{contexts.map(text => <p key={text}>{text}</p>)}</>}
+    {point.missing && <small>Mais informações em Dados incompletos.</small>}
   </div>;
 }

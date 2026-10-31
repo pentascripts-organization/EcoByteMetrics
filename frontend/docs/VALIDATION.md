@@ -102,9 +102,20 @@ Também foi feita uma tentativa com credenciais fictícias pelo proxy do Vite at
 
 Para a validação com banco, iniciar PostgreSQL com o esquema e ambiente corretos da versão escolhida do backend, disponibilizar uma conta de teste com senha armazenada como hash e conferir no navegador: entrada válida/incorreta, retorno à administração, expiração, Sair, acesso sem token e falha/recuperação da conexão. A branch de persistência revisada em 28/10 ainda precisa preservar a proteção das rotas e o hash de senha existentes na develop antes de ser usada nessa integração.
 
-## Retomar com o backend e o banco disponíveis
+## Cadastro conectado ao PostgreSQL — 30/10/2026
 
-- **Histórico:** acordar o contrato de consulta por aplicações e intervalo, fuso, paginação/agregação, unidades, cobertura e amostras incompletas. Substituir o histórico de sessão pelo persistido, sem duplicar cálculos ou consultas.
-- **Login:** validar o frontend já conectado com uma conta real e conferir token ausente/inválido/expirado nas operações protegidas. Integrar cadastro em uma etapa própria. A proteção real das operações deve estar no backend.
-- **Configurações:** confirmar quais operações existem e quais exigem autenticação. Implementar apenas ações reais com respostas e erros verificáveis.
-- **Integração final:** executar descoberta, remoção, retorno, falhas, fatores de carbono, histórico e comparação junto ao backend atualizado. Depois preparar o merge com `develop`.
+O formulário de cadastro foi habilitado e conectado a `POST /backend/api/users`. O estado compartilhado bloqueia envios duplicados, valida os campos, cancela requisições ao sair e ignora respostas tardias. Cadastro confirmado volta ao login com e-mail preenchido e mensagem de sucesso, mantendo o destino seguro e sem iniciar sessão automaticamente. Senha não é armazenada no estado compartilhado nem persistida no navegador.
+
+Uma verificação com o código real de autenticação do frontend utilizou o proxy do Vite, o backend local na porta 3001 e PostgreSQL 18. Foram aprovados criação de conta, hash armazenado, e-mail duplicado, senha incorreta, login, perfil próprio e saída. A renderização do login confirmou mensagem, e-mail preenchido, senha ausente e filtros preservados. A conta temporária foi removida ao terminar. Isso valida o transporte, o estado e a renderização; não substitui a revisão visual e de interação no navegador, indisponível nesta sessão.
+
+## Histórico persistido — 30/10/2026
+
+A fonte do monitoramento passou a ser `GET /backend/api/monitoring`, com período e corte temporal. A API lê PostgreSQL; a interface substitui a resposta anterior, sem acumular amostras observadas no navegador. A linha do tempo usa rodadas gravadas, e pausas do navegador não são apresentadas como causas de lacunas no coletor.
+
+O servidor coleta e grava numa única rodada de 30 segundos, publicando o cache após commit. Os testes verificam preservação de UTC na migração, corte temporal, identificação externa, remoção/retorno, emissões desconhecidas, zero real, agregação com contagens e ausência de publicação após rollback. A migração e o contrato estão em `backend/docs/HISTORY.md`. A revisão visual e de interação no navegador continua pendente.
+
+## Pendências de integração
+
+- Revisar navegação, filtros e linha do tempo no navegador, inclusive mobile e acessibilidade.
+- Conectar somente as operações de configuração que tiverem endpoints e autorização definidos no backend.
+- Executar a revisão final para integração com `develop`; nenhuma publicação ou merge é realizado automaticamente por esta etapa.

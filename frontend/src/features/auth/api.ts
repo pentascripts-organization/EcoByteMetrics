@@ -1,6 +1,8 @@
 import { requestJson, RequestError } from "../../shared/lib/http.ts";
 
 export interface Credentials { email: string; password: string }
+export interface Registration extends Credentials { name: string }
+export type RegistrationErrors = Partial<Record<keyof Registration, string>>;
 export interface AuthSession { token: string; email: string; expiresAt: number }
 
 const backend = (import.meta.env?.VITE_BACKEND_URL ?? "/backend").replace(/\/+$/, "");
@@ -26,6 +28,42 @@ export async function login(credentials: Credentials, signal: AbortSignal): Prom
     body: JSON.stringify({ email: credentials.email.trim().toLowerCase(), password: credentials.password }), signal,
   });
   return parseSession(result);
+}
+
+export function validateRegistration(input: Registration): RegistrationErrors {
+  const errors: RegistrationErrors = {};
+  const name = input.name.trim();
+  const email = input.email.trim();
+  if (!name || Array.from(name).length > 50) errors.name = "Informe seu nome com até 50 caracteres.";
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Informe um e-mail válido com até 254 caracteres.";
+  if (!input.password.trim() || Array.from(input.password).length < 8) errors.password = "Use pelo menos 8 caracteres na senha.";
+  else if (new TextEncoder().encode(input.password).length > 72) errors.password = "A senha ultrapassa o limite de 72 bytes. Use uma senha mais curta.";
+  return errors;
+}
+
+export async function registerAccount(input: Registration, signal: AbortSignal): Promise<{ id: number; name: string; email: string }> {
+  const email = input.email.trim().toLowerCase();
+  const result = await requestJson(backend + "/api/users", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name_user: input.name.trim(), email_user: email, password_user: input.password }), signal,
+  });
+  if (!result || typeof result !== "object" || !("id_user" in result) ||
+    typeof result.id_user !== "number" || !Number.isSafeInteger(result.id_user) || result.id_user <= 0 ||
+    !("name_user" in result) || typeof result.name_user !== "string" || !result.name_user.trim() ||
+    !("email_user" in result) || result.email_user !== email)
+    throw new RequestError("format", "Não foi possível confirmar o cadastro.");
+  return { id: result.id_user, name: result.name_user, email };
+}
+
+export function registrationErrorMessage(error: unknown): string {
+  if (error instanceof RequestError) {
+    if (error.status === 409) return "Já existe uma conta com esse e-mail. Entre ou use outro e-mail.";
+    if (error.status === 400) return "Confira o nome, o e-mail e os requisitos da senha.";
+    if (error.status === 429) return "Muitas tentativas de cadastro. Aguarde um pouco antes de tentar novamente.";
+    if (error.kind === "network" || error.kind === "timeout" || error.kind === "format")
+      return "Não foi possível confirmar a criação da conta. Verifique a conexão. Se já enviou os dados, tente entrar antes de cadastrar novamente.";
+  }
+  return "O serviço de cadastro está indisponível no momento. Tente novamente mais tarde.";
 }
 
 export function loginErrorMessage(error: unknown): string {

@@ -1,6 +1,11 @@
 
 import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import pool from "../src/db/connection";
+import { fetchCarbonRegions } from "../src/integrations/carbon-api";
+import { WorkerCarbons } from "../src/modules/Worker/worker.carbon.service";
+import { WorkerService } from "../src/modules/Worker/worker.metric.service";
+import { ServiceAPISevice } from "../src/integrations/services-api";
 
 import type {
     AggregatorService,
@@ -18,11 +23,8 @@ import {
     refreshServiceMetrics,
     resetMetricsFetcher,
     setMetricsFetcherForTesting,
-    resetCarbonRegionsFetcher,
-    resetPersistence,
     setCarbonRegionsFetcherForTesting,
-    setPersistenceForTesting,
-} from "../src/modules/services/services.service.js";
+} from "../src/modules/Services/services.service.js";
 
 const billingService: AggregatorService = {
     id: "billing-api",
@@ -83,15 +85,13 @@ const checkoutMetrics: ServiceMetrics = {
 };
 
 beforeEach(() => {
-    setPersistenceForTesting(async () => {}, async () => {});
     setCarbonRegionsFetcherForTesting(async () => []);
 });
 
 afterEach(() => {
     resetServicesFetcher();
     resetMetricsFetcher();
-    resetCarbonRegionsFetcher();
-    resetPersistence();
+    setCarbonRegionsFetcherForTesting(fetchCarbonRegions);
 });
 
 describe("Serviço de descoberta de serviços", () => {
@@ -145,34 +145,33 @@ describe("Serviço de descoberta de serviços", () => {
 });
 
 describe("Serviço de coleta de métricas", () => {
-    it("persiste a amostra com o fator de carbono da região", async () => {
-        let persistedSample: {
-            serviceId: string;
-            metrics: ServiceMetrics;
-            carbonIntensity: number | null;
-        } | undefined;
-
-        setServicesFetcherForTesting(async () => [billingService]);
-        await refreshDiscoveredServices();
-        setMetricsFetcherForTesting(async () => billingMetrics);
-        setCarbonRegionsFetcherForTesting(async () => [{
-            code: "SA-SP",
-            carbonIntensity: 85,
-        }]);
-        setPersistenceForTesting(
-            async () => {},
-            async (serviceId, metrics, carbonIntensity) => {
-                persistedSample = { serviceId, metrics, carbonIntensity };
+    it("o worker grava a amostra e o fator de carbono vinculados à mesma localização", async t => {
+        const inserts: { sql: string; values: unknown[] }[] = [];
+        t.mock.method(pool, "query", async (sql: string, values: unknown[]) => {
+            if (/SELECT \* FROM locations/i.test(sql)) return { rows: [{ id_location: 10 }] };
+            if (/SELECT \* FROM services/i.test(sql)) return { rows: [{ id_service: 20, id_location: 10 }] };
+            if (/INSERT INTO (carbons|Metrics)/i.test(sql)) {
+                inserts.push({ sql, values });
+                return { rows: [{ id_location: 10, id_service: 20 }] };
             }
-        );
-
-        await refreshServiceMetrics();
-
-        assert.deepEqual(persistedSample, {
-            serviceId: "billing-api",
-            metrics: billingMetrics,
-            carbonIntensity: 85,
+            if (/UPDATE services/i.test(sql)) return { rows: [] };
+            throw new Error("Consulta inesperada no teste de persistência");
         });
+        const serviceAPI = new ServiceAPISevice();
+        t.mock.method(serviceAPI, "getMetricRegionDetails", async () => billingMetrics);
+        await new WorkerCarbons().listarCarbons([{
+            code: "SA-SP", country: "Brasil", region: "São Paulo", city: "São Paulo",
+            latitude: -23.55, longitude: -46.63,
+            carbon_intensity_gco2e_per_kwh: 85, renewable_share_percent: 70,
+        }]);
+        await new WorkerService().listarServices([billingService], serviceAPI);
+        const carbon = inserts.find(insert => /carbons/i.test(insert.sql))!;
+        const metric = inserts.find(insert => /Metrics/i.test(insert.sql))!;
+        assert.deepEqual(carbon.values.slice(0, 3), [10, 85, 70]);
+        assert.deepEqual(metric.values.slice(0, 5), [20, 45, 2.5, 10, 0.4]);
+        assert.equal(metric.values[6], 30);
+        assert.match(carbon.values[3] as string, /^\d{4}-\d{2}-\d{2}T.*Z$/);
+        assert.match(metric.values[5] as string, /^\d{4}-\d{2}-\d{2}T.*Z$/);
     });
 
     it("armazena as métricas após uma consulta bem-sucedida", async () => {
