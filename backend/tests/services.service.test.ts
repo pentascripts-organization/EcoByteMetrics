@@ -41,6 +41,7 @@ const checkoutService: AggregatorService = {
         region_code: "SA-SP",
         country: "Brasil",
         region: "São Paulo",
+        region: "São Paulo",
         city: "São Paulo",
         latitude: -23.55,
         longitude: -46.63,
@@ -49,15 +50,30 @@ const checkoutService: AggregatorService = {
 };
 const billingMetrics: ServiceMetrics = {
     collection_interval_seconds: 30,
-    metrics: { cpu_percent: 45, memory_gb: 2.5, disk_gb: 10, network_gb: 0.4 },
+    metrics: {
+        cpu_percent: 45,
+        memory_gb: 2.5,
+        disk_gb: 10,
+        network_gb: 0.4,
+    },
 };
 const updatedBillingMetrics: ServiceMetrics = {
     collection_interval_seconds: 30,
-    metrics: { cpu_percent: 60, memory_gb: 3, disk_gb: 12, network_gb: 0.6 },
+    metrics: {
+        cpu_percent: 60,
+        memory_gb: 3,
+        disk_gb: 12,
+        network_gb: 0.6,
+    },
 };
 const checkoutMetrics: ServiceMetrics = {
     collection_interval_seconds: 30,
-    metrics: { cpu_percent: 25, memory_gb: 1.5, disk_gb: 8, network_gb: 0.2 },
+    metrics: {
+        cpu_percent: 25,
+        memory_gb: 1.5,
+        disk_gb: 8,
+        network_gb: 0.2,
+    },
 };
 
 beforeEach(() => {
