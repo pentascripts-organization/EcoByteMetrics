@@ -1,11 +1,23 @@
 const regular = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 });
 const small = new Intl.NumberFormat("pt-BR", { maximumSignificantDigits: 4 });
+const compact = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
 export function formatNumber(value: number | null) {
   if (value === null || !Number.isFinite(value)) return "—";
   return (
     Math.abs(value) > 0 && Math.abs(value) < 0.01 ? small : regular
   ).format(value);
+}
+
+export function emissionScale(grams: number | null) {
+  return grams !== null && Number.isFinite(grams) && Math.abs(grams) >= 100
+    ? { divisor: 1000, unit: "kg CO₂e" } : { divisor: 1, unit: "g CO₂e" };
+}
+
+export function formatEmissions(grams: number | null, divisor = emissionScale(grams).divisor) {
+  if (grams === null || !Number.isFinite(grams)) return "—";
+  const value = grams / divisor;
+  return divisor === 1000 && Math.abs(value) >= .01 ? compact.format(value) : formatNumber(value);
 }
 
 export function formatRecordedPeriod(first: number | null, last: number | null) {

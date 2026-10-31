@@ -49,7 +49,7 @@ Para medir o tamanho do build, execute `npm run measure:build`. O relatório dis
 | --- | --- |
 | `/` | Landing page com quatro vídeos, seções explicativas e acesso ao dashboard |
 | `/dashboard` | Lista, filtros, estados, globo, resumo e evolução das amostras |
-| `/dashboard?servico=ID` | Resumo, recursos e evolução da aplicação; globo permanece à esquerda no desktop |
+| `/dashboard?servico=ID` | Resumo e recursos da última coleta; totais por período na Evolução; globo permanece à esquerda no desktop |
 | `/comparar` | Seleção de duas ou mais aplicações, tabela com o mesmo intervalo e cobertura por aplicação |
 | `/login` | Formulário conectado ao backend, sessão em memória, retorno seguro e tratamento de erros |
 | `/cadastro` | Criação de conta pela API, validação e retorno ao login com confirmação e e-mail preenchido |
@@ -59,11 +59,13 @@ Para medir o tamanho do build, execute `npm run measure:build`. O relatório dis
 | `/energia`, `/emissoes` | Redirecionam à evolução com a métrica correspondente |
 | Outras | Página 404 |
 
-Busca, estado, país, região, cidade, período e data são mantidos na URL. A navegação entre monitoramento e comparação preserva esses filtros e as seleções de comparação. Os estados do serviço são os da consulta atual, ou da observação selecionada explicitamente na linha do tempo; escolher uma data limite de amostras não reconstrói estados passados do servidor.
+Busca, estado, país, região, cidade, período e data são mantidos na URL. A navegação entre monitoramento e comparação preserva esses filtros e as seleções de comparação. O backend reconstrói o catálogo e os estados até o corte escolhido. Datas futuras são rejeitadas. Quando a aplicação aberta fica fora dos filtros, a interface informa isso e oferece limpar os filtros ou voltar à lista.
 
 ## Dados, cálculos e limites
 
 O adaptador `src/features/monitoring/api/monitoring.ts` consulta `GET /backend/api/monitoring?period=24h|7d`, com `until` ISO opcional para revisão de coletas. A resposta vem do PostgreSQL, incluindo catálogo, recursos da última coleta, fatores capturados, histórico, cobertura e diagnósticos do coletor. A interface não consulta diretamente as APIs externas nem monta o histórico a partir das visitas ao navegador.
+
+A visão geral e o resumo individual mostram a última leitura disponível de cada aplicação. Evolução e Comparar apresentam os totais do período; o seletor de período aparece somente nessas análises.
 
 O backend coleta e grava a cada 30 segundos, mesmo com o navegador fechado, enquanto estiver ativo. Recarregar a página consulta novamente os dados gravados. Selecionar período ou data consulta o banco novamente; a interface não mostra uma resposta de outro recorte como se fosse o resultado novo. Em falha de rede, a última resposta permanece em memória, sem gerar amostras adicionais.
 

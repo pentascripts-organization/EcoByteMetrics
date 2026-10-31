@@ -3,7 +3,7 @@ import { RotateCw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { collectionRange, summarizeCollections } from "../domain/history";
-import { formatNumber } from "@/shared/lib/format";
+import { emissionScale, formatEmissions, formatNumber } from "@/shared/lib/format";
 import { createRefreshAnimation } from "../domain/refreshAnimation";
 
 export function MonitoringSummary({ services, history, loading, onRefresh, comparison = false, latest = false, context }: {
@@ -29,7 +29,7 @@ export function MonitoringSummary({ services, history, loading, onRefresh, compa
   const formatDate = (value: string | number) => new Date(value).toLocaleString("pt-BR");
   return <section className="monitoring-summary" aria-label="Totais da seleção">
     <div className="monitoring-visible-totals">
-      <div><span>{latest ? "CO₂e das últimas coletas" : "CO₂e calculado na seleção"}</span><strong>{formatNumber(totals.emissionsG)} <small>g CO₂e</small></strong></div>
+      <div><span>{latest ? "CO₂e das últimas coletas" : "CO₂e calculado na seleção"}</span><strong>{formatEmissions(totals.emissionsG)} <small>{emissionScale(totals.emissionsG).unit}</small></strong></div>
       <div><span>{latest ? "Energia das últimas coletas" : "Energia estimada na seleção"}</span><strong>{formatNumber(totals.energyKwh)} <small>kWh</small></strong></div>
       <span className="monitoring-total-scope">Totais das {services.length} aplicações {comparison ? "marcadas para comparação." : "filtradas, incluindo todas as páginas da lista."}</span>
     </div>

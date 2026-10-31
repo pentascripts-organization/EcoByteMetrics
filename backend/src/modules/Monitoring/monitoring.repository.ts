@@ -59,16 +59,17 @@ export async function readMonitoring(query: HistoryQuery) {
       const stale = sample && end.getTime() - row.collected_at.getTime() > Math.max(90_000, interval! * 3000);
       const removed = cycle ? !active.has(row.external_id) : !row.active_service;
       const failed = cycle?.errors?.[row.external_id];
+      const missingMetrics = failed === "metrics_missing" || failed === "invalid_metrics";
       return {
         id: row.external_id, name: active.get(row.external_id)?.name ?? row.name_service,
         ...place, regionCode: place.region_code,
-        status: removed ? "removed" : failed ? "unavailable" : !sample ? "no-metrics" : stale ? "stale" : "available",
+        status: removed ? "removed" : missingMetrics ? "no-metrics" : failed ? "unavailable" : !sample ? "no-metrics" : stale ? "stale" : "available",
         cpuPercent: sample ? Number(sample.cpu_metric) : null, memoryGb: sample ? Number(sample.ram_metric) : null,
         diskGb: sample ? Number(sample.hd_metric) : null, networkGb: sample ? Number(sample.network_metric) : null,
         energyKwh: row.energy, emissionsG: factor === null || row.energy === null ? null : row.energy * factor,
         carbonIntensity: factor, renewablePercent: sample?.renewable_percent == null ? null : Number(sample.renewable_percent),
         collectionIntervalSeconds: interval, lastCollectionAt: iso(row.collected_at),
-        ...(failed ? { statusMessage: "Não foi possível obter métricas nesta rodada. Exibindo a última coleta gravada, quando disponível." }
+        ...(failed ? { statusMessage: (missingMetrics ? "A aplicação está listada, mas não forneceu métricas válidas nesta rodada. " : "Não foi possível consultar as métricas nesta rodada. ") + "Exibindo a última coleta gravada, quando disponível." }
           : stale ? { statusMessage: "A última coleta gravada está desatualizada." } : {}),
       };
     });
@@ -94,7 +95,11 @@ export async function readMonitoring(query: HistoryQuery) {
     ];
     return { source: "database", services, regions, history, historyPeriod: query.period, historyUntil: end.toISOString(), selectedAt: query.until ?? null, bucketSeconds,
       observations: instants.rows.map(row => ({ observedAt: iso(row.at), collectionCount: row.collection_count, services: [], samples: [] })),
-      collectionEvents: failures.rows.map(row => ({from: iso(row.collected_at), to: new Date(row.collected_at.getTime() + 30_000).toISOString(), kind: "service-unavailable", serviceIds: Object.keys(row.errors)})),
+      collectionEvents: failures.rows.flatMap(row => ["metrics-missing", "service-unavailable"].flatMap(kind => {
+        const serviceIds = Object.entries(row.errors).filter(([, code]) =>
+          (code === "metrics_missing" || code === "invalid_metrics") === (kind === "metrics-missing")).map(([id]) => id);
+        return serviceIds.length ? [{from: iso(row.collected_at), to: new Date(Math.min(row.collected_at.getTime() + 30_000, end.getTime())).toISOString(), kind, serviceIds}] : [];
+      })),
       discoveryUpdatedAt: iso(cycle?.collected_at ?? null), discoveryComplete: true,
       lastCollectionAt: iso(serviceRows.rows.reduce<Date | null>((last, row) => row.collected_at && (!last || row.collected_at > last) ? row.collected_at : last, null)),
       totalEnergyKwh: history.length ? history.reduce((sum, point) => sum + point.energyKwh, 0) : null,

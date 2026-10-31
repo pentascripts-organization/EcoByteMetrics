@@ -81,7 +81,7 @@ export interface MonitoringSnapshot {
 export interface CollectionEvent {
   from: string;
   to: string;
-  kind: "tab-hidden" | "monitoring-inactive" | "request-failed" | "no-new-samples" | "service-unavailable";
+  kind: "tab-hidden" | "monitoring-inactive" | "request-failed" | "no-new-samples" | "service-unavailable" | "metrics-missing";
   serviceIds?: string[];
 }
 

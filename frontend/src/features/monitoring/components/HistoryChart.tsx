@@ -4,7 +4,7 @@ import type { DashboardMetric } from "../domain/dashboard";
 import type { EvolutionPoint, EvolutionMode } from "../domain/evolution";
 import { evolutionChartData } from "../domain/chartData";
 import type { EvolutionChartPoint } from "../domain/chartData";
-import { formatNumber } from "@/shared/lib/format";
+import { emissionScale, formatEmissions, formatNumber } from "@/shared/lib/format";
 
 const RechartsEvolutionChart = lazy(() => import("./RechartsEvolutionChart").then(module => ({ default: module.RechartsEvolutionChart })));
 
@@ -14,7 +14,8 @@ export function HistoryChart({ points, chartData, metric, mode, intervalMs, load
 }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const data = useMemo(() => chartData ?? evolutionChartData(points, intervalMs), [points, intervalMs, chartData]);
-  const unit = metric === "energy" ? "kWh" : "g CO₂e";
+  const scale = emissionScale(points.reduce((max, point) => Math.max(max, point.value ?? 0), 0));
+  const unit = metric === "energy" ? "kWh" : scale.unit;
   const seriesLabel = metric === "energy" ? "Energia estimada" : "Emissões estimadas";
   const readingLabel = mode === "cumulative"
     ? metric === "energy" ? "Energia acumulada no período" : "CO₂e acumulado no período"
@@ -30,7 +31,7 @@ export function HistoryChart({ points, chartData, metric, mode, intervalMs, load
   const fullTime = (timestamp: number) => new Date(timestamp).toLocaleString("pt-BR");
   return <figure className="evolution-chart" aria-labelledby={id + "-caption"}>
     <figcaption id={id + "-caption"} className="evolution-chart-reading">
-      <div><span>{readingLabel}</span><strong style={{ color }}>{formatNumber(latest.value)} <small>{unit}</small></strong></div>
+      <div><span>{readingLabel}</span><strong style={{ color }}>{metric === "energy" ? formatNumber(latest.value) : formatEmissions(latest.value, scale.divisor)} <small>{unit}</small></strong></div>
       <time dateTime={new Date(latest.to ?? latest.timestamp).toISOString()}>Até {fullTime(latest.to ?? latest.timestamp)}</time>
     </figcaption>
     <div className="evolution-recharts" data-engine="recharts" data-chart-mode={mode} role="group" aria-label={seriesLabel + " ao longo do tempo"} aria-describedby={id + "-help"}>

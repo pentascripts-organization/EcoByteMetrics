@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowUpRight, ChevronLeft, ChevronRight, Clock3, ListFilter, Search, X } from "lucide-react";
 import { FiltersDialog } from "../components/FiltersDialog";
 import { InfoTooltip } from "@/shared/ui/InfoTooltip";
+import { localDateTimeMax } from "@/shared/lib/localDate";
 import { clearMonitoringFilters } from "../domain/analysis";
 import { SortSelect } from "../components/SortSelect";
 import { useSearchParams } from "react-router-dom";
@@ -21,7 +22,7 @@ import { useMonitoring } from "../hooks/useMonitoring";
 import { useAnalysis } from "../hooks/useAnalysis";
 import { applicationImpacts, serviceLocationPeers, statusColors } from "../domain/dashboard";
 import type { DashboardMetric } from "../domain/dashboard";
-import { collectionRange, latestCollections, summarizeCollections } from "../domain/history";
+import { collectionRange, latestCollections } from "../domain/history";
 import { serviceStatusLabels } from "../types";
 import type { MonitoredService } from "../types";
 import { formatDataPeriod, formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
@@ -32,7 +33,7 @@ import { AdministrationAccess } from "@/features/auth/AdministrationAccess";
 const stamp = (value?: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "Ainda não realizada";
 
 function ServiceStatus({ service }: { service: MonitoredService }) {
-  return <span className="monitoring-status"><i style={{ background: statusColors[service.status] }} />{serviceStatusLabels[service.status]}</span>;
+  return <span className="monitoring-status" title={service.statusMessage}><i style={{ background: statusColors[service.status] }} />{serviceStatusLabels[service.status]}</span>;
 }
 
 export function DashboardPage() {
@@ -55,7 +56,9 @@ export function DashboardPage() {
   const previousSelection = useRef("");
   const restoringListFocus = useRef(false);
   const selectedId = params.get("servico") ?? "";
-  const selected = analysis.environmentServices.find(service => service.id === selectedId);
+  const selectedCandidate = analysis.environmentServices.find(service => service.id === selectedId);
+  const selected = analysis.services.find(service => service.id === selectedId);
+  const selectedOutsideFilters = Boolean(selectedCandidate && !selected);
   const search = params.get("busca") ?? "";
   const status = params.get("estado") ?? "";
   const metric: DashboardMetric = params.get("ordem") === "energy" ? "energy" : "emissions";
@@ -63,6 +66,7 @@ export function DashboardPage() {
   const tab = params.get("aba") === "administracao" ? "administracao" : params.get("aba") === "comparar" ? "comparar" : params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
   const administration = !selectedId && tab === "administracao";
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
+  const historicalView = selectedId ? detailTab === "evolucao" : tab === "evolucao" || tab === "comparar";
   const evolutionMode = params.get("serie") === "intervalos" ? "intervals" : "cumulative";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || params.has("periodo"));
   const update = useCallback((values: Record<string, string>, replace = false) => {
@@ -86,7 +90,6 @@ export function DashboardPage() {
   const focusServiceId = focusedServiceId || hoveredServiceId;
   const highlightedIds = focusServiceId ? [focusServiceId] : mapHighlightedIds;
   const selectedHistory = useMemo(() => analysis.history.filter(point => point.serviceId === selectedId), [analysis.history, selectedId]);
-  const selectedSummary = useMemo(() => summarizeCollections(selectedHistory), [selectedHistory]);
   const selectedRange = useMemo(() => collectionRange(selectedHistory), [selectedHistory]);
   const comparedIds = params.getAll("app");
   const summaryServices = tab === "comparar" ? services.filter(service => comparedIds.includes(service.id)) : services;
@@ -122,7 +125,7 @@ export function DashboardPage() {
     <TopographicSides key="topography" />
     {selectedId ? <div className="monitoring-heading detail-heading">
       <div className="monitoring-detail-toolbar"><button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>{filterButton}</div>
-      <h1 ref={heading} tabIndex={-1}>{selected?.name ?? "Aplicação não encontrada"}</h1>
+      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
       {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
     </div> : <div className="monitoring-heading">
       <div><h1>Monitoramento</h1></div>
@@ -135,16 +138,16 @@ export function DashboardPage() {
       <label>País<select value={params.get("pais") ?? ""} onChange={event => update({ pais: event.target.value, cidade: "", regiao: "" })}><option value="">Todos os países</option>{countries.map(country => <option key={country}>{country}</option>)}</select></label>
       <label>Região<select value={params.get("regiao") ?? ""} onChange={event => update({ regiao: event.target.value, cidade: "" })}><option value="">Todas as regiões</option>{regionOptions.map(service => <option key={service.regionCode} value={service.regionCode}>{[service.city, service.region].filter(Boolean).join(" · ") || service.regionCode}</option>)}</select></label>
       <label>Situação da aplicação<select value={status} onChange={event => update({ estado: event.target.value })}><option value="">Todas as situações</option>{Object.entries(serviceStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label>Período<select value={period} onChange={event => update({ periodo: event.target.value })}><option value="24h">Até 24 horas</option><option value="7d">Até 7 dias</option></select></label>
-      <label>Consultar o passado até<input aria-label="Consultar o passado até" type="datetime-local" value={analysis.invalidDate ? "" : analysis.date} onChange={event => update({ ate: event.target.value })} /></label>
+      {historicalView && <label>Período<select value={period} onChange={event => update({ periodo: event.target.value })}><option value="24h">Até 24 horas</option><option value="7d">Até 7 dias</option></select></label>}
+      <label>Consultar o passado até<input aria-label="Consultar o passado até" type="datetime-local" max={localDateTimeMax()} value={analysis.invalidDate ? "" : analysis.date} onChange={event => update({ ate: event.target.value })} /></label>
       <button className="monitoring-text-button" onClick={clearFilters}><X size={16} />Limpar filtros</button>
       <div className="monitoring-filter-history"><h3>Escolher um horário anterior</h3><ObservationTimeline observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} onExplore={!selectedId && tab === "evolucao" ? () => { update({ aba: mobile ? "mapa" : "" }); setFiltersOpen(false); } : undefined} /></div>
     </div><p className="monitoring-filter-note">Limpar filtros mantém o período escolhido.</p></FiltersDialog>}
     {!administration && <>
-    {analysis.invalidDate && <p className="monitoring-notice" role="alert">A data na URL é inválida. <button onClick={() => update({ ate: "" })}>Voltar para agora</button></p>}
+    {analysis.invalidDate && <p className="monitoring-notice" role="alert">Escolha uma data válida até o momento atual. <button onClick={goLive}>Voltar para agora</button></p>}
     {analysis.observationMissing && <p className="monitoring-notice" role="alert">Este instante não está disponível no histórico consultado. <button onClick={goLive}>Voltar para agora</button></p>}
     {error && <div className="monitoring-notice" role="alert"><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button><details><summary>Detalhes da conexão</summary><p>{error}</p></details></div>}
-    {selectedId && dataContext}
+    {selectedId && historicalView && dataContext}
     {analysis.observedAt && <div className="monitoring-past-banner" role="status"><Clock3 size={18} aria-hidden="true" /><span>Você está consultando o passado: <strong>{stamp(analysis.observedAt)}</strong></span><button type="button" onClick={goLive}>Voltar para agora</button></div>}
     {snapshot.warning && <details className="monitoring-notice"><summary>Parte dos dados não pôde ser atualizada</summary>
       <p>{snapshot.warning}</p>
@@ -160,12 +163,12 @@ export function DashboardPage() {
           <RegionMap key="world" services={mapServices} selectedServiceId={selected?.id} onSelectService={openService} history={selected ? analysis.history : history} lens={lens} highlightedServiceIds={highlightedIds} focusServiceId={selected ? undefined : focusServiceId} onHighlightServices={setMapHighlightedIds} />
         </section>
         {selected ? <section className="monitoring-service-summary">
-          {detailTab === "resumo" ? <><h2>Impacto estimado no período</h2><p className="monitoring-explanation">{analysis.periodLabel} · totais das leituras disponíveis.<br />{formatRecordedPeriod(selectedRange.first, selectedRange.last)}. Emissões disponíveis em {selectedSummary.emissionCount} de {selectedSummary.count} leituras.</p><dl className="monitoring-facts">
-            <div><dt>Energia total no período</dt><dd>{formatNumber(selectedSummary.energyKwh)} <small>kWh</small></dd></div>
-            <div><dt>CO₂e calculado no período</dt><dd>{formatNumber(selectedSummary.emissionsG)} <small>g CO₂e</small></dd></div>
+          {detailTab === "resumo" ? <><h2>Impacto estimado na última coleta</h2><dl className="monitoring-facts">
+            <div><dt>Energia na última coleta</dt><dd>{formatNumber(selected.energyKwh)} <small>kWh</small></dd></div>
+            <div><dt>CO₂e na última coleta</dt><dd>{formatNumber(selected.emissionsG)} <small>g CO₂e</small></dd></div>
             <div><dt>Última coleta válida</dt><dd className="fact-text">{stamp(selected.lastCollectionAt)}</dd></div>
             <div><dt>Intensidade de carbono da última coleta</dt><dd className="fact-text">{formatNumber(selected.carbonIntensity ?? null)} g CO₂e/kWh</dd></div>
-          </dl>{selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}</> : detailTab === "recursos" ? <section className="monitoring-resources"><div className="monitoring-section-heading"><h2>Recursos da última coleta</h2><span>{stamp(selected.lastCollectionAt)}</span></div>
+          </dl><button className="monitoring-text-button" onClick={() => update({ detalhe: "evolucao" })}>Ver totais e histórico</button>{selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}</> : detailTab === "recursos" ? <section className="monitoring-resources"><div className="monitoring-section-heading"><h2>Recursos da última coleta</h2><span>{stamp(selected.lastCollectionAt)}</span></div>
           <dl className="monitoring-resource-list">{[
             ["CPU", selected.cpuPercent, "%"], ["Memória", selected.memoryGb, "GB"], ["Disco", selected.diskGb, "GB"], ["Rede", selected.networkGb, "GB"], ["Tempo representado pela leitura", selected.collectionIntervalSeconds ?? null, "s"],
           ].map(([label, value, unit]) => <div key={String(label)}><dt>{label}</dt><dd>{formatNumber(value as number | null)} <span>{unit}</span></dd></div>)}</dl>{selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}<p className="monitoring-explanation">Valores ausentes são exibidos como “—”. Métricas antigas preservam o estado de desatualização da aplicação.</p>
@@ -180,7 +183,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty">Esta aplicação não está no ambiente recebido. <button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={loading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
       {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>

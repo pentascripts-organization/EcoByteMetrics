@@ -39,25 +39,28 @@ export function getAnalysis(
   snapshot: MonitoringSnapshot,
   period: Period,
   search: string,
+  now = Date.now(),
 ) {
   const params = new URLSearchParams(search);
+  const date = params.get("ate") ?? "";
+  const instant = params.get("instante") ?? "";
+  const requestedUntil = date ? parseLocalDate(date) : Date.parse(instant);
+  const invalidDate = Boolean((date || instant) && (!Number.isFinite(requestedUntil) || requestedUntil > now));
   const dateCutoff = snapshot.source === "database" ? parseLocalDate(params.get("ate") ?? "") : NaN;
-  const observedAt = params.get("instante") ?? (Number.isFinite(dateCutoff) ? new Date(dateCutoff).toISOString() : "");
+  const observedAt = invalidDate ? "" : instant || (Number.isFinite(dateCutoff) ? new Date(dateCutoff).toISOString() : "");
   const observations = snapshot.observations ?? [];
-  const requestedUntil = params.get("ate") ? parseLocalDate(params.get("ate")!) : Date.parse(observedAt);
   const mismatchedQuery = snapshot.source === "database" && (snapshot.historyPeriod !== period ||
     (Number.isFinite(requestedUntil) ? Date.parse(snapshot.selectedAt ?? "") !== requestedUntil : Boolean(snapshot.selectedAt)));
   const observation = snapshot.source === "database" ? undefined : observations.find(entry => entry.observedAt === observedAt);
   const observationMissing = Boolean(observedAt && (snapshot.source === "database" ? !Number.isFinite(Date.parse(observedAt)) : !observation));
-  const environmentServices = mismatchedQuery ? [] : observation?.services ?? (observationMissing ? [] : snapshot.services);
-  const sourceHistory = mismatchedQuery ? [] : observation ? observationHistory(observations, observedAt) : observationMissing ? [] : snapshot.history;
+  const environmentServices = mismatchedQuery || invalidDate ? [] : observation?.services ?? (observationMissing ? [] : snapshot.services);
+  const sourceHistory = mismatchedQuery || invalidDate ? [] : observation ? observationHistory(observations, observedAt) : observationMissing ? [] : snapshot.history;
   const regionCode = params.get("regiao") ?? "";
   const selectedRegion = snapshot.regions.find(
     (region) => region.code === regionCode,
   );
   const country = selectedRegion?.country ?? params.get("pais") ?? "";
   const city = selectedRegion?.city ?? params.get("cidade") ?? "";
-  const date = params.get("ate") ?? "";
   const regional = Boolean(regionCode || country || city);
   const regionalServices = environmentServices.filter((service) =>
     regionCode
@@ -68,7 +71,6 @@ export function getAnalysis(
   const end = date
     ? parseLocalDate(date)
     : Date.parse((snapshot.source === "database" ? snapshot.historyUntil ?? snapshot.selectedAt : null) ?? observation?.observedAt ?? snapshot.lastCollectionAt ?? "");
-  const invalidDate = Boolean(date && !Number.isFinite(end));
   const serviceIds = new Set(services.map((service) => service.id));
   const days = period === "24h" ? 1 : 7;
   const start = end - days * 86400_000;

@@ -16,3 +16,8 @@ export function parseLocalDate(value: string) {
     ? date.getTime()
     : NaN;
 }
+
+export function localDateTimeMax(now = Date.now()) {
+  const date = new Date(now);
+  return new Date(now - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}

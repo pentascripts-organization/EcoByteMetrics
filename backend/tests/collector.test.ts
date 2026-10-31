@@ -4,6 +4,7 @@ import pool from "../src/db/connection";
 import { collectOnce } from "../src/modules/Monitoring/collector";
 import { getCollectedMetricsByServiceId, getDiscoveredServices, publishCollection } from "../src/modules/Services/services.service";
 import { parseHistoryQuery } from "../src/modules/Monitoring/monitoring.router";
+import { MetricsApiError } from "../src/integrations/metrics-api";
 
 const service = { id: "test-api", name: "Test", metrics_path: "/metrics/test-api", location: {
   region_code: "br-sp", country: "Brasil", region: "SP", city: "São Paulo", latitude: -23.55, longitude: -46.63,
@@ -49,4 +50,25 @@ test("filtros de histórico exigem período permitido, data com fuso e IDs limit
     {period: "24h", until: "2026-10-30T23:00:00-03:00", serviceIds: ["billing-api"]});
   for (const query of [{period: "all"}, {until: "30/10/2026"}, {until: "2026-02-30T12:00:00Z"}, {until: "2026-10-30T23:00:00"}, {service: {}}, {service: Array(101).fill("app")}])
     assert.throws(() => parseHistoryQuery(query));
+  const now = Date.parse("2026-10-31T12:00:00Z");
+  assert.throws(() => parseHistoryQuery({until: "2026-10-31T12:00:01Z"}, now), /momento atual/);
+  assert.equal(parseHistoryQuery({until: "2026-10-31T09:00:00-03:00"}, now).until, "2026-10-31T09:00:00-03:00");
+});
+
+test("coletor grava motivos distintos sem interromper aplicações saudáveis nem criar métricas fictícias", async t => {
+  const apps = ["good", "missing", "invalid", "offline", "network"].map(id => ({...service, id, name: id}));
+  const writes: {sql: string; values?: unknown[]}[] = [];
+  t.mock.method(pool, "connect", async () => ({
+    async query(sql: string, values?: unknown[]) { writes.push({sql,values}); return {rowCount:1,rows:[{id_location:1,id_service:1}]}; }, release() {},
+  }));
+  const result = await collectOnce({services: async () => apps, regions: async () => [], metrics: async id => {
+    if (id === "missing") throw new MetricsApiError("metrics_missing");
+    if (id === "offline") throw new MetricsApiError("service_unavailable");
+    if (id === "network") throw new Error("timeout");
+    return id === "invalid" ? {...sample,metrics:{...sample.metrics,cpu_percent:101}} : sample;
+  }});
+  assert.deepEqual(result.errors,{missing:"metrics_missing",invalid:"invalid_metrics",offline:"service_unavailable",network:"metrics_unavailable"});
+  assert.equal(writes.filter(write => /INSERT INTO metrics\(/.test(write.sql)).length,1);
+  const stored = writes.find(write => /INSERT INTO monitoring_collections/.test(write.sql));
+  assert.deepEqual(JSON.parse(stored!.values![2] as string),result.errors);
 });

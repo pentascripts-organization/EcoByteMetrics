@@ -19,3 +19,11 @@ test("registros em dias diferentes não parecem representar apenas o último dia
 test("seleção sem registros não promete uma semana de dados", () => {
   assert.equal(formatDataPeriod(null, null), "Ainda não há registros nesta seleção");
 });
+
+
+test("limite do campo de passado usa o horário local, sem segundos futuros", async () => {
+  const {localDateTimeMax,parseLocalDate}=await import("../src/shared/lib/localDate.ts");
+  const now=new Date(2026,9,31,15,37,48).getTime();
+  assert.equal(localDateTimeMax(now),"2026-10-31T15:37");
+  assert.ok(parseLocalDate(localDateTimeMax(now))<=now);
+});

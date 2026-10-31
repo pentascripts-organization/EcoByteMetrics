@@ -10,7 +10,7 @@ import { EvolutionGaps } from "./EvolutionGaps";
 import { evolutionChartData } from "../domain/chartData";
 import { EvolutionSamples } from "./EvolutionSamples";
 import { MonitoringTabs } from "./MonitoringTabs";
-import { formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
+import { emissionScale, formatEmissions, formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
 import "../styles/evolution.css";
 
 export function EvolutionPanel({ history, services, collectionEvents, metric, onMetric, period, onPeriod, mode, onMode, compact = false, loading, observedAt, impacts = [], onOpenService }: {
@@ -25,7 +25,7 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
     const ids = new Set(services.map(service => service.id));
     return evolutionChartData(data.points, data.intervalMs, collectionEvents?.filter(event => !event.serviceIds || event.serviceIds.some(id => ids.has(id))));
   }, [data, services, collectionEvents]);
-  const gapCount = chartData.filter(point => point.missing || point.value === null || point.reason).length;
+  const gapCount = chartData.filter(point => point.missing || point.value === null || point.reason || point.events?.length).length;
   const { summary } = data;
   const complete = summary.count > 0 && summary.emissionCount === summary.count;
   const coverage = summary.count ? Math.floor(summary.emissionCount / summary.count * 10_000) / 100 : null;
@@ -33,7 +33,9 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
   const stamp = (timestamp: number | null) => timestamp === null ? "Aguardando coleta" : new Date(timestamp).toLocaleString("pt-BR");
   const total = metric === "energy" ? summary.energyKwh : complete ? summary.emissionsG : null;
   const contributors = impacts.filter(entry => entry.summary.count > 0);
-  const unit = metric === "energy" ? "kWh" : "g CO₂e";
+  const scale = emissionScale(summary.emissionsG);
+  const unit = metric === "energy" ? "kWh" : scale.unit;
+  const chartUnit = metric === "energy" ? "kWh" : emissionScale(data.points.reduce((max, point) => Math.max(max, point.value ?? 0), 0)).unit;
   const [params, setParams] = useSearchParams();
   const panelId = useId();
   const sections = [
@@ -64,27 +66,27 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
 
     <div className="evolution-section" id={panelId} role="tabpanel" aria-label={sections.find(entry => entry.value === section)!.label}>
       {section === "grafico" && <section className="evolution-chart-panel" aria-label="Série de estimativas">
-        <div className="evolution-chart-heading"><span>Agrupado em intervalos de {interval} · {unit}</span><div className="evolution-segmented evolution-mode" role="group" aria-label="Modo do gráfico"><button type="button" aria-pressed={mode === "intervals"} onClick={() => onMode("intervals")}>Ver por intervalo</button><button type="button" aria-pressed={mode === "cumulative"} onClick={() => onMode("cumulative")}>Total acumulado</button></div></div>
+        <div className="evolution-chart-heading"><span>Agrupado em intervalos de {interval} · {chartUnit}</span><div className="evolution-segmented evolution-mode" role="group" aria-label="Modo do gráfico"><button type="button" aria-pressed={mode === "intervals"} onClick={() => onMode("intervals")}>Ver por intervalo</button><button type="button" aria-pressed={mode === "cumulative"} onClick={() => onMode("cumulative")}>Total acumulado</button></div></div>
         <HistoryChart points={data.points} chartData={chartData} metric={metric} mode={mode} intervalMs={data.intervalMs} loading={loading} onEnergy={() => onMetric("energy")} />
-        {gapCount > 0 && <p className="evolution-chart-warning">Existem leituras ausentes ou sem cálculo de carbono. A soma usa os valores disponíveis. As faixas em âmbar indicam períodos sem leituras. Veja Dados incompletos para entender.</p>}
+        {gapCount > 0 && <p className="evolution-chart-warning">Há falhas de coleta, leituras ausentes ou sem cálculo de carbono. A soma usa os valores disponíveis. Veja Dados incompletos para entender.</p>}
       </section>}
 
       {section === "aplicacoes" && <section className="evolution-contributors">
         <div className="evolution-subheading"><h3>Impacto por aplicação</h3><span>{metric === "energy" ? "Energia" : "Emissões"} no período</span></div>
         {contributors.length ? <><ol>{contributors.slice(page * 5, (page + 1) * 5).map(({ service, value, summary: serviceSummary }) => {
           const share = total !== null && total > 0 && value !== null ? value / total * 100 : null;
-          return <li key={service.id}><button onClick={() => onOpenService(service.id)}><span>{service.name}</span><ArrowUpRight size={15} aria-hidden="true" /></button><div><strong>{formatNumber(value)} <small>{unit}</small></strong><span>{share === null ? serviceSummary.emissionCount < serviceSummary.count && metric === "emissions" ? "Incompleto" : "—" : formatNumber(share) + "%"}</span></div></li>;
+          return <li key={service.id}><button onClick={() => onOpenService(service.id)}><span>{service.name}</span><ArrowUpRight size={15} aria-hidden="true" /></button><div><strong>{metric === "energy" ? formatNumber(value) : formatEmissions(value, scale.divisor)} <small>{unit}</small></strong><span>{share === null ? serviceSummary.emissionCount < serviceSummary.count && metric === "emissions" ? "Incompleto" : "—" : formatNumber(share) + "%"}</span></div></li>;
         })}</ol><div className="evolution-pagination"><span aria-live="polite">{page * 5 + 1}–{Math.min((page + 1) * 5, contributors.length)} de {contributors.length} aplicações</span><div><button aria-label="Página anterior de aplicações" disabled={page === 0} onClick={() => setApplicationPage(page - 1)}><ChevronLeft size={18} /></button><button aria-label="Próxima página de aplicações" disabled={page === lastPage} onClick={() => setApplicationPage(page + 1)}><ChevronRight size={18} /></button></div></div></> : <p className="evolution-section-empty">A participação aparecerá quando houver coletas.</p>}
       </section>}
 
       {section === "coletas" && <EvolutionSamples points={data.points} metric={metric} mode={mode} />}
-      {section === "lacunas" && <EvolutionGaps data={chartData} />}
+      {section === "lacunas" && <EvolutionGaps data={chartData} services={services} />}
 
       {section === "detalhes" && <section className="evolution-details">
         <h3>Dados do período</h3>
         <dl className="evolution-details-grid">
           <div><dt>Energia estimada</dt><dd>{formatNumber(summary.energyKwh)} kWh</dd></div>
-          <div><dt>Emissões {complete || !summary.count ? "estimadas" : "parciais"}</dt><dd>{formatNumber(summary.emissionsG)} g CO₂e</dd></div>
+          <div><dt>Emissões {complete || !summary.count ? "estimadas" : "parciais"}</dt><dd>{formatEmissions(summary.emissionsG)} {scale.unit}</dd></div>
           <div><dt>Leituras registradas</dt><dd>{summary.count.toLocaleString("pt-BR")}</dd></div>
           <div><dt>Aplicações com coletas</dt><dd>{data.serviceCount} / {services.length}</dd></div>
           <div><dt>Leituras com cálculo de CO₂</dt><dd>{coverage === null ? "—" : formatNumber(coverage) + "%"}<small>{summary.emissionCount} de {summary.count} leituras</small></dd></div>

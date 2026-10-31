@@ -78,9 +78,9 @@ export async function getMonitoringSnapshot(signal = new AbortController().signa
   if (raw.collectionWarning !== undefined && raw.collectionWarning !== null && typeof raw.collectionWarning !== "string") throw invalid();
   const collectionEvents = Array.isArray(raw.collectionEvents) ? raw.collectionEvents.map(value => {
     const data = object(value);
-    if (data.kind !== "service-unavailable" || !timestamp(data.from) || !timestamp(data.to) ||
+    if (!["service-unavailable", "metrics-missing"].includes(text(data.kind)) || !timestamp(data.from) || !timestamp(data.to) ||
       !Array.isArray(data.serviceIds) || data.serviceIds.some(id => typeof id !== "string")) throw invalid();
-    return { from: data.from, to: data.to, kind: "service-unavailable" as const, serviceIds: data.serviceIds as string[] };
+    return { from: data.from, to: data.to, kind: data.kind as "service-unavailable" | "metrics-missing", serviceIds: data.serviceIds as string[] };
   }) : [];
   return { source: "database", services, history, regions, observations, collectionEvents,
     historyPeriod: raw.historyPeriod as "24h" | "7d", selectedAt: typeof raw.selectedAt === "string" ? raw.selectedAt : null,

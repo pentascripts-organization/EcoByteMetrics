@@ -9,7 +9,7 @@ A interface consulta `GET /api/monitoring`; não consulta mais as APIs externas 
 `GET /api/monitoring?period=7d&until=2026-10-30T23:00:00Z`
 
 - `period`: `24h` ou `7d`; padrão `7d`.
-- `until`: opcional, ISO com fuso, usado como limite superior inclusivo. Horários inválidos recebem 400.
+- `until`: opcional, ISO com fuso, usado como limite superior inclusivo. Horários inválidos ou futuros recebem 400.
 - `service`: identificador externo opcional, repetível até 100 aplicações. O identificador não é o número interno da tabela.
 - A janela começa um período antes do limite superior. O catálogo e os diagnósticos correspondem à última rodada gravada até esse limite.
 - Sem corte, a resposta usa o instante da consulta. UTC é usado no transporte e no banco; a interface formata no fuso do dispositivo.
@@ -21,6 +21,8 @@ Cada ponto de histórico contém `serviceId`, localização capturada, `firstCol
 ## Identidade e dados incompletos
 
 `Services.external_id` mantém a identidade do agregador quando o nome muda. Falha de métricas não remove uma aplicação do catálogo. Ausência em uma descoberta bem-sucedida marca remoção; retorno reativa a aplicação. Falha da descoberta não substitui o catálogo por uma lista vazia.
+
+O coletor preserva o código estruturado de erro da API. `metrics_missing` e `invalid_metrics` geram o estado `no-metrics` e diagnósticos `metrics-missing`; falhas de consulta geram `unavailable` e `service-unavailable`. A última leitura válida é conservada. Registros antigos com motivo genérico continuam genéricos, sem inferir uma causa. Os diagnósticos nunca ultrapassam o corte solicitado e são exibidos também quando outras aplicações continuam coletando.
 
 Cada métrica guarda o fator e a localização recebidos na mesma rodada. Fator ausente é `null`; zero recebido é zero válido. Um catálogo de carbono indisponível não reutiliza silenciosamente um fator antigo para a nova amostra. Agregados parciais informam quantas amostras têm estimativa; gráficos de emissões incompletas não apresentam um total completo inventado.
 

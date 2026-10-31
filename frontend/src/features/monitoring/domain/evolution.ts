@@ -3,7 +3,7 @@ import type { DashboardMetric } from "./dashboard.ts";
 import { mergeCollectionHistory, summarizeCollections } from "./history.ts";
 
 export type EvolutionMode = "intervals" | "cumulative";
-export interface EvolutionPoint { timestamp: number; value: number | null; gap: boolean; reason?: string; from?: number; to?: number }
+export interface EvolutionPoint { timestamp: number; value: number | null; gap: boolean; reason?: string; from?: number; to?: number; intervalFrom?: number; intervalTo?: number }
 
 export function evolutionData(history: CollectionPoint[], metric: DashboardMetric, mode: EvolutionMode) {
   const samples = mergeCollectionHistory([], history).filter(point => Number.isFinite(Date.parse(point.collectedAt)))
@@ -49,7 +49,8 @@ export function evolutionData(history: CollectionPoint[], metric: DashboardMetri
     const value = included > 0 ? mode === "cumulative" ? total : bucket.total : null;
     const gap = previous === null || bucket.first - previous > intervalMs * 1.5;
     previous = bucket.last;
-    return { timestamp: bucket.timestamp, value, gap, from: mode === "cumulative" ? first ?? bucket.first : bucket.first, to: bucket.last, ...(included < available ? {
+    const intervalFrom = intervalMs === 30_000 ? bucket.first : bucket.timestamp;
+    return { timestamp: bucket.timestamp, value, gap, intervalFrom, intervalTo: intervalMs === 30_000 ? bucket.last + 1 : intervalFrom + intervalMs, from: mode === "cumulative" ? first ?? bucket.first : bucket.first, to: bucket.last, ...(included < available ? {
       reason: `Há amostras sem fator de carbono registrado. ${mode === "cumulative" ? "O acumulado" : "O intervalo"} considera ${included} de ${available} amostras; as demais não são tratadas como emissão zero.`,
     } : {}) };
   });

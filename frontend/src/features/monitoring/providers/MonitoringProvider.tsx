@@ -34,9 +34,11 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
   const filterParams = new URLSearchParams(search);
   const dateFilter = filterParams.get("ate");
   const untilTimestamp = dateFilter ? parseLocalDate(dateFilter) : Date.parse(filterParams.get("instante") ?? "");
-  const until = Number.isFinite(untilTimestamp) ? new Date(untilTimestamp).toISOString() : undefined;
+  const invalidCutoff = Boolean((dateFilter || filterParams.get("instante")) && !Number.isFinite(untilTimestamp));
+  const until = Number.isFinite(untilTimestamp) && !invalidCutoff ? new Date(untilTimestamp).toISOString() : undefined;
 
   const refresh = useCallback(async () => {
+    if (invalidCutoff || (until && Date.parse(until) > Date.now())) { setLoading(false); setError(null); return null; }
     if (pending.current) return null;
     const controller = new AbortController();
     const requestedAt = new Date().toISOString();
@@ -74,7 +76,7 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     }
-  }, [period, until]);
+  }, [period, until, invalidCutoff]);
 
   useEffect(() => {
     const updateIfVisible = () => {

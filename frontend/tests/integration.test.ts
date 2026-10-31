@@ -191,13 +191,15 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const analysis=getAnalysis(mixed,"24h","");
       assert.equal(analysis.availableSince,Date.parse(first));
       assert.equal(analysis.availableUntil,Date.parse(at));
-      for(const path of ["/dashboard?servico=a","/dashboard?aba=evolucao"]) {
+      for(const path of ["/dashboard?servico=a&detalhe=evolucao","/dashboard?aba=evolucao"]) {
         const markup=render(path,DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,"");
         assert.ok(markup.includes('Registros de '+new Date(first).toLocaleString('pt-BR')));
       }
       const detail=render("/dashboard?servico=a",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,"");
-      assert.match(detail,/CO₂e calculado no período/);
-      assert.match(detail,/1,25/);
+      assert.match(detail,/CO₂e na última coleta/);
+      assert.match(detail,/0,085/);
+      assert.ok(!detail.includes("1,25"));
+      assert.match(detail,/Ver totais e histórico/);
       assert.match(detail,/Última coleta válida/);
       assert.match(render("/dashboard?aba=evolucao&serie=acumulado",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/CO₂e acumulado no período/);
       assert.match(render("/dashboard?aba=evolucao&serie=intervalos",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/CO₂e no último intervalo/);
@@ -223,6 +225,54 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(past,/Você está consultando o passado/);
       assert.match(past.split('class="monitoring-app-table"')[1]!.split('</table>')[0]!,/0,1 g/);
       assert.ok(!past.includes("0,3 g"));
+    });
+
+    await t.test("resumo individual mantém a última leitura mesmo quando o histórico soma muito mais", () => {
+      const data={...snapshot,services:[{...service,emissionsG:.3}],history:[{serviceId:"a",collectedAt:at,energyKwh:5,emissionsG:96}]};
+      const detail=render("/dashboard?servico=a",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(detail,/Impacto estimado na última coleta/);
+      assert.match(detail,/<dd>0,3 <small>g CO₂e/);
+      assert.ok(!detail.includes("96 <small>g CO₂e"));
+      const evolution=render("/dashboard?servico=a&detalhe=evolucao",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(evolution,/96/);
+    });
+
+    await t.test("filtros respeitam o escopo da tela, bloqueiam futuro e explicam aplicação excluída", () => {
+      const overview=render("/dashboard?painel=historico");
+      assert.ok(!overview.includes("<label>Período<select"));
+      assert.match(render("/dashboard?aba=evolucao&painel=historico"),/<label>Período<select/);
+      assert.match(render("/dashboard?aba=comparar&painel=historico"),/<label>Período<select/);
+      assert.match(overview,/type="datetime-local" max="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"/);
+      const future=new Date(Date.now()+86400_000).toISOString();
+      const invalid=getAnalysis(snapshot,"24h","?instante="+encodeURIComponent(future));
+      assert.equal(invalid.invalidDate,true);
+      assert.equal(invalid.services.length,0);
+      assert.equal(invalid.history.length,0);
+      const futurePage=render("/dashboard?instante="+encodeURIComponent(future));
+      assert.match(futurePage,/Escolha uma data válida até o momento atual/);
+      const data={...snapshot,services:[service,{...service,id:"b",country:"Ireland",city:"Dublin"}]};
+      const excluded=render("/dashboard?servico=a&pais=Ireland",DashboardPage,{snapshot:data});
+      assert.match(excluded,/Esta aplicação está fora dos filtros atuais/);
+      assert.match(excluded,/Limpar filtros/);
+      assert.ok(!excluded.includes("Impacto estimado na última coleta"));
+    });
+
+    await t.test("falha parcial aparece nos diagnósticos com a aplicação e o motivo, mesmo sem lacuna global", () => {
+      const stamp=(seconds:number)=>new Date(Date.parse(at)+seconds*1000).toISOString();
+      const history=[["a",-60],["b",-60],["a",-30],["a",0],["b",0]].map(([id,seconds])=>({serviceId:String(id),collectedAt:stamp(Number(seconds)),energyKwh:.001,emissionsG:.1}));
+      const data={...snapshot,history,collectionEvents:[{from:stamp(-30),to:at,kind:"metrics-missing",serviceIds:["b"]}]};
+      const markup=render("/dashboard?aba=evolucao&painel=lacunas",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(markup,/Falha de coleta em parte do ambiente/);
+      assert.match(markup,/não forneceu métricas válidas/);
+      assert.match(markup,/Aplicações: Audit/);
+      assert.ok(!markup.includes("Nenhum dado incompleto detectado"));
+      const onlyA=render("/dashboard?aba=evolucao&painel=lacunas&busca=Billing",DashboardPage,{snapshot:data});
+      assert.match(onlyA,/Nenhum dado incompleto detectado/);
+    });
+
+    await t.test("contrato preserva diagnóstico de métricas ausentes enviado pelo backend", async child => {
+      child.mock.method(globalThis,"fetch",async()=>Response.json(persisted({collectionEvents:[{from:at,to:at,kind:"metrics-missing",serviceIds:["a"]}]})));
+      assert.equal((await getMonitoringSnapshot()).collectionEvents[0].kind,"metrics-missing");
     });
 
     await t.test("linha do tempo conta rodadas reais e identifica seus pontos agrupados", () => {
@@ -349,7 +399,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     });
 
     await t.test("detalhes mantêm globo à esquerda e conteúdo das três abas à direita", () => {
-      for (const [tab, text] of [["resumo", "Impacto estimado no período"], ["recursos", "Recursos da última coleta"], ["evolucao", "Evolução da aplicação"]]) {
+      for (const [tab, text] of [["resumo", "Impacto estimado na última coleta"], ["recursos", "Recursos da última coleta"], ["evolucao", "Evolução da aplicação"]]) {
         const markup = render("/dashboard?servico=a&detalhe=" + tab).replace(/<!--.*?-->/g, "");
         const panel = markup.indexOf('class="monitoring-service-summary"');
         assert.ok(panel > markup.indexOf('class="monitoring-map"'));
@@ -468,7 +518,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.ok(!markup.includes('class="evolution-chart-panel"'));
       const graph = render("/dashboard?aba=evolucao", DashboardPage, changes);
       assert.ok(!graph.includes('class="evolution-gap-detail"'));
-      assert.match(graph, /faixas em âmbar/);
+      assert.match(graph, /Há falhas de coleta/);
       const noGaps = render("/dashboard?aba=evolucao&painel=lacunas");
       assert.match(noGaps, /Nenhum dado incompleto detectado/);
     });
@@ -482,6 +532,26 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const analysis = getAnalysis(past, "24h", "?instante=" + encodeURIComponent(at));
       assert.equal(analysis.collectionEvents.length, 1);
       assert.equal(analysis.collectionEvents[0].kind, "request-failed");
+    });
+
+    await t.test("acumulado usa kg no resumo, gráfico, tabela e popup, preservando os valores originais", () => {
+      const history=Array.from({length:10},(_,index)=>({serviceId:"a",collectedAt:new Date(Date.parse(at)-(9-index)*300_000).toISOString(),energyKwh:.001,emissionsG:index===0?39.9287:50,bucketSeconds:300}));
+      const original=JSON.stringify(history);
+      const data={...snapshot,services:[service],history};
+      const cumulative=render("/dashboard?aba=evolucao",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(cumulative,/0,49 <small>kg CO₂e/);
+      assert.match(cumulative,/5 minutos · kg CO₂e/);
+      assert.ok(!cumulative.includes("489,9287"));
+      const samples=render("/dashboard?aba=evolucao&painel=coletas",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(samples,/Total acumulado no período \(kg CO₂e\)/);
+      assert.match(samples,/<td[^>]*>0,49<\/td>/);
+      const intervals=render("/dashboard?aba=evolucao&serie=intervalos",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(intervals,/5 minutos · g CO₂e/);
+      const energy=render("/dashboard?aba=evolucao&ordem=energy",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
+      assert.match(energy,/5 minutos · kWh/);
+      const tooltip=renderToString(h(EvolutionTooltip,{active:true,payload:[{payload:{timestamp:Date.parse(at),value:489.9287}}],seriesLabel:"Emissões estimadas",unit:"kg CO₂e",divisor:1000})).replace(/<!--.*?-->/g,"");
+      assert.match(tooltip,/0,49 kg CO₂e/);
+      assert.equal(JSON.stringify(history),original);
     });
 
     await t.test("tooltips distinguem uma lacuna real de estimativa ausente e mantêm zero válido", () => {

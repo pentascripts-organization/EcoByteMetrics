@@ -1,5 +1,5 @@
 import pool from "../../db/connection";
-import { fetchAvailableServices, fetchServiceMetrics } from "../../integrations/metrics-api";
+import { fetchAvailableServices, fetchServiceMetrics, MetricsApiError } from "../../integrations/metrics-api";
 import { CarbonAPISevice } from "../../integrations/carbon-api";
 import { persistCollection, type Collection } from "./collection.repository";
 import { publishCollection } from "../Services/services.service";
@@ -22,9 +22,9 @@ export async function collectOnce(dependencies = {
         const values = [sample.metrics.memory_gb, sample.metrics.disk_gb, sample.metrics.network_gb];
         if (!Number.isFinite(sample.metrics.cpu_percent) || sample.metrics.cpu_percent < 0 || sample.metrics.cpu_percent > 100 ||
           values.some(value => !Number.isFinite(value) || value < 0) ||
-          !Number.isSafeInteger(sample.collection_interval_seconds) || sample.collection_interval_seconds <= 0) throw new Error("Métricas inválidas");
+          !Number.isSafeInteger(sample.collection_interval_seconds) || sample.collection_interval_seconds <= 0) throw new MetricsApiError("invalid_metrics");
         cycle.metrics.set(service.id, sample);
-      } catch { cycle.errors[service.id] = "metrics_unavailable"; }
+      } catch (error) { cycle.errors[service.id] = error instanceof MetricsApiError ? error.code : "metrics_unavailable"; }
     }));
   }
   const client = await pool.connect();

@@ -123,6 +123,37 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
   });
 });
 
+test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos sem ultrapassar o corte histórico", async t => {
+  await isolated(t, async client => {
+    await client.query(readFileSync(new URL("../../../database/DDL.sql", import.meta.url), "utf8"));
+    const location = {region_code:"br-sp",country:"Brasil",region:"SP",city:"São Paulo",latitude:0,longitude:0};
+    const catalog = ["a","b"].map(id => ({id,name:id,metrics_path:"/metrics/"+id,location}));
+    const sample = {collection_interval_seconds:30,metrics:{cpu_percent:10,memory_gb:0,disk_gb:0,network_gb:0}};
+    const make = (at: string): Collection => ({at,catalog,metrics:new Map(catalog.map(app => [app.id,sample])),errors:{},regions:[]});
+    await persistCollection(client,make("2026-10-30T12:00:00Z"));
+    for (const [index,code] of ["metrics_missing","invalid_metrics","service_unavailable","metrics_unavailable"].entries()) {
+      const cycle = make(new Date(Date.parse("2026-10-30T12:00:00Z")+(index+1)*30_000).toISOString());
+      cycle.metrics.delete("b"); cycle.errors.b=code;
+      await persistCollection(client,cycle);
+      const result = await readMonitoring({period:"24h",until:cycle.at,serviceIds:[]});
+      assert.equal(result.services.find(app => app.id === "a")!.status,"available");
+      const b = result.services.find(app => app.id === "b")!;
+      assert.equal(b.status,index<2 ? "no-metrics" : "unavailable");
+      assert.equal(b.lastCollectionAt,"2026-10-30T12:00:00.000Z");
+      const diagnostic = result.collectionEvents.find(event => event.from === cycle.at)!;
+      assert.equal(diagnostic.kind,index<2 ? "metrics-missing" : "service-unavailable");
+      assert.deepEqual(diagnostic.serviceIds,["b"]);
+      assert.equal(diagnostic.to,cycle.at);
+      assert(result.collectionEvents.every(event => event.to <= cycle.at));
+    }
+    const recovered=make("2026-10-30T12:02:30Z");
+    await persistCollection(client,recovered);
+    const result=await readMonitoring({period:"24h",until:recovered.at,serviceIds:[]});
+    assert.equal(result.services.find(app => app.id === "b")!.status,"available");
+    assert.equal(result.collectionEvents.length,4);
+  });
+});
+
 test("recuperação legada usa a região e o último fator anterior sem preencher falhas novas ou usar fatores futuros", async t => {
   await isolated(t, async client => {
     await client.query(readFileSync(new URL("../../../database/DDL.sql", import.meta.url), "utf8"));

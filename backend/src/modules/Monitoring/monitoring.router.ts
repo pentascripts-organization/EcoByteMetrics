@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { readMonitoring, type HistoryQuery } from "./monitoring.repository";
 
-export function parseHistoryQuery(input: Record<string, unknown>): HistoryQuery {
+export function parseHistoryQuery(input: Record<string, unknown>, now = Date.now()): HistoryQuery {
   const period = input.period ?? "7d";
   if (period !== "24h" && period !== "7d") throw new Error("Período inválido. Use 24h ou 7d.");
   const until = input.until;
@@ -11,6 +11,7 @@ export function parseHistoryQuery(input: Record<string, unknown>): HistoryQuery 
     const days = [31, year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     if (!parts || year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1] ||
       hour > 23 || minute > 59 || second > 59 || !Number.isFinite(Date.parse(until as string))) throw new Error("Informe um horário válido com fuso.");
+    if (Date.parse(until as string) > now) throw new Error("Escolha um horário até o momento atual.");
   }
   const serviceIds = input.service === undefined ? [] : Array.isArray(input.service) ? input.service : [input.service];
   if (serviceIds.length > 100 || serviceIds.some(id => typeof id !== "string" || !id || id.length > 255)) throw new Error("Seleção de aplicações inválida.");
