@@ -11,13 +11,15 @@ A interface consulta `GET /api/monitoring`; não consulta mais as APIs externas 
 - `view`: `latest` ou `history` (padrão). `latest` evita as consultas de histórico, rodadas e falhas do período; mantém as mesmas últimas leituras e regiões. Retorna `historyIncluded: false`, listas históricas vazias e totais do período nulos. A interface usa esse modo na visão geral e carrega o histórico ao abrir uma área que precisa dele.
 - `period`: `24h` ou `7d`; padrão `7d`.
 - `until`: opcional, ISO com fuso, usado como limite superior inclusivo. Horários inválidos ou futuros recebem 400.
-- `service`: identificador externo opcional, repetível até 100 aplicações. O identificador não é o número interno da tabela.
+- `service`: identificador externo opcional, repetível até 100 valores, cada um com 1 a 255 caracteres. Duplicados são removidos depois de verificar o limite de 100 valores. O identificador não é o número interno da tabela.
 - A janela começa um período antes do limite superior. O catálogo e os diagnósticos correspondem à última rodada gravada até esse limite.
 - Sem corte, a resposta usa o instante da consulta. UTC é usado no transporte e no banco; a interface formata no fuso do dispositivo.
 
 A resposta inclui `source: "database"`, `services`, `regions`, `history`, `observations` (horários de rodadas gravadas), `collectionEvents`, `historyPeriod`, `historyUntil` e `selectedAt`. Cada posição de `observations` traz `collectionCount`, a quantidade real de rodadas que ela representa. A interface soma essa contagem e informa separadamente quantos pontos agrupados há na barra de revisão. As leituras usam uma transação consistente para não misturar duas rodadas.
 
 Cada ponto de histórico contém `serviceId`, localização capturada, `firstCollectedAt`, `collectedAt`, `energyKwh`, `emissionsG`, `intervalSeconds`, `sampleCount`, `emissionCount` e `bucketSeconds`. O agrupamento é de 30 segundos para até uma hora de dados, 5 minutos para até um dia e 1 hora para períodos maiores. Somas, durações e contagens originais são preservadas. Há um limite explícito de 20.000 pontos agrupados por consulta; excedê-lo retorna 413, sem truncar silenciosamente os totais.
+
+Parâmetros inválidos recebem 400; histórico acima do limite recebe 413; falha na consulta ao banco recebe 503. As validações de data e identificadores ficam em funções separadas no próprio `monitoring.router.ts`, sem alterar o contrato da resposta.
 
 ## Identidade e dados incompletos
 

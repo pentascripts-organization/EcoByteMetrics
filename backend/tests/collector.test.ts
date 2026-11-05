@@ -74,3 +74,24 @@ test("coletor grava motivos distintos sem interromper aplicações saudáveis ne
   const stored = writes.find(write => /INSERT INTO monitoring_collections/.test(write.sql));
   assert.deepEqual(JSON.parse(stored!.values![2] as string),result.errors);
 });
+
+test("datas preservam ano bissexto, limites do calendário, fuso e instante atual", () => {
+  const now = Date.parse("2026-10-31T12:00:00Z");
+  for (const until of ["2024-02-29T12:00:00Z", "2026-04-30T23:59:59.999Z", "2026-10-31T09:00:00-03:00"]) {
+    assert.equal(parseHistoryQuery({until}, now).until, until);
+  }
+  for (const until of [null, 123, "2025-02-29T12:00:00Z", "2026-04-31T12:00:00Z", "0000-01-01T12:00:00Z", "2026-00-01T12:00:00Z", "2026-13-01T12:00:00Z", "2026-10-00T12:00:00Z", "2026-10-30T24:00:00Z", "2026-10-30T12:60:00Z", "2026-10-30T12:00:60Z", "2026-10-30T12:00:00+99:00"]) {
+    assert.throws(() => parseHistoryQuery({until}, now), /horário válido com fuso/);
+  }
+  assert.deepEqual(parseHistoryQuery({}), {period:"7d", until:undefined, serviceIds:[]});
+});
+
+test("aplicações preservam limites e removem duplicados sem aceitar IDs inválidos", () => {
+  const ids = Array.from({length:100}, (_, index) => "app-" + index);
+  assert.deepEqual(parseHistoryQuery({service:ids}).serviceIds, ids);
+  assert.deepEqual(parseHistoryQuery({service:"a".repeat(255)}).serviceIds, ["a".repeat(255)]);
+  assert.deepEqual(parseHistoryQuery({service:["app", "app"]}).serviceIds, ["app"]);
+  for (const service of [null, 1, "", "a".repeat(256), ["app", null], [...ids, "extra"]]) {
+    assert.throws(() => parseHistoryQuery({service}), /Seleção de aplicações inválida/);
+  }
+});

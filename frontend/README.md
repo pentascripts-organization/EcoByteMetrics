@@ -22,7 +22,7 @@ O proxy remove `/backend` antes de encaminhar a consulta. Reinicie o Vite após 
 
 A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Monitoramento e comparação precisam de respostas da API para mostrar aplicações reais; não existe modo de demonstração automático.
 
-A aba Administração exige sessão em desenvolvimento e produção. Uma visita sem sessão vai ao login, preservando o destino e os filtros; a tela de login também oferece o caminho para cadastro. A administração contém a configuração de coleta, sem uma seção separada de Acesso. O intervalo é consultado em `GET /backend/api/monitoring-settings`, protegido por Bearer, usando a mesma constante do coletor. A tela é somente leitura e trata carregamento, falha e nova tentativa. Referências do layout em [ADMINISTRATION-DESIGN.md](src/features/monitoring/ADMINISTRATION-DESIGN.md).
+A aba Administração exige sessão em desenvolvimento e produção. Uma visita sem sessão vai ao login, preservando o destino e os filtros; a tela de login também oferece o caminho para cadastro. O painel permanece vazio por enquanto, mantendo a identificação da conta e a ação Sair. Referências do layout em [ADMINISTRATION-DESIGN.md](src/features/monitoring/ADMINISTRATION-DESIGN.md).
 
 ## Login e sessão
 
