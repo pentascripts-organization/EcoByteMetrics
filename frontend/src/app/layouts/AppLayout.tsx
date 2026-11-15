@@ -8,7 +8,7 @@ import { Brand } from "@/shared/ui/Brand";
 import { AnalysisProvider } from "@/features/monitoring/providers/AnalysisProvider";
 
 export function AppLayout() {
-  const { state, pathname } = useLocation();
+  const { state, pathname, search } = useLocation();
   const navigate = useNavigate();
   const pending = useRef(false);
   const mounted = useRef(true);
@@ -38,7 +38,7 @@ export function AppLayout() {
   };
   const [entry] = useState(() => state?.homeEntry === "crossfade" ? "crossfade" : state?.homeEntry === "fade" ? "fade" : undefined);
   return <AnalysisProvider>
-    <div className="monitoring-shell" data-entry={entry}>
+    <div className="monitoring-shell" data-entry={entry} data-globe-view={new URLSearchParams(search).has("servico") ? "detail" : "overview"}>
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <header className="monitoring-header" onClickCapture={returnHome} onPointerEnter={() => { if (pathname === "/dashboard") void prepareHome().catch(() => {}); }} onFocusCapture={() => { if (pathname === "/dashboard") void prepareHome().catch(() => {}); }}>
         <Brand />

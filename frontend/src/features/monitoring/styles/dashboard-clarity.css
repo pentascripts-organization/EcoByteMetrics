@@ -126,16 +126,16 @@ html:has(.monitoring-filter-dialog[open]) { overflow: hidden; }
 }
 
 /* Filter drawer: distinct sections, quiet controls and a persistent action. */
-.monitoring-filter-dialog { padding: 0; width: min(540px, 100%); background: #f7faf8; box-shadow: -20px 0 60px rgb(8 47 53 / 14%); }
+.monitoring-filter-dialog { padding: 0; width: min(640px, 100%); background: #f7faf8; box-shadow: -20px 0 60px rgb(8 47 53 / 14%); }
 .monitoring-filter-dialog[open] { display: flex; flex-direction: column; animation: filterDrawerEnter 300ms cubic-bezier(.22,1,.36,1); }
 .monitoring-filter-dialog::backdrop { background: rgb(8 47 53 / 32%); backdrop-filter: blur(3px); }
-.monitoring-filter-dialog > header { padding: 28px 28px 24px; background: #fff; border-bottom: 1px solid #dfe9e3; flex-shrink: 0; }
-.filter-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: .12em; font-weight: 700; color: #087e59; margin-bottom: 12px; }
+.monitoring-filter-dialog > header { padding: 22px 28px 18px; background: #fff; border-bottom: 1px solid #dfe9e3; flex-shrink: 0; }
+.filter-eyebrow { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: .12em; font-weight: 700; color: #087e59; margin-bottom: 8px; }
 .monitoring-filter-dialog h2 { font-size: 28px; letter-spacing: -.8px; line-height: 1.2; }
 .monitoring-filter-dialog header button { background: #f1f6f3; border: 1px solid #e0e9e3; border-radius: 50%; }
-.filter-dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 28px 24px; overscroll-behavior: contain; }
+.filter-dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 24px 16px; overscroll-behavior: contain; }
 .monitoring-filter-dialog .monitoring-filters { margin: 0; gap: 14px; padding: 0; }
-.filter-section-title { grid-column: 1 / -1; display: flex; gap: 10px; align-items: flex-start; padding-top: 24px; margin-top: 4px; border-top: 1px solid #e1eae4; }
+.filter-section-title { grid-column: 1 / -1; display: flex; gap: 10px; align-items: flex-start; padding: 0; margin: 0 0 4px; border: 0; }
 .filter-section-title:first-child { border: 0; }
 .filter-section-title > svg { color: #087e59; margin-top: 2px; flex-shrink: 0; }
 .filter-section-title h3 { font-size: 14px; font-weight: 750; margin: 0; }
@@ -152,10 +152,30 @@ html:has(.monitoring-filter-dialog[open]) { overflow: hidden; }
 .filter-history-access strong { font-size: 13px; }
 .filter-history-access p { font-size: 12px; color: #526b78; line-height: 1.6; margin: 6px 0 10px; }
 .filter-history-access a { font-size: 12px; color: #087e59; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.monitoring-filter-dialog > footer { flex-shrink: 0; padding: 18px 28px; border-top: 1px solid #dfe9e3; background: #fff; }
+.monitoring-filter-dialog > footer { display: grid; grid-template-columns: auto 1fr; gap: 20px; flex-shrink: 0; padding: 14px 24px; border-top: 1px solid #dfe9e3; background: #fff; }
 .monitoring-filter-dialog footer button { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; border-radius: 12px; background: #087e59; color: #fff; }
 .monitoring-filter-dialog footer button:hover { background: #066346; }
-.monitoring-filter-note { margin-top: 16px; font-size: 11px; }
+.monitoring-filter-note { margin-top: 10px; font-size: 11px; }
+.monitoring-filter-dialog .monitoring-filters { align-content:start; gap:14px; }
+.filter-group { min-width:0; display:grid; align-content:start; gap:10px; padding:16px; border:1px solid #dde9e1; border-radius:16px; background:#fff; }
+.filter-group-location { grid-column:1 / -1; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.filter-group .filter-section-title { grid-column:1 / -1; }
+.filter-group .filter-select-field { display:flex; flex-direction:column; gap:7px; min-width:0; font-size:12px; font-weight:600; color:#355c53; }
+.filter-group > label { display:flex; flex-direction:column; }
+.monitoring-filter-dialog .filter-group input { height:48px; }
+.monitoring-filter-dialog .filter-full-width { grid-column:auto; }
+.monitoring-filter-dialog .monitoring-filter-history { border-radius:16px; padding:16px; }
+.monitoring-filter-dialog .monitoring-filter-history > h3 { margin-bottom:8px; font-size:13px; }
+.monitoring-filter-dialog .filter-history-access { padding:10px 0 0; }
+.monitoring-filter-dialog .filter-history-access p { margin:4px 0 6px; }
+.monitoring-filter-dialog footer .filter-clear-action { width:auto; padding:10px 4px; background:transparent; color:#087e59; font-size:12px; }
+.monitoring-filter-dialog footer .filter-clear-action:hover { background:#f1f8f4; }
+.monitoring-filter-dialog .observation-timeline { padding:0; margin:0; border:0; }
+.monitoring-filter-dialog .observation-timeline > p { margin:6px 0; font-size:11px; }
+.monitoring-filter-dialog .timeline-heading { gap:8px; }
+@media (max-width:600px) { .monitoring-filter-dialog .monitoring-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } .filter-dialog-body { padding:16px; } .filter-group { padding:12px; } .filter-section-title p { font-size:11px; } }
+@media (max-width:440px) { .monitoring-filter-dialog header p { display:none; } .monitoring-filter-dialog > header { padding:16px 20px; } .monitoring-filter-dialog h2 { font-size:25px; } .filter-eyebrow { margin-bottom:6px; } .filter-dialog-body { padding:14px 16px; } .filter-group { gap:8px; } .filter-group:not(.filter-group-location) { grid-column:1 / -1; } .filter-section-title p { display:none; } }
+@media (max-height:800px) { .monitoring-filter-dialog > header { padding:16px 24px; } .monitoring-filter-dialog header p { margin-top:4px; } .filter-eyebrow { margin-bottom:5px; } .filter-dialog-body { padding-top:14px; padding-bottom:12px; } .filter-group { padding:12px; gap:8px; } .filter-section-title p { display:none; } .monitoring-filter-dialog .monitoring-filters { gap:12px; } .monitoring-filter-dialog > footer { padding-top:10px; padding-bottom:10px; } }
 @keyframes filterDrawerEnter { from { transform: translateX(100%); opacity: .4; } to { transform: none; opacity: 1; } }
 @media (max-width: 400px) { .monitoring-filter-dialog > header { padding: 22px 18px; } .filter-dialog-body { padding: 0 18px 20px; } .monitoring-filter-dialog > footer { padding: 16px 18px; } }
 @media (prefers-reduced-motion: reduce) { .monitoring-filter-dialog[open] { animation: none; } }

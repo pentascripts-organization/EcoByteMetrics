@@ -440,20 +440,20 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.equal(panel(), "");
     });
 
-    await t.test("visão geral e mapa oferecem expansão sem interferir nos detalhes ou abrir um modal inicialmente", () => {
+    await t.test("visão geral e mapa mantêm a cena compartilhada sem abrir um modal inicialmente", async () => {
       for (const route of ["/dashboard", "/dashboard?aba=mapa"]) {
         const markup = render(route);
-        assert.match(markup, /aria-label="Expandir visão do globo"/);
-        assert.match(markup, /class="globe-expand-button"[^>]*aria-expanded="false"/);
+        assert.equal((markup.match(/class="monitoring-map-runtime"/g) ?? []).length, 1);
+        assert.match(markup, /class="monitoring-map globe-anchor"/);
         assert.doesNotMatch(markup, /class="globe-exploration-controls"/);
       }
       assert.doesNotMatch(render("/dashboard?servico=a"), /aria-label="Expandir visão do globo"/);
     });
 
-    await t.test("detalhes mostram impacto antes de recursos e localização, com abas compatíveis", () => {
+    await t.test("detalhes preservam identidade, recursos, localização e impacto, com abas compatíveis", () => {
       for (const tab of ["resumo", "recursos"]) {
         const markup = render("/dashboard?servico=a&detalhe=" + tab).replace(/<!--.*?-->/g, "");
-        assert.ok(markup.indexOf('id="service-impact-title"') < markup.indexOf('id="service-resources-title"'));
+        assert.ok(markup.indexOf('id="service-resources-title"') < markup.indexOf('id="service-impact-title"'));
         assert.ok(markup.indexOf('id="service-resources-title"') < markup.indexOf('id="service-location-title"'));
         assert.match(markup, /Sem coordenadas disponíveis/);
         assert.match(markup, /São Paulo/);
@@ -463,7 +463,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       }
       assert.match(render("/dashboard?servico=a&detalhe=evolucao"), /CO₂e acumulado no período/);
       const located = {...snapshot, services: [{...service, latitude: -23.55, longitude: -46.63}]};
-      assert.match(render("/dashboard?servico=a", DashboardPage, {snapshot: located}), /class="monitoring-map"/);
+      assert.match(render("/dashboard?servico=a", DashboardPage, {snapshot: located}), /class="monitoring-map globe-anchor"/);
       const stale = {...snapshot, services: [{...service, status: "stale", energyKwh: null, emissionsG: null}]};
       const markup = render("/dashboard?servico=a", DashboardPage, {snapshot: stale});
       assert.match(markup, /Leitura preservada/);
@@ -472,6 +472,32 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(render("/dashboard?busca=unknown"), /Nenhuma aplicação nesta seleção/);
       assert.match(render("/dashboard?servico=missing"), /Aplicação não encontrada/);
       assert.match(render("/dashboard", DashboardPage, { error: "Sem conexão" }), /Tentar novamente/);
+    });
+
+    await t.test("CPU circular preserva zero e ausência; histórico mantém um único globo central", () => {
+      const zero = {...snapshot, services:[{...service,cpuPercent:0,latitude:-23.55,longitude:-46.63}]};
+      const overview = render("/dashboard?servico=a",DashboardPage,{snapshot:zero}).replace(/<!--.*?-->/g,"");
+      assert.match(overview, /class="service-cpu-dial" data-missing="false" style="--cpu-sweep:0deg"/);
+      assert.match(overview, />0<small>%/);
+      assert.match(overview, /data-detail-view="overview"/);
+      const history = render("/dashboard?servico=a&detalhe=evolucao",DashboardPage,{snapshot:zero});
+      assert.match(history, /data-detail-view="history"/);
+      assert.match(history, /class="service-history-card"/);
+      assert.equal((history.match(/class="monitoring-map-runtime"/g) ?? []).length,1);
+      assert.doesNotMatch(history, /id="service-impact-title"/);
+      assert.match(history, /service-resources-title/);
+      const missing = {...zero,services:[{...zero.services[0],cpuPercent:null}]};
+      assert.match(render("/dashboard?servico=a",DashboardPage,{snapshot:missing}), /class="service-cpu-dial" data-missing="true"/);
+    });
+
+    await t.test("o renderizador é único em todas as seleções e a expansão continua disponível no mapa independente", async () => {
+      for (const route of ["/dashboard", "/dashboard?servico=a", "/dashboard?servico=a&detalhe=evolucao", "/dashboard?servico=missing", "/dashboard?aba=evolucao"]) {
+        const markup = render(route);
+        assert.equal((markup.match(/class="monitoring-map-runtime"/g) ?? []).length,1);
+      }
+      const { RegionMap } = await vite.ssrLoadModule("/src/features/monitoring/components/map/RegionMap.tsx");
+      const MapPage = () => h(RegionMap,{services:snapshot.services,onSelectService:()=>{}});
+      assert.match(render("/dashboard",MapPage), /class="globe-expand-button"[^>]*aria-expanded="false"/);
     });
 
     await t.test("unidades de leitura preservam escala, precisão e valores ausentes", async () => {

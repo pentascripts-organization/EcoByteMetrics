@@ -217,3 +217,26 @@ test("expanded view centers the same projection, enlarges it and restores the in
     assert.ok(Math.abs(camera.view!.offsetX + original.offset[0]) < 1e-9);
   }
 });
+
+
+test("overview-to-detail movement interpolates scale and center for 750ms and reverses on the same camera", () => {
+  const viewport = {width:1920,height:1080};
+  const overview = getGlobeViewport(viewport,{left:240,top:300,width:560,height:520});
+  const detail = getGlobeViewport(viewport,{left:640,top:150,width:700,height:700});
+  const camera = new PerspectiveCamera();
+  animateGlobeViewport(camera,overview,0,()=>0,()=>{});
+  let pending: ((time:number)=>void) | undefined;
+  const request = (callback:(time:number)=>void) => { pending=callback; return 1; };
+  const step = (time:number) => { const callback=pending; pending=undefined; callback?.(time); };
+  const stop = animateGlobeViewport(camera,detail,750,request,()=>{pending=undefined;});
+  step(0); step(375);
+  assert.ok(camera.fov < overview.fieldOfView && camera.fov > detail.fieldOfView);
+  assert.ok(camera.view!.offsetX < -overview.offset[0] && camera.view!.offsetX > -detail.offset[0]);
+  stop();
+  const intermediate = camera.projectionMatrix.clone();
+  animateGlobeViewport(camera,overview,750,request,()=>{pending=undefined;});
+  assert.deepEqual(camera.projectionMatrix,intermediate);
+  step(400); step(1150);
+  assert.ok(Math.abs(camera.fov-overview.fieldOfView)<1e-9);
+  assert.ok(Math.abs(camera.view!.offsetX+overview.offset[0])<1e-9);
+});

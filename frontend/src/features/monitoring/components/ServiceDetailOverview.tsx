@@ -1,10 +1,10 @@
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Activity, Clock3, Cpu, Gauge, HardDrive, Leaf, MapPin, Wifi, Zap } from "lucide-react";
+import { Activity, Clock3, Cpu, Gauge, HardDrive, Layers3, Leaf, MapPin, Wifi, Zap } from "lucide-react";
 import type { CollectionPoint, MonitoredService } from "../types";
 import type { Period } from "@/shared/lib/period";
 import { formatNumber } from "@/shared/lib/format";
 import { detailReading } from "../domain/detailReading";
-import { RegionMap } from "./map/RegionMap";
 import { ServiceTrendItem } from "./ServiceTrendItem";
 
 export function ServiceReadingMeta({ service, observedAt }: { service: MonitoredService; observedAt?: string | null }) {
@@ -27,7 +27,9 @@ export function ServiceReadingMeta({ service, observedAt }: { service: Monitored
   </div>;
 }
 
-export function ServiceDetailOverview({ service, services, allServices, history, period, onSelectService }: {
+export function ServiceDetailOverview({ service, history, period, header, historyPanel, onMapAnchor, animateEntry = false }: {
+  onMapAnchor?: (element: HTMLDivElement | null) => void; animateEntry?: boolean;
+  header?: ReactNode; historyPanel?: ReactNode;
   service: MonitoredService; services: MonitoredService[]; allServices: MonitoredService[];
   history: CollectionPoint[]; period: Period; onSelectService: (id: string) => void;
 }) {
@@ -35,10 +37,48 @@ export function ServiceDetailOverview({ service, services, allServices, history,
   const carbon = detailReading(service.emissionsG, "carbon");
   const coordinates = Number.isFinite(service.latitude) && Number.isFinite(service.longitude);
   const location = [service.city, service.region, service.country].filter(Boolean).join(" · ") || "Localização não informada";
-  return <div className="service-detail-overview">
+  const cpu = service.cpuPercent != null && Number.isFinite(service.cpuPercent) ? Math.max(0, Math.min(100, service.cpuPercent)) : null;
+  return <div className="service-detail-overview" data-detail-view={historyPanel ? "history" : "overview"} data-detail-entry={animateEntry || undefined}>
+    <div className="service-identity">{header}</div>
+
+    <div className="service-detail-columns">
+      <section className="monitoring-detail-card service-resources" aria-labelledby="service-resources-title">
+        <div className="monitoring-section-heading"><div><h2 id="service-resources-title"><Layers3 size={22} aria-hidden="true" />Recursos da última coleta</h2><p className="monitoring-section-subtitle">Uso de recursos no mesmo intervalo das estimativas.</p></div></div>
+        <div className="service-resource-layout">
+          <dl className="service-cpu-dial" data-missing={cpu === null} style={{"--cpu-sweep": `${(cpu ?? 0) * 3.6}deg`} as CSSProperties}>
+            <div className="service-cpu-value"><dt><Cpu size={24} aria-hidden="true" />CPU</dt>
+              <dd title={service.cpuPercent == null ? "Dado não disponível" : `${service.cpuPercent.toLocaleString("pt-BR")} %`}>{cpu === null ? "—" : service.cpuPercent!.toLocaleString("pt-BR", {maximumFractionDigits:1})}<small>%</small></dd>
+            </div>
+          </dl>
+          <dl className="service-resource-grid">
+            {([ ["Memória", service.memoryGb, "GB", Activity], ["Disco", service.diskGb, "GB", HardDrive], ["Rede", service.networkGb, "GB", Wifi] ] as const).map(([label, value, unit, Icon]) => <div className="service-resource" key={label}>
+              <dt><Icon size={18} aria-hidden="true" />{label}</dt>
+              <dd title={value == null ? "Dado não disponível" : `${value.toLocaleString("pt-BR", {maximumSignificantDigits:15})} ${unit}`}>
+                {value == null ? "—" : value.toLocaleString("pt-BR", {maximumFractionDigits:2})} <small>{unit}</small>
+              </dd>
+            </div>)}
+          </dl>
+        </div>
+        {service.statusMessage && <p className="service-message">{service.statusMessage}</p>}
+        <p className="monitoring-explanation">“—” indica dado ausente. Uma leitura preservada não representa uma nova coleta.</p>
+        {history.length >= 2 && <ServiceTrendItem service={service} metric="emissions" period={period} preloadedHistory={history} isExpanded={false} />}
+      </section>
+      <section className="monitoring-detail-card service-location" aria-labelledby="service-location-title">
+        <div className="monitoring-section-heading"><h2 id="service-location-title"><MapPin size={18} aria-hidden="true" />Localização</h2></div>
+        <p className="service-location-name">{location}</p>
+
+      </section>
+    </div>
+    <section className="service-globe" aria-label="Localização geográfica da aplicação">
+      <div className="service-globe-orbit service-globe-orbit--one" aria-hidden="true" />
+      <div className="service-globe-orbit service-globe-orbit--two" aria-hidden="true" />
+        {coordinates ? <div className="monitoring-map globe-anchor" ref={onMapAnchor}><div className="globe-stage" aria-hidden="true" /></div>
+          : <div className="service-map-unavailable" role="status"><MapPin size={28} aria-hidden="true" /><strong>Sem coordenadas disponíveis</strong><span>A localização informada continua disponível acima.</span></div>}
+    </section>
+    <aside className="service-impact-column">{historyPanel ? <div className="service-history-card">{historyPanel}</div> : <>
     <section className="service-impact" aria-labelledby="service-impact-title">
       <div className="monitoring-section-heading"><div>
-        <h2 id="service-impact-title">Impacto estimado na última coleta</h2>
+        <h2 id="service-impact-title"><Leaf size={22} aria-hidden="true" />Impacto estimado na última coleta</h2>
         <p className="monitoring-section-subtitle">Energia e emissões estimadas para o intervalo da leitura, não totais acumulados.</p>
       </div></div>
       <dl className="service-impact-grid">
@@ -48,29 +88,6 @@ export function ServiceDetailOverview({ service, services, allServices, history,
         <div className="service-kpi"><dt><Clock3 size={18} aria-hidden="true" />Duração da leitura</dt><dd>{formatNumber(service.collectionIntervalSeconds ?? null)} <small>s</small></dd></div>
       </dl>
     </section>
-    <div className="service-detail-columns">
-      <section className="monitoring-detail-card service-resources" aria-labelledby="service-resources-title">
-        <div className="monitoring-section-heading"><div><h2 id="service-resources-title">Recursos da última coleta</h2><p className="monitoring-section-subtitle">Uso de recursos no mesmo intervalo das estimativas.</p></div></div>
-        <dl className="service-resource-grid">
-          {([ ["CPU", service.cpuPercent, "%", Cpu], ["Memória", service.memoryGb, "GB", Activity],
-            ["Disco", service.diskGb, "GB", HardDrive], ["Rede", service.networkGb, "GB", Wifi] ] as const).map(([label, value, unit, Icon]) => <div className="service-resource" key={label}>
-            <dt><Icon size={18} aria-hidden="true" />{label}</dt>
-            <dd title={value == null ? "Dado não disponível" : `${value.toLocaleString("pt-BR", { maximumSignificantDigits: 15 })} ${unit}`} key={String(value)}>
-              {value == null ? "—" : value.toLocaleString("pt-BR", { maximumFractionDigits: label === "CPU" ? 1 : 2 })} <small>{unit}</small>
-            </dd>
-            {label === "CPU" && value != null && <div className="monitoring-resource-meter" aria-hidden="true"><div className="monitoring-resource-meter__fill" style={{width: `${Math.min(100, Math.max(0, value))}%`}} /></div>}
-          </div>)}
-        </dl>
-        {service.statusMessage && <p className="service-message">{service.statusMessage}</p>}
-        <p className="monitoring-explanation">“—” indica dado ausente. Uma leitura preservada não representa uma nova coleta.</p>
-        {history.length >= 2 && <ServiceTrendItem service={service} metric="emissions" period={period} preloadedHistory={history} isExpanded={false} />}
-      </section>
-      <section className="monitoring-detail-card service-location" aria-labelledby="service-location-title">
-        <div className="monitoring-section-heading"><h2 id="service-location-title"><MapPin size={18} aria-hidden="true" />Localização</h2></div>
-        <p className="service-location-name">{location}</p>
-        {coordinates ? <RegionMap inline services={services} allServices={allServices} selectedServiceId={service.id} onSelectService={onSelectService} history={history} rotationPaused />
-          : <div className="service-map-unavailable" role="status"><MapPin size={28} aria-hidden="true" /><strong>Sem coordenadas disponíveis</strong><span>A localização informada continua disponível acima.</span></div>}
-      </section>
-    </div>
+    </>}</aside>
   </div>;
 }

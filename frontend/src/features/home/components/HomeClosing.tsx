@@ -53,7 +53,6 @@ export function HomeClosing() {
           rel="noreferrer"
           title="Acessar repositório no GitHub"
         >
-          <span className="footer-github-label">github:</span>
           <span className="footer-github-pill">
             <GithubIcon size={15} className="github-logo" />
             <span className="footer-github-text">pentascripts-organization/EcoByteMetrics</span>

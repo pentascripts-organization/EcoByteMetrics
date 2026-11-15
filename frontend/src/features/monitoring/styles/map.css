@@ -286,7 +286,7 @@
 /* Exploration animates the original globe and moves surrounding panels out of view. */
 .monitoring-location { position: relative; }
 .monitoring-shell .globe-expand-button {
-  position: absolute; right: 8px; top: -76px; z-index: 5; width: 38px; height: 38px;
+  position: absolute; right: -12px; top: -72px; z-index: 5; width: 38px; height: 38px;
   display: grid; place-items: center; padding: 0; border-radius: 50%; border: 1px solid #b9d9c9;
   background: #fff; color: #087e59; pointer-events: auto;
   box-shadow: 0 2px 8px rgb(8 47 53 / 5%); transition: background 180ms ease, box-shadow 180ms ease;

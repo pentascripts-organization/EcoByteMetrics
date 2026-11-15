@@ -113,3 +113,16 @@ test("abrir e fechar durante a aproximação retorna suavemente sem recriar a c�
   assert.deepEqual(position, { lat: 0, lng: -40, altitude: 1.1 });
   assert.deepEqual(calls.at(-1), { target: { lat: 12, lng: -35, altitude: 1.2 }, duration: 650 });
 });
+
+
+test("selection restores the exact overview orientation and zoom across application changes", () => {
+  const selection = createGlobeSelection();
+  const original = {lat:42,lng:-120,altitude:1.85};
+  assert.equal(selection.update("a",original), null);
+  original.lat = 0;
+  selection.update("b", {lat:-23,lng:-46,altitude:1.35});
+  assert.deepEqual(selection.update(undefined), {lat:42,lng:-120,altitude:1.85});
+  assert.equal(selection.update(undefined), null);
+  selection.update("c", {lat:10,lng:20,altitude:.9});
+  assert.deepEqual(selection.update(undefined), {lat:10,lng:20,altitude:.9});
+});
