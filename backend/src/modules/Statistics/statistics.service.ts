@@ -1,4 +1,4 @@
-import {GlobalStatistics, StatisticRepository} from "./statistics.repository.js";
+import {EnergyComparisonParams, EnergyPeriod, GlobalStatistics, StatisticRepository} from "./statistics.repository.js";
 
 
 export class StatisticService{
@@ -47,8 +47,40 @@ export class StatisticService{
 
     async getEnergyCalculationService(){
         const result= await this.statisticRepository.getEnergyCalculation();
-        return result;
-        
+        return result; 
     }
+
+    async compare(ids:number[], period:EnergyPeriod){
+
+            if (!["week", "month", "year"].includes(period)) {
+            throw new Error("Período inválido.");
+            }
+
+            const end = new Date();
+            const start = new Date(end);
+
+            switch (period) {
+            case "week":
+                start.setUTCDate(start.getUTCDate() - 7);
+                break;
+
+            case "month":
+                start.setUTCDate(start.getUTCDate() - 30);
+                break;
+
+            case "year":
+                start.setUTCMonth(start.getUTCMonth() - 12);
+                break;
+            }
+
+            const params: EnergyComparisonParams = {
+            ids,
+            period,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            };
+
+            return this.statisticRepository.getMetricCompare(params);
+  }
 
 }

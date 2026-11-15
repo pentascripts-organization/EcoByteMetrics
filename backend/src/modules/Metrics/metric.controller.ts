@@ -51,5 +51,5 @@ export class MetricController{
             handleError(error, res, next);
         }
     }
-
+    
 }

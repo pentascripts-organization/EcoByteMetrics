@@ -74,5 +74,5 @@ CREATE TABLE monitoring_collections (
 );
 CREATE INDEX metrics_collected_at_idx ON metrics(date_houry,id_service);
 
-
 CREATE UNIQUE INDEX services_external_id_idx ON services(external_id);
+
