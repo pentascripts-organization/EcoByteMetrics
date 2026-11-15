@@ -116,13 +116,31 @@ export class StatisticController {
 
   compare = async(req: Request, res: Response) => {
         try {
-            const serviceA = String(req.query.serviceA);
-            const serviceB = String(req.query.serviceB);
+            const idsParam = req.query.ids;
             const period = String(req.query.period) as EnergyPeriod;
 
+            if (typeof idsParam !== "string") {
+                return res.status(400).json({
+                success: false,
+                message: "Informe os IDs dos serviços."
+                });
+            }
+
+            const ids = idsParam.split(",").map(Number);
+
+            if (
+                ids.length < 2 ||
+                ids.some(id => !Number.isInteger(id) || id <= 0) ||
+                new Set(ids).size !== ids.length
+            ) {
+                return res.status(400).json({
+                success: false,
+                message: "Informe pelo menos dois IDs válidos e distintos."
+                });
+            }
+
             const data = await this.statisticService.compare(
-                serviceA,
-                serviceB,
+                ids,
                 period,
             );
 
@@ -131,13 +149,13 @@ export class StatisticController {
                 period,
                 data,
             });
-            } catch (error) {
+        } catch (error) {
             const message =
                 error instanceof Error
                 ? error.message
                 : "Erro ao comparar serviços.";
 
-            return res.status(400).json({
+            return res.status(500).json({
                 success: false,
                 message,
             });

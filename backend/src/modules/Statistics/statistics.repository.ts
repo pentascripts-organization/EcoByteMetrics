@@ -10,8 +10,7 @@ export interface GlobalStatistics {
 }
 export type EnergyPeriod = "week" | "month" | "year";
 export interface EnergyComparisonParams {
-  serviceA: string;
-  serviceB: string;
+  ids: number[];
   start: string;
   end: string;
   period: EnergyPeriod;
@@ -421,11 +420,10 @@ export class StatisticRepository {
                                 name_service,
                                 id_location
                             FROM services
-                            WHERE name_service IN ($1, $2)
+                            WHERE id_service = ANY($1::int[])
                         ),
 
-                        -- 1. Busca as métricas do período e a última amostra
-                        -- anterior ao início da janela.
+                        -- 1. Busca as métricas do período e a última amostra anterior.
                         samples AS (
                             SELECT
                                 m.id_service,
@@ -435,14 +433,11 @@ export class StatisticRepository {
                                 m.ram_metric,
                                 m.hd_metric,
                                 m.network_metric
-
                             FROM metrics m
-
                             INNER JOIN selected_services s
                                 ON s.id_service = m.id_service
-
-                            WHERE m.date_houry >= $3::timestamptz
-                              AND m.date_houry < $4::timestamptz
+                            WHERE m.date_houry >= $2::timestamptz
+                            AND m.date_houry < $3::timestamptz
 
                             UNION ALL
 
@@ -454,9 +449,7 @@ export class StatisticRepository {
                                 previous.ram_metric,
                                 previous.hd_metric,
                                 previous.network_metric
-
                             FROM selected_services s
-
                             CROSS JOIN LATERAL (
                                 SELECT
                                     m.id_service,
@@ -466,15 +459,12 @@ export class StatisticRepository {
                                     m.ram_metric,
                                     m.hd_metric,
                                     m.network_metric
-
                                 FROM metrics m
-
                                 WHERE m.id_service = s.id_service
-                                  AND m.date_houry < $3::timestamptz
-                                  AND m.date_houry >= (
-                                      $3::timestamptz - INTERVAL '30 seconds'
-                                  )
-
+                                AND m.date_houry < $2::timestamptz
+                                AND m.date_houry >= (
+                                    $2::timestamptz - INTERVAL '30 seconds'
+                                )
                                 ORDER BY m.date_houry DESC
                                 LIMIT 1
                             ) previous
@@ -484,24 +474,20 @@ export class StatisticRepository {
                         samples_with_next AS (
                             SELECT
                                 *,
-
                                 LEAD(date_houry) OVER (
                                     PARTITION BY id_service
                                     ORDER BY date_houry
                                 ) AS next_date
-
                             FROM samples
                         ),
 
                         -- 3. Define o intervalo efetivo de cada amostra.
-                        -- Cada amostra representa no máximo 30 segundos.
                         intervals AS (
                             SELECT
                                 *,
-
                                 GREATEST(
                                     date_houry,
-                                    $3::timestamptz
+                                    $2::timestamptz
                                 ) AS effective_start,
 
                                 LEAST(
@@ -510,9 +496,8 @@ export class StatisticRepository {
                                         date_houry + INTERVAL '30 seconds'
                                     ),
                                     date_houry + INTERVAL '30 seconds',
-                                    $4::timestamptz
+                                    $3::timestamptz
                                 ) AS effective_end
-
                             FROM samples_with_next
                         ),
 
@@ -520,7 +505,6 @@ export class StatisticRepository {
                         intervals_with_duration AS (
                             SELECT
                                 *,
-
                                 GREATEST(
                                     0,
                                     EXTRACT(
@@ -529,35 +513,26 @@ export class StatisticRepository {
                                         )
                                     )
                                 ) AS duration_seconds
-
                             FROM intervals
                         ),
 
-                        -- 5. Busca a intensidade de carbono mais recente
-                        -- disponível para a localização do serviço.
+                        -- 5. Busca a intensidade de carbono mais recente.
                         carbon_data AS (
                             SELECT
                                 i.*,
-
                                 COALESCE(
                                     c.intesity_co2e_kwh_carbon,
                                     0
                                 ) AS carbon_intensity
-
                             FROM intervals_with_duration i
-
                             LEFT JOIN LATERAL (
                                 SELECT
                                     cb.intesity_co2e_kwh_carbon
-
                                 FROM carbons cb
-
                                 WHERE cb.id_location = i.id_location
-                                  AND cb.date_houry <= i.date_houry
-
+                                AND cb.date_houry <= i.date_houry
                                 ORDER BY cb.date_houry DESC
                                 LIMIT 1
-
                             ) c ON TRUE
                         ),
 
@@ -565,7 +540,6 @@ export class StatisticRepository {
                         power_calculation AS (
                             SELECT
                                 *,
-
                                 (
                                     COALESCE(cpu_metric, 0) / 100.0 * 120
                                     +
@@ -575,21 +549,18 @@ export class StatisticRepository {
                                     +
                                     COALESCE(network_metric, 0) * 0.02
                                 ) AS total_power_watts
-
                             FROM carbon_data
                         ),
 
-                        -- 7. Calcula a energia consumida em kWh.
+                        -- 7. Calcula a energia em kWh.
                         energy_calculation AS (
                             SELECT
                                 *,
-
                                 (
                                     total_power_watts
                                     * duration_seconds
                                     / 3600000.0
                                 ) AS energy_kwh
-
                             FROM power_calculation
                         ),
 
@@ -597,11 +568,9 @@ export class StatisticRepository {
                         emission_calculation AS (
                             SELECT
                                 *,
-
                                 (
                                     energy_kwh * carbon_intensity
                                 ) AS emissions_gco2e
-
                             FROM energy_calculation
                         ),
 
@@ -615,54 +584,45 @@ export class StatisticRepository {
 
                                 CASE
                                     -- WEEK: agrupamento por dia.
-                                    WHEN $5 = 'week' THEN
+                                    WHEN $4 = 'week' THEN
                                         DATE_TRUNC(
                                             'day',
                                             effective_start AT TIME ZONE 'UTC'
                                         ) AT TIME ZONE 'UTC'
 
-                                    -- MONTH: blocos consecutivos de 7 dias
-                                    -- contados a partir do início do período.
-                                    WHEN $5 = 'month' THEN
-                                        $3::timestamptz
+                                    -- MONTH: blocos consecutivos de 7 dias.
+                                    WHEN $4 = 'month' THEN
+                                        $2::timestamptz
                                         +
                                         FLOOR(
                                             EXTRACT(
                                                 EPOCH FROM (
-                                                    effective_start - $3::timestamptz
+                                                    effective_start - $2::timestamptz
                                                 )
                                             ) / 604800
                                         )::integer * INTERVAL '7 days'
 
                                     -- YEAR: agrupamento por mês calendário.
-                                    WHEN $5 = 'year' THEN
+                                    WHEN $4 = 'year' THEN
                                         DATE_TRUNC(
                                             'month',
                                             effective_start AT TIME ZONE 'UTC'
                                         ) AT TIME ZONE 'UTC'
-
                                 END AS bucket_key
 
                             FROM emission_calculation
-
                             WHERE duration_seconds > 0
                         ),
 
-                        -- 10. Soma energia, emissões e amostras
-                        -- por serviço e agrupamento.
+                        -- 10. Agrega energia, emissões e amostras.
                         aggregated AS (
                             SELECT
                                 id_service,
                                 bucket_key,
-
                                 COUNT(DISTINCT date_houry)::integer AS sample_count,
-
                                 SUM(energy_kwh) AS energy_kwh,
-
                                 SUM(emissions_gco2e) AS emissions_gco2e
-
                             FROM bucketed
-
                             GROUP BY
                                 id_service,
                                 bucket_key
@@ -671,76 +631,74 @@ export class StatisticRepository {
                         -- 11. Define os limites dos agrupamentos.
                         bucket_bounds AS (
                             SELECT
-
                                 CASE
-                                    WHEN $5 = 'week' THEN
+                                    WHEN $4 = 'week' THEN
                                         DATE_TRUNC(
                                             'day',
-                                            $3::timestamptz AT TIME ZONE 'UTC'
+                                            $2::timestamptz AT TIME ZONE 'UTC'
                                         ) AT TIME ZONE 'UTC'
 
-                                    WHEN $5 = 'month' THEN
-                                        $3::timestamptz
+                                    WHEN $4 = 'month' THEN
+                                        $2::timestamptz
 
-                                    WHEN $5 = 'year' THEN
+                                    WHEN $4 = 'year' THEN
                                         DATE_TRUNC(
                                             'month',
-                                            $3::timestamptz AT TIME ZONE 'UTC'
+                                            $2::timestamptz AT TIME ZONE 'UTC'
                                         ) AT TIME ZONE 'UTC'
                                 END AS first_bucket,
 
                                 CASE
-                                    WHEN $5 = 'week' THEN
+                                    WHEN $4 = 'week' THEN
                                         DATE_TRUNC(
                                             'day',
                                             (
-                                                $4::timestamptz - INTERVAL '1 microsecond'
+                                                $3::timestamptz - INTERVAL '1 microsecond'
                                             ) AT TIME ZONE 'UTC'
                                         ) AT TIME ZONE 'UTC'
 
-                                    WHEN $5 = 'month' THEN
-                                        $3::timestamptz
+                                    WHEN $4 = 'month' THEN
+                                        $2::timestamptz
                                         +
                                         FLOOR(
                                             EXTRACT(
                                                 EPOCH FROM (
-                                                    $4::timestamptz
+                                                    $3::timestamptz
                                                     - INTERVAL '1 microsecond'
-                                                    - $3::timestamptz
+                                                    - $2::timestamptz
                                                 )
                                             ) / 604800
                                         )::integer * INTERVAL '7 days'
 
-                                    WHEN $5 = 'year' THEN
+                                    WHEN $4 = 'year' THEN
                                         DATE_TRUNC(
                                             'month',
                                             (
-                                                $4::timestamptz - INTERVAL '1 microsecond'
+                                                $3::timestamptz - INTERVAL '1 microsecond'
                                             ) AT TIME ZONE 'UTC'
                                         ) AT TIME ZONE 'UTC'
                                 END AS last_bucket,
 
                                 CASE
-                                    WHEN $5 = 'week' THEN INTERVAL '1 day'
-                                    WHEN $5 = 'month' THEN INTERVAL '7 days'
-                                    WHEN $5 = 'year' THEN INTERVAL '1 month'
+                                    WHEN $4 = 'week' THEN INTERVAL '1 day'
+                                    WHEN $4 = 'month' THEN INTERVAL '7 days'
+                                    WHEN $4 = 'year' THEN INTERVAL '1 month'
                                 END AS bucket_interval
                         ),
 
-                        -- 12. Gera todos os agrupamentos,
-                        -- inclusive os que não possuem amostras.
+                        -- 12. Gera todos os agrupamentos.
                         bucket_series AS (
                             SELECT
                                 gs.bucket_key,
 
                                 GREATEST(
                                     gs.bucket_key,
-                                    $3::timestamptz
+                                    $2::timestamptz
                                 ) AS bucket_start,
 
                                 LEAST(
                                     gs.bucket_key + bb.bucket_interval,
-                                    $4::timestamptz
+                                    $3::timestamptz
                                 ) AS bucket_end
 
                             FROM bucket_bounds bb
@@ -752,8 +710,7 @@ export class StatisticRepository {
                             ) AS gs(bucket_key)
                         ),
 
-                        -- 13. Garante que ambos os serviços
-                        -- tenham os mesmos agrupamentos.
+                        -- 13. Garante que todos os serviços tenham os mesmos agrupamentos.
                         final_data AS (
                             SELECT
                                 s.id_service,
@@ -767,15 +724,8 @@ export class StatisticRepository {
                                     0
                                 )::integer AS sample_count,
 
-                                CASE
-                                    WHEN a.sample_count IS NULL THEN NULL
-                                    ELSE a.energy_kwh
-                                END AS energy_kwh,
-
-                                CASE
-                                    WHEN a.sample_count IS NULL THEN NULL
-                                    ELSE a.emissions_gco2e
-                                END AS emissions_gco2e
+                                a.energy_kwh,
+                                a.emissions_gco2e
 
                             FROM selected_services s
 
@@ -783,7 +733,7 @@ export class StatisticRepository {
 
                             LEFT JOIN aggregated a
                                 ON a.id_service = s.id_service
-                              AND a.bucket_key = b.bucket_key
+                            AND a.bucket_key = b.bucket_key
                         )
 
                         -- 14. Resultado final.
@@ -801,10 +751,10 @@ export class StatisticRepository {
                         ORDER BY
                             bucket_start,
                             id_service;
+
                         `;
         const {rows}= await pool.query(sql,[
-                        param.serviceA,
-                        param.serviceB,
+                        param.ids,
                         param.start,
                         param.end,
                         param.period]);

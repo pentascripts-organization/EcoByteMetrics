@@ -50,18 +50,7 @@ export class StatisticService{
         return result; 
     }
 
-    async compare(serviceA:string, serviceB:string, period:EnergyPeriod){
-            if (!serviceA?.trim() || !serviceB?.trim()) {
-                throw new Error("Os nomes dos serviços são obrigatórios.");
-            }
-
-            if (serviceA.trim() === serviceB.trim()) {
-                throw new Error("Selecione dois serviços diferentes.");
-            }
-
-            if (serviceA === serviceB) {
-            throw new Error("Selecione dois serviços diferentes.");
-            }
+    async compare(ids:number[], period:EnergyPeriod){
 
             if (!["week", "month", "year"].includes(period)) {
             throw new Error("Período inválido.");
@@ -85,8 +74,7 @@ export class StatisticService{
             }
 
             const params: EnergyComparisonParams = {
-            serviceA,
-            serviceB,
+            ids,
             period,
             start: start.toISOString(),
             end: end.toISOString(),
