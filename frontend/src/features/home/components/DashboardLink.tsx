@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
+import { cinematicDashboardTransition } from "../domain/cinematicDashboardTransition";
 import { dashboardTransition } from "../domain/dashboardTransition";
 
-const prepare = () => Promise.all([import("@/app/layouts/AppLayout"), import("@/features/monitoring/pages/DashboardPage")]);
+const prepare = () => Promise.all([import("@/app/layouts/AppLayout"), import("@/features/monitoring/pages/DashboardPage"), import("@/features/monitoring/components/map/WorldGlobe")]);
 function waitForPage() {
   return new Promise<void>(resolve => {
     const ready = () => document.querySelector(".monitoring-shell main h1, .page-load-error");
@@ -32,8 +33,13 @@ export function DashboardLink({ children, className }: { children: ReactNode; cl
     void (async () => {
       try { await prepare(); } catch { /* The route boundary handles a failed import. */ }
       if (!mounted.current) return;
-      await dashboardTransition(document, matchMedia("(prefers-reduced-motion: reduce)").matches,
-        entry => flushSync(() => navigate("/dashboard", { state: { homeEntry: entry } })), waitForPage);
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const navigateToDashboard = (entry: "crossfade" | "fade") => flushSync(() => navigate("/dashboard", { state: { homeEntry: entry } }));
+      if (reduced || !document.startViewTransition || !Element.prototype.animate) {
+        await dashboardTransition(document, reduced, navigateToDashboard, waitForPage);
+      } else {
+        await cinematicDashboardTransition(navigateToDashboard);
+      }
       pending.current = false;
       if (mounted.current) setLoading(false);
     })();

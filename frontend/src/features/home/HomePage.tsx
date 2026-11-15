@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import { HomeClosing } from "./components/HomeClosing";
 import { HomeHeader } from "@/features/home/components/HomeHeader";
 import { Hero } from "@/features/home/components/Hero";
@@ -14,11 +15,12 @@ import "./styles/closing.css";
 import "./styles/scrollbar.css";
 
 export function HomePage() {
+  const { state } = useLocation();
   const copy = content.pt;
   const ref = useHomeReveal();
 
   return (
-    <div ref={ref} className="ecobyte-home site-shell">
+    <div ref={ref} className="ecobyte-home site-shell" data-return-entry={state?.dashboardReturn === true || undefined}>
       <a className="skip-link" href="#conteudo">
         Pular para o conteúdo
       </a>

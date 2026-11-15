@@ -32,3 +32,18 @@ test("a failed transition falls back once without blocking navigation or leaving
   assert.deepEqual(calls, ["fade"]);
   assert.deepEqual(document.documentElement.dataset, {});
 });
+
+
+test("the home journey uses its own direction and never navigates twice after a rejected animation", async () => {
+  let navigations = 0;
+  const document = {
+    documentElement: {dataset: {} as Record<string,string>},
+    startViewTransition(update: () => Promise<void>) {
+      assert.equal(document.documentElement.dataset.routeTransition, "home");
+      return {ready: Promise.reject(new Error("snapshot unavailable")), finished: update().then(() => { throw new Error("cancelled"); })};
+    },
+  };
+  await dashboardTransition(document, false, () => { navigations++; }, async () => {}, "home");
+  assert.equal(navigations, 1);
+  assert.equal(document.documentElement.dataset.routeTransition, undefined);
+});

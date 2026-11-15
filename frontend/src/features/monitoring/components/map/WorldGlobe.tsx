@@ -422,7 +422,7 @@ function WorldGlobe({
   }, [inline, painted, lost]);
 
   return (
-    <div ref={host} className="globe-stage" data-ready={ready && !lost}>
+    <div ref={host} className="globe-stage" data-ready={ready && !lost} data-painted={painted && !lost}>
       {viewport.width > 0 && viewport.portalRoot && createPortal(<div
       className={"globe-background" + (inline ? " globe-background--inline" : "")}
       data-intro={painted && motionAllowed && settings.parallaxEnabled}
