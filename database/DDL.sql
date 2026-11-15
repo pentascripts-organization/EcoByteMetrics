@@ -74,5 +74,25 @@ CREATE TABLE monitoring_collections (
 );
 CREATE INDEX metrics_collected_at_idx ON metrics(date_houry,id_service);
 
-
 CREATE UNIQUE INDEX services_external_id_idx ON services(external_id);
+
+--Tabela de para armazenar calculos de energia e carbono
+CREATE TABLE energy_calculations (
+    id_energy BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_service INTEGER NOT NULL REFERENCES services(id_service),
+    date_houry TIMESTAMPTZ NOT NULL,
+    cpu_power_w NUMERIC NOT NULL,
+    ram_power_w NUMERIC NOT NULL,
+    disk_power_w NUMERIC NOT NULL,
+    network_power_w NUMERIC NOT NULL,
+    total_power_w NUMERIC NOT NULL,
+    duration_seconds NUMERIC NOT NULL,
+    energy_kwh NUMERIC NOT NULL,
+    carbon_intensity_g_kwh NUMERIC,
+    emission_g_co2e NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (id_service, date_houry)
+);
+
+CREATE INDEX idx_energy_service_date
+ON energy_calculations (id_service, date_houry);

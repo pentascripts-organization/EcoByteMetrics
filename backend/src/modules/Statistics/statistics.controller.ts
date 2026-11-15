@@ -1,6 +1,7 @@
 
 import { type Request, type Response } from "express";
 import { StatisticService } from "./statistics.service.js";
+import { EnergyPeriod } from "./statistics.repository.js";
 
 export class StatisticController {
     private statisticService: StatisticService = new StatisticService();
@@ -112,4 +113,34 @@ export class StatisticController {
       });
     }
   };
+
+  compare = async(req: Request, res: Response) => {
+        try {
+            const serviceA = Number(req.query.serviceA);
+            const serviceB = Number(req.query.serviceB);
+            const period = String(req.query.period) as EnergyPeriod;
+
+            const data = await this.statisticService.compare(
+                serviceA,
+                serviceB,
+                period,
+            );
+
+            return res.status(200).json({
+                success: true,
+                period,
+                data,
+            });
+            } catch (error) {
+            const message =
+                error instanceof Error
+                ? error.message
+                : "Erro ao comparar serviços.";
+
+            return res.status(400).json({
+                success: false,
+                message,
+            });
+    }
+  }
 }

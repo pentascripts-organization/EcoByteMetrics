@@ -11,6 +11,7 @@ router.get("/list/:id_service",  metricController.listMetricsByServiceIdControll
 router.post("/", authMiddleware, adminMiddleware, metricController.createMetricController);
 router.get("/:id_metric", metricController.getMetricByIdController);
 
+
 router.all("/:id_metric",  methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
 router.all("/", methodNotAllowed(["POST", "OPTIONS"]));
 router.all("/list/:id_service",  methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
