@@ -6,8 +6,9 @@ import { InfoTooltip } from "@/shared/ui/InfoTooltip";
 import { serviceStatusLabels } from "../types";
 import { CountUp } from "@/shared/ui/CountUp";
 
-export function MonitoringSummary({ services, history, comparison = false, latest = false, context, totals: providedTotals }: {
+export function MonitoringSummary({ services, history, comparison = false, latest = false, context, hideStatusCounts = false, totals: providedTotals }: {
   services: MonitoredService[]; history: CollectionPoint[];
+  hideStatusCounts?: boolean;
   loading?: boolean; onRefresh?: () => void;
   comparison?: boolean; latest?: boolean; context?: ReactNode;
   totals?: ReturnType<typeof summarizeCollections>;
@@ -18,11 +19,15 @@ export function MonitoringSummary({ services, history, comparison = false, lates
       <div><span>{latest ? "CO₂e das últimas coletas" : "CO₂e calculado na seleção"}<InfoTooltip label="total de carbono">{latest ? "Soma das estimativas da última leitura disponível de cada aplicação filtrada. As leituras podem ter horários e durações diferentes. Leituras sem fator de carbono não entram na soma." : "Soma das estimativas de carbono disponíveis no período e nas aplicações selecionadas. Leituras sem fator de carbono não são consideradas emissão zero."}</InfoTooltip></span><strong><CountUp to={totals.emissionsG} formatter={val => formatEmissions(val)} /> <small>{emissionScale(totals.emissionsG).unit}</small></strong></div>
       <div><span>{latest ? "Energia das últimas coletas" : "Energia estimada na seleção"}<InfoTooltip label="total de energia">{latest ? "Soma da energia estimada nas últimas leituras disponíveis. Não representa uma medição simultânea do ambiente; aplicações sem novas leituras podem conservar dados antigos." : "Soma da energia estimada nas leituras registradas no período e nas aplicações selecionadas. Intervalos sem leituras não são preenchidos."}</InfoTooltip></span><strong><CountUp to={totals.energyKwh} formatter={val => formatNumber(val)} /> <small>kWh</small></strong></div>
       <span className="monitoring-total-scope">Totais das {services.length} aplicações {comparison ? "marcadas para comparação." : "filtradas, incluindo todas as páginas da lista."}</span>
-      <ul className="monitoring-operational-counts" aria-label="Situação das aplicações na seleção">{Object.entries(serviceStatusLabels).map(([status,label]) => {
-        const count = services.filter(service => service.status === status).length;
-        return count || status === "available" || status === "unavailable" ? <li key={status}>{label}: <strong><CountUp to={count} /></strong></li> : null;
-      })}</ul>
+      {!hideStatusCounts && <OperationalCounts services={services} />}
     </div>
     {context}
   </section>;
+}
+
+export function OperationalCounts({ services }: { services: MonitoredService[] }) {
+  return (<ul className="monitoring-operational-counts" aria-label="Situação das aplicações na seleção">{Object.entries(serviceStatusLabels).map(([status,label]) => {
+        const count = services.filter(service => service.status === status).length;
+        return count || status === "available" || status === "unavailable" ? <li key={status}>{label}: <strong><CountUp to={count} /></strong></li> : null;
+      })}</ul>);
 }

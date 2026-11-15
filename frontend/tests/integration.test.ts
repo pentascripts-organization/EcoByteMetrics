@@ -250,9 +250,10 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       }
       const detail=render("/dashboard?servico=a",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,"");
       assert.match(detail,/CO₂e na última coleta/);
-      assert.match(detail,/0,085/);
+      assert.match(detail,/85 <small>mg CO₂e/);
       assert.ok(!detail.includes("1,25"));
-      assert.match(detail,/Ver totais e histórico/);
+      assert.match(detail,/>Histórico<\/button>/);
+      assert.doesNotMatch(detail,/Ver totais e histórico/);
       assert.match(detail,/Última coleta válida/);
       assert.match(render("/dashboard?aba=evolucao&serie=acumulado",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/CO₂e acumulado no período/);
       assert.match(render("/dashboard?aba=evolucao&serie=intervalos",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/CO₂e no último intervalo/);
@@ -284,7 +285,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const data={...snapshot,services:[{...service,emissionsG:.3}],history:[{serviceId:"a",collectedAt:at,energyKwh:5,emissionsG:96}]};
       const detail=render("/dashboard?servico=a",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
       assert.match(detail,/Impacto estimado na última coleta/);
-      assert.match(detail,/<dd>0,3 <small>g CO₂e/);
+      assert.match(detail,/>300 <small>mg CO₂e/);
       assert.ok(!detail.includes("96 <small>g CO₂e"));
       const evolution=render("/dashboard?servico=a&detalhe=evolucao",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
       assert.match(evolution,/96/);
@@ -315,12 +316,13 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.equal((await getMonitoringSnapshot()).collectionEvents[0].kind,"metrics-missing");
     });
 
-    await t.test("linha do tempo conta rodadas reais e identifica seus pontos agrupados", () => {
+    await t.test("linha do tempo conta rodadas reais e identifica seus pontos agrupados", async () => {
       const observed={...snapshot,observations:[
         {observedAt:new Date(Date.parse(at)-300_000).toISOString(),collectionCount:10,services:[],samples:[]},
         {observedAt:at,collectionCount:2,services:[],samples:[]},
       ]};
-      const markup=render("/dashboard?painel=historico",DashboardPage,{snapshot:observed}).replace(/<!--.*?-->/g,"");
+      const { ObservationTimeline } = await vite.ssrLoadModule("/src/features/monitoring/components/ObservationTimeline.tsx");
+      const markup=renderToString(h(ObservationTimeline,{observations:observed.observations,selected:"",onSelect:()=>{},onLive:()=>{}})).replace(/<!--.*?-->/g,"");
       assert.match(markup,/12 rodadas de coleta gravadas/);
       assert.match(markup,/2 pontos de revisão/);
       assert.match(markup,/Última rodada registrada/);
@@ -438,18 +440,50 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.equal(panel(), "");
     });
 
-    await t.test("detalhes mantêm globo à esquerda e conteúdo das três abas à direita", () => {
-      for (const [tab, text] of [["resumo", "Impacto estimado na última coleta"], ["recursos", "Recursos da última coleta"], ["evolucao", "Evolução da aplicação"]]) {
-        const markup = render("/dashboard?servico=a&detalhe=" + tab).replace(/<!--.*?-->/g, "");
-        const panel = markup.indexOf('class="monitoring-service-summary"');
-        assert.ok(panel > markup.indexOf('class="monitoring-map"'));
-        assert.ok(markup.indexOf(text!) > panel);
-        assert.equal((markup.match(/class="monitoring-map"/g) ?? []).length, 1);
-        assert.match(markup, /Sem coordenadas/);
+    await t.test("visão geral e mapa oferecem expansão sem interferir nos detalhes ou abrir um modal inicialmente", () => {
+      for (const route of ["/dashboard", "/dashboard?aba=mapa"]) {
+        const markup = render(route);
+        assert.match(markup, /aria-label="Expandir visão do globo"/);
+        assert.match(markup, /class="globe-expand-button"[^>]*aria-expanded="false"/);
+        assert.doesNotMatch(markup, /class="globe-exploration-controls"/);
       }
+      assert.doesNotMatch(render("/dashboard?servico=a"), /aria-label="Expandir visão do globo"/);
+    });
+
+    await t.test("detalhes mostram impacto antes de recursos e localização, com abas compatíveis", () => {
+      for (const tab of ["resumo", "recursos"]) {
+        const markup = render("/dashboard?servico=a&detalhe=" + tab).replace(/<!--.*?-->/g, "");
+        assert.ok(markup.indexOf('id="service-impact-title"') < markup.indexOf('id="service-resources-title"'));
+        assert.ok(markup.indexOf('id="service-resources-title"') < markup.indexOf('id="service-location-title"'));
+        assert.match(markup, /Sem coordenadas disponíveis/);
+        assert.match(markup, /São Paulo/);
+        assert.doesNotMatch(markup, /class="monitoring-map"/);
+        assert.match(markup, />Visão geral<\/button>/);
+        assert.match(markup, />Histórico<\/button>/);
+      }
+      assert.match(render("/dashboard?servico=a&detalhe=evolucao"), /CO₂e acumulado no período/);
+      const located = {...snapshot, services: [{...service, latitude: -23.55, longitude: -46.63}]};
+      assert.match(render("/dashboard?servico=a", DashboardPage, {snapshot: located}), /class="monitoring-map"/);
+      const stale = {...snapshot, services: [{...service, status: "stale", energyKwh: null, emissionsG: null}]};
+      const markup = render("/dashboard?servico=a", DashboardPage, {snapshot: stale});
+      assert.match(markup, /Leitura preservada/);
+      assert.match(markup, /dados desatualizados/);
+      assert.match(markup, /Dado não disponível/);
       assert.match(render("/dashboard?busca=unknown"), /Nenhuma aplicação nesta seleção/);
       assert.match(render("/dashboard?servico=missing"), /Aplicação não encontrada/);
       assert.match(render("/dashboard", DashboardPage, { error: "Sem conexão" }), /Tentar novamente/);
+    });
+
+    await t.test("unidades de leitura preservam escala, precisão e valores ausentes", async () => {
+      const { detailReading } = await vite.ssrLoadModule("/src/features/monitoring/domain/detailReading.ts");
+      assert.equal(detailReading(.0004372, "energy").value, "0,4372");
+      assert.equal(detailReading(.0004372, "energy").unit, "Wh");
+      assert.equal(detailReading(.0372, "carbon").value, "37,2");
+      assert.equal(detailReading(.0372, "carbon").unit, "mg CO₂e");
+      assert.equal(detailReading(1, "energy").unit, "kWh");
+      assert.equal(detailReading(1, "carbon").unit, "g CO₂e");
+      assert.equal(detailReading(0, "carbon").value, "0");
+      for (const value of [null, undefined, NaN, Infinity]) assert.equal(detailReading(value, "energy").value, "—");
     });
 
     await t.test("atualização preserva o texto da consulta anterior até a resposta chegar", () => {
@@ -521,6 +555,14 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(render("/dashboard?servico=a&detalhe=evolucao&painel=aplicacoes"), /evolution-chart-panel/);
     });
 
+    await t.test("filtros anônimos não exibem falha genérica nem histórico protegido, mas falhas continuam visíveis no painel", () => {
+      const filtered=render("/dashboard?painel=historico",DashboardPage,{error:"Falha de conexão"});
+      assert.doesNotMatch(filtered,/A atualização falhou/);
+      assert.match(filtered,/Entrar para ver histórico/);
+      for (const heading of ["Localização", "Estado do ambiente", "Período e histórico"]) assert.ok(filtered.includes(heading));
+      assert.match(render("/dashboard",DashboardPage,{error:"Falha de conexão"}),/A atualização falhou/);
+    });
+
     await t.test("filtros usam painel separado e o passado continua identificado com o painel fechado", () => {
       const observed = {...snapshot,observations:[{observedAt:at,services:snapshot.services,samples:snapshot.history}]};
       for(const path of ["/dashboard?aba=evolucao","/dashboard?servico=a&detalhe=evolucao","/dashboard?servico=a&detalhe=resumo"]) {
@@ -535,7 +577,8 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
         }
         assert.match(open,/<dialog[^>]*aria-labelledby="filter-dialog-title"/);
         assert.match(open,/Fechar filtros/);
-        assert.equal((open.match(/class="observation-timeline"/g)??[]).length,1);
+        assert.equal((open.match(/class="observation-timeline"/g)??[]).length,0);
+        assert.match(open,/Entrar para ver histórico/);
         assert.match(open,/Situação da aplicação/);
         assert.ok(!open.includes('Todos os estados'));
         assert.ok(!open.includes('class="evolution-history"'));

@@ -9,7 +9,7 @@ import { countries, findCountry } from "@/shared/geography/geography";
 import type { CountryFeature, GlobeCity } from "@/shared/geography/geography";
 import type { MonitoredService } from "../../types";
 import { useSettings } from "@/shared/preferences/useSettings";
-import { animateGlobeViewport, getGlobePixelRatio, getGlobeViewport, isGlobeInteractionPoint, restoreGlobeViewport } from "./globeViewport";
+import { animateGlobeViewport, expandedGlobeAnchor, getGlobePixelRatio, getGlobeViewport, isGlobeInteractionPoint, restoreGlobeViewport } from "./globeViewport";
 import { createGlobeRotation } from "./globeRotation";
 import { createGlobeSelection, INITIAL_GLOBE_POSITION, scheduleGlobeFocus } from "./globeFocus";
 import { countryObject, createCountryLayer, keepCountryObject } from "./countryLayer";
@@ -38,6 +38,8 @@ interface WorldGlobeProps {
   highlightedCityId?: string;
   focusCity?: GlobeCity;
   rotationPaused?: boolean;
+  inline?: boolean;
+  expanded?: boolean;
 }
 
 const noCountries: CountryFeature[] = [];
@@ -57,6 +59,8 @@ function WorldGlobe({
   highlightedCityId,
   focusCity,
   rotationPaused = false,
+  inline = false,
+  expanded = false,
 }: WorldGlobeProps) {
   const host = useRef<HTMLDivElement>(null);
   const globe = useRef<GlobeMethods | undefined>(undefined);
@@ -81,7 +85,7 @@ function WorldGlobe({
   const [motionAllowed, setMotionAllowed] = useState(() => typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const { settings } = useSettings();
   const [experiments] = useState(() => globeExperiments(window.location.search, import.meta.env.DEV));
-  const rendererConfig = useMemo(() => ({ antialias: true, alpha: experiments.alpha, powerPreference: "high-performance" as const }), [experiments.alpha]);
+  const rendererConfig = useMemo(() => ({ antialias: true, alpha: true, powerPreference: "high-performance" as const }), []);
   const batched = experiments.batched && !onCountrySelect;
   const countryLayers = useMemo(() => batched ? [createCountryLayer(countries)] : [], [batched]);
   const surface = useMemo(
@@ -221,16 +225,16 @@ function WorldGlobe({
   useEffect(() => {
     const element = host.current;
     if (!element) return;
-    const portalRoot = element.closest(".monitoring-shell") ?? document.body;
+    const portalRoot = inline ? element : element.closest(".monitoring-shell") ?? document.body;
     let frame = 0;
     const measure = () => {
       frame = 0;
-      const anchor = element.getBoundingClientRect();
+      const anchor = expanded ? { ...expandedGlobeAnchor({ width: document.documentElement.clientWidth, height: window.innerHeight }), bottom: window.innerHeight } : element.getBoundingClientRect();
       const visible = anchor.width > 0 && anchor.height > 0 && anchor.bottom > 0 && anchor.top < window.innerHeight;
       setViewport(previous => {
         if (!visible) return previous.visible ? { ...previous, visible: false } : previous;
         const size = { width: document.documentElement.clientWidth, height: window.innerHeight };
-        const next = { ...getGlobeViewport(size, anchor), compact: size.width <= 900 };
+        const next = inline ? { width: anchor.width, height: anchor.height, offset: [0, 0] as [number, number], fieldOfView: 50, compact: true } : { ...getGlobeViewport(size, anchor), compact: size.width <= 900 };
         return previous.visible && previous.width === next.width && previous.height === next.height &&
           previous.offset[0] === next.offset[0] && previous.offset[1] === next.offset[1] &&
           previous.fieldOfView === next.fieldOfView && previous.compact === next.compact ? previous : { ...next, visible, portalRoot };
@@ -249,7 +253,7 @@ function WorldGlobe({
       window.removeEventListener("scroll", schedule, true);
       cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [inline, expanded]);
 
   useEffect(() => {
     if (!ready || !globe.current) return;
@@ -262,7 +266,7 @@ function WorldGlobe({
 
   useEffect(() => {
     if (!ready || !globe.current) return;
-    if (!experiments.alpha) globe.current.renderer().setClearColor("#fff", 1);
+    globe.current.renderer().setClearColor(0x000000, 0);
     const scene = globe.current.scene();
     const afterRender = scene.onAfterRender;
     const reveal: typeof afterRender = (...args) => {
@@ -291,7 +295,7 @@ function WorldGlobe({
     const camera = globe.current?.camera();
     if (!ready || !(camera instanceof PerspectiveCamera)) return;
     const resized = camera.view?.fullWidth !== viewport.width || camera.view?.fullHeight !== viewport.height;
-    const duration = projectionInitialized.current && !resized && viewport.width > 900 && viewport.visible && motionAllowed && settings.parallaxEnabled ? 650 : 0;
+    const duration = projectionInitialized.current && !resized && viewport.visible && motionAllowed && settings.parallaxEnabled ? 650 : 0;
     projectionInitialized.current = true;
     return animateGlobeViewport(camera, viewport, duration, requestAnimationFrame, cancelAnimationFrame);
   }, [ready, viewport, motionAllowed, settings.parallaxEnabled]);
@@ -320,7 +324,7 @@ function WorldGlobe({
     if (cameraInitialized.current && !cityId && !country && !hasFocus && !returning && !layoutChanged) return;
     const target =
       cityId && Number.isFinite(cityLat) && Number.isFinite(cityLng)
-        ? { lat: cityLat!, lng: cityLng!, altitude: 0.65 }
+        ? { lat: cityLat!, lng: cityLng!, altitude: inline ? 1.7 : 0.65 }
         : returning ? returning
         : hasFocus
           ? { lat: focusLat, lng: focusLng, altitude: cameraInitialized.current ? globe.current.pointOfView().altitude : INITIAL_GLOBE_POSITION.altitude }
@@ -339,7 +343,7 @@ function WorldGlobe({
     cancelCameraMotion.current = cancel;
     cameraInitialized.current = true;
     return cancel;
-  }, [ready, country, cityId, cityLat, cityLng, selectedServiceId, focusLat, focusLng, settings.parallaxEnabled, motionAllowed, viewport.compact]);
+  }, [ready, country, cityId, cityLat, cityLng, selectedServiceId, focusLat, focusLng, settings.parallaxEnabled, motionAllowed, viewport.compact, inline]);
 
   useEffect(() => {
     const canvas = globe.current?.renderer().domElement;
@@ -411,16 +415,22 @@ function WorldGlobe({
     if (selected) onCountrySelect?.(selected.properties.name);
   }
 
+  useEffect(() => {
+    if (!inline || painted || lost) return;
+    const timer = window.setTimeout(() => setLost(true), 12000);
+    return () => window.clearTimeout(timer);
+  }, [inline, painted, lost]);
+
   return (
     <div ref={host} className="globe-stage" data-ready={ready && !lost}>
       {viewport.width > 0 && viewport.portalRoot && createPortal(<div
-      className="globe-background"
+      className={"globe-background" + (inline ? " globe-background--inline" : "")}
       data-intro={painted && motionAllowed && settings.parallaxEnabled}
       data-mask={experiments.mask}
       style={{ visibility: viewport.visible && (painted || lost) ? "visible" : "hidden" }}
       aria-label={readOnly ? "Globo 3D para visualização" : "Globo 3D interativo"}
       onPointerDownCapture={(event) => {
-        if (event.target instanceof HTMLCanvasElement && (!host.current || !isGlobeInteractionPoint(host.current.getBoundingClientRect(), event.clientX, event.clientY))) {
+        if (event.target instanceof HTMLCanvasElement && (!host.current || !isGlobeInteractionPoint((expanded ? expandedGlobeAnchor({ width: viewport.width, height: viewport.height }) : host.current.getBoundingClientRect()), event.clientX, event.clientY))) {
           event.stopPropagation();
           return;
         }
@@ -450,7 +460,7 @@ function WorldGlobe({
       }}
       onPointerUpCapture={event => { resolution.current?.end(); rotation.current?.end(); selectTouch(event); }}
       onWheelCapture={event => {
-        if (!host.current || !isGlobeInteractionPoint(host.current.getBoundingClientRect(), event.clientX, event.clientY)) {
+        if (!host.current || !isGlobeInteractionPoint((expanded ? expandedGlobeAnchor({ width: viewport.width, height: viewport.height }) : host.current.getBoundingClientRect()), event.clientX, event.clientY)) {
           event.stopPropagation();
           return;
         }
@@ -461,7 +471,7 @@ function WorldGlobe({
         <p className="globe-fallback" role="status">
           {readOnly
             ? "A visualização 3D foi interrompida."
-            : "A visualização 3D foi interrompida. Continue pela lista de aplicações."}
+            : "Mapa indisponível. A localização textual e as métricas continuam disponíveis."}
         </p>
       ) : (
         viewport.width > 0 && (
@@ -469,7 +479,7 @@ function WorldGlobe({
             ref={globe}
             width={viewport.width}
             height={viewport.height}
-            backgroundColor={experiments.alpha ? "rgba(0,0,0,0)" : "#fff"}
+            backgroundColor="rgba(0,0,0,0)"
             globeMaterial={surface}
             rendererConfig={rendererConfig}
             globeCurvatureResolution={4}
@@ -508,6 +518,7 @@ function WorldGlobe({
         </span>
       )}
     </div>, viewport.portalRoot)}
+    {inline && !painted && !lost && <p className="globe-fallback" role="status">Carregando mapa…</p>}
     </div>
   );
 }

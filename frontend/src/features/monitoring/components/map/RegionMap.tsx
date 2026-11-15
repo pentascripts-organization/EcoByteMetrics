@@ -4,21 +4,24 @@ import type { CollectionPoint, MonitoredService } from "../../types";
 import { impactLocations } from "../../domain/observatory";
 import type { ImpactLens } from "../../domain/observatory";
 import { findCountry } from "@/shared/geography/geography";
-import { formatNumber } from "@/shared/lib/format";
+import { ArrowUpRight, Leaf, MapPin, Maximize2, X, Zap } from "lucide-react";
+import { detailReading } from "../../domain/detailReading";
 import { StatusBadge } from "../StatusBadge";
 
 const WorldGlobe = lazy(() => import("./WorldGlobe"));
+import { ExpandedGlobe } from "./ExpandedGlobe";
+
 const emptyHistory: CollectionPoint[] = [];
 
 class GlobeBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    return this.state.failed ? <p className="globe-fallback" role="status">O globo 3D está indisponível. Continue pela lista de aplicações.</p> : this.props.children;
+    return this.state.failed ? <p className="globe-fallback" role="status">Mapa indisponível. A localização textual e as métricas continuam disponíveis.</p> : this.props.children;
   }
 }
 
-export function RegionMap({ services, allServices, selectedServiceId, onSelectService, history = emptyHistory, lens = "status", highlightedServiceIds = [], focusServiceId, onHighlightServices, rotationPaused = false }: {
+export function RegionMap({ services, allServices, selectedServiceId, onSelectService, history = emptyHistory, lens = "status", highlightedServiceIds = [], focusServiceId, onHighlightServices, rotationPaused = false, inline = false }: {
   services: MonitoredService[];
   allServices?: MonitoredService[];
   selectedServiceId?: string;
@@ -29,8 +32,11 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
   focusServiceId?: string;
   onHighlightServices?: (ids: string[]) => void;
   rotationPaused?: boolean;
+  inline?: boolean;
 }) {
   const [groupId, setGroupId] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const closeExpanded = useCallback(() => setExpanded(false), []);
   const groups = useMemo(() => impactLocations(services, history, lens), [services, history, lens]);
   const countryCodes = useMemo(() => [...new Set((allServices ?? services).map(service => findCountry(service.country ?? "")?.properties.code).filter(Boolean))].sort().join(","), [allServices, services]);
   const supportedCountries = useMemo(() => new Set(countryCodes.split(",").filter(Boolean)), [countryCodes]);
@@ -42,25 +48,31 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
     const group = groups.find(entry => entry.id === id);
     if (!group) return;
     setGroupId(id);
-    if (group.services.length === 1) onSelectService(group.services[0]!.id);
+    if (group.services.length === 1) { setExpanded(false); onSelectService(group.services[0]!.id); }
   }, [groups, onSelectService]);
   const highlightPoint = useCallback((id: string, active: boolean) => {
     const group = groups.find(entry => entry.id === id);
     onHighlightServices?.(active && group ? group.services.map(service => service.id) : []);
   }, [groups, onHighlightServices]);
   return <div className="monitoring-map">
+    {!inline && <button type="button" className="globe-expand-button" aria-label="Expandir visão do globo" title="Expandir visão do globo" aria-expanded={expanded} onClick={() => setExpanded(true)}><Maximize2 size={18} aria-hidden="true" /></button>}
+    {expanded && <ExpandedGlobe onClose={closeExpanded} />}
     <GlobeBoundary><Suspense fallback={<p className="globe-fallback" role="status">Carregando o globo 3D…</p>}>
-      <WorldGlobe services={allServices ?? services} supportedCountries={supportedCountries} cities={groups} city={selected} selectedServiceId={selectedServiceId}
-        onPointSelect={selectPoint} onPointHover={highlightPoint} highlightedCityId={highlightedCityId} focusCity={focusCity} rotationPaused={rotationPaused} />
+      <WorldGlobe expanded={expanded} inline={inline} services={allServices ?? services} supportedCountries={supportedCountries} cities={groups} city={selected} selectedServiceId={selectedServiceId}
+        onPointSelect={selectPoint} onPointHover={highlightPoint} highlightedCityId={highlightedCityId} focusCity={focusCity} rotationPaused={rotationPaused || expanded} />
     </Suspense></GlobeBoundary>
     {choosing && (
-      <div className="map-popup-card" role="dialog" aria-label={"Aplicações em " + choosing.name}>
+      <div className="map-popup-card" role="dialog" aria-label={"Aplicações em " + choosing.name} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setGroupId(""); } }}>
         <div className="map-popup-header">
-          <strong className="map-popup-title">{choosing.name} · {choosing.count} {choosing.count === 1 ? "aplicação" : "aplicações"}</strong>
-          <button type="button" className="map-popup-close" onClick={() => setGroupId("")} aria-label="Fechar popup de aplicações">✕</button>
+          <div className="map-popup-place"><span className="map-popup-place-icon"><MapPin size={19} aria-hidden="true" /></span><div><strong className="map-popup-title">{choosing.name}</strong><span className="map-popup-count">{choosing.count} {choosing.count === 1 ? "aplicação nesta localização" : "aplicações nesta localização"}</span></div></div>
+          <button type="button" className="map-popup-close" onClick={() => setGroupId("")} aria-label="Fechar popup de aplicações"><X size={18} aria-hidden="true" /></button>
         </div>
+        <p className="map-popup-context">Estimativas da última coleta de cada aplicação</p>
         <div className="map-popup-content">
-          {choosing.services.map(service => (
+          {choosing.services.map(service => {
+            const energy = detailReading(service.energyKwh, "energy");
+            const carbon = detailReading(service.emissionsG, "carbon");
+            return (
             <div key={service.id} className="map-popup-item">
               <div className="map-popup-item-header">
                 <span className="map-popup-service-name">{service.name}</span>
@@ -68,19 +80,19 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
               </div>
               <div className="map-popup-metrics">
                 <div className="map-popup-metric">
-                  <span className="map-popup-metric-label">Energia</span>
-                  <span className="map-popup-metric-value">{service.energyKwh != null ? `${formatNumber(service.energyKwh)} kWh` : "—"}</span>
+                  <span className="map-popup-metric-label"><Zap size={13} aria-hidden="true" />Energia</span>
+                  <span className="map-popup-metric-value" title={energy.exact}>{energy.value} <small>{energy.unit}</small></span>
                 </div>
                 <div className="map-popup-metric">
-                  <span className="map-popup-metric-label">Carbono</span>
-                  <span className="map-popup-metric-value">{service.emissionsG != null ? `${formatNumber(service.emissionsG)} g CO₂e` : "—"}</span>
+                  <span className="map-popup-metric-label"><Leaf size={13} aria-hidden="true" />Emissões</span>
+                  <span className="map-popup-metric-value" title={carbon.exact}>{carbon.value} <small>{carbon.unit}</small></span>
                 </div>
               </div>
-              <button type="button" className="map-popup-action" onClick={() => onSelectService(service.id)}>
-                Ver detalhes
+              <button type="button" className="map-popup-action" aria-label={"Ver detalhes de " + service.name} onClick={() => { setExpanded(false); onSelectService(service.id); }}>
+                Ver aplicação <ArrowUpRight size={15} aria-hidden="true" />
               </button>
             </div>
-          ))}
+          ); })}
         </div>
       </div>
     )}

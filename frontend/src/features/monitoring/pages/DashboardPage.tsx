@@ -1,29 +1,22 @@
 import "../styles/map.css";
 import "../styles/dashboard.css";
 import "../styles/dashboard-clarity.css";
+import "../styles/service-detail.css";
+import { ServiceDetailOverview, ServiceReadingMeta } from "../components/ServiceDetailOverview";
 import "@/shared/ui/AnimatedList.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity,
   ArrowLeft,
-  ArrowRight,
   Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  Cpu,
-  Gauge,
-  Globe2,
-  HardDrive,
-  Leaf,
   ListFilter,
   MapPin,
   RotateCw,
   Search,
-  Wifi,
   X,
-  Zap,
 } from "lucide-react";
 import { ServiceTrendItem } from "../components/ServiceTrendItem";
 import { createRefreshAnimation } from "../domain/refreshAnimation";
@@ -39,7 +32,7 @@ import { EvolutionPanel } from "../components/EvolutionPanel";
 import { ComparisonPanel } from "../components/ComparisonPanel";
 import { AdministrationPanel } from "../components/AdministrationPanel";
 import { ObservationTimeline } from "../components/ObservationTimeline";
-import { MonitoringSummary } from "../components/MonitoringSummary";
+import { MonitoringSummary, OperationalCounts } from "../components/MonitoringSummary";
 import { MonitoringState } from "../components/MonitoringState";
 import type { ImpactLens } from "../domain/observatory";
 import { useMonitoring } from "../hooks/useMonitoring";
@@ -52,6 +45,10 @@ import type { MonitoredService } from "../types";
 import { formatDataPeriod, formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
 import { CountryFlag } from "@/shared/ui/CountryFlag";
 import { TopographicSides } from "../components/TopographicSides";
+import { useAuth } from "@/features/auth/useAuth";
+import { Link } from "react-router-dom";
+import { loginLocation } from "@/features/auth/api";
+import { Globe2, SlidersHorizontal, LockKeyhole } from "lucide-react";
 import { AdministrationAccess } from "@/features/auth/AdministrationAccess";
 
 const stamp = (value?: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "Ainda não realizada";
@@ -75,6 +72,7 @@ function ServiceStatus({ service }: { service: MonitoredService }) {
 export function DashboardPage() {
   const { snapshot, loading, error, refresh, period, setHistoryOpen } = useMonitoring();
   const analysis = useAnalysis();
+  const { session } = useAuth();
   const [params, setParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico");
   const [applicationPage, setApplicationPage] = useState(0);
@@ -107,7 +105,7 @@ export function DashboardPage() {
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
   const historicalView = selectedId ? detailTab === "evolucao" : tab === "evolucao" || tab === "comparar";
   const showFilters = filtersOpen && !administration && !historicalView;
-  useEffect(() => { setHistoryOpen?.(showFilters); return () => setHistoryOpen?.(false); }, [showFilters, setHistoryOpen]);
+  useEffect(() => { setHistoryOpen?.(showFilters && Boolean(session)); return () => setHistoryOpen?.(false); }, [showFilters, setHistoryOpen, session]);
   const evolutionMode = params.get("serie") === "intervalos" ? "intervals" : "cumulative";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || params.has("periodo"));
   const update = useCallback((values: Record<string, string>, replace = false) => {
@@ -191,20 +189,22 @@ export function DashboardPage() {
     {selectedId ? <div className="monitoring-heading detail-heading">
       <div className="monitoring-detail-toolbar">
         <button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>
+
+      </div>
+      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
+      {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
+      {selected && <ServiceReadingMeta service={selected} observedAt={analysis.observedAt} />}
         {selected && (
           <MonitoringTabs
             label="Informações da aplicação"
             value={detailTab === "evolucao" ? "evolucao" : "resumo"}
             tabs={[
-              { value: "resumo", label: "Métricas e Recursos" },
-              { value: "evolucao", label: "Evolução histórica" },
+              { value: "resumo", label: "Visão geral" },
+              { value: "evolucao", label: "Histórico" },
             ]}
             onChange={value => update({ detalhe: value })}
           />
         )}
-      </div>
-      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
-      {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
     </div> : <div className="monitoring-heading">
       <div><h1>Monitoramento</h1></div>
       {!administration && !historicalView && <div className="monitoring-tools">
@@ -213,17 +213,20 @@ export function DashboardPage() {
       </div>}
     </div>}
     {showFilters && <FiltersDialog onClose={() => setFiltersOpen(false)}><div className="monitoring-filters">
+      <div className="filter-section-title"><Globe2 size={17} /><div><h3>Localização</h3><p>Encontre aplicações por país e região.</p></div></div>
       <label>País<select value={params.get("pais") ?? ""} onChange={event => update({ pais: event.target.value, cidade: "", regiao: "" })}><option value="">Todos os países</option>{countries.map(country => <option key={country}>{country}</option>)}</select></label>
       <label>Região<select value={params.get("regiao") ?? ""} onChange={event => update({ regiao: event.target.value, cidade: "" })}><option value="">Todas as regiões</option>{regionOptions.map(service => <option key={service.regionCode} value={service.regionCode}>{[service.city, service.region].filter(Boolean).join(" · ") || service.regionCode}</option>)}</select></label>
-      <label>Situação da aplicação<select value={status} onChange={event => update({ estado: event.target.value })}><option value="">Todas as situações</option>{Object.entries(serviceStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="filter-section-title"><SlidersHorizontal size={17} /><div><h3>Estado do ambiente</h3><p>Escolha quais aplicações acompanhar.</p></div></div>
+      <label className="filter-full-width">Situação da aplicação<select value={status} onChange={event => update({ estado: event.target.value })}><option value="">Todas as situações</option>{Object.entries(serviceStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="filter-section-title"><Clock3 size={17} /><div><h3>Período e histórico</h3><p>Explore um momento anterior do ambiente.</p></div></div>
       <label>Consultar o passado até<input aria-label="Consultar o passado até" type="datetime-local" max={localDateTimeMax()} value={analysis.invalidDate ? "" : analysis.date} onChange={event => update({ ate: event.target.value })} /></label>
       <button className="monitoring-text-button" onClick={clearFilters}><X size={16} />Limpar filtros</button>
-      <div className="monitoring-filter-history"><h3>Escolher um horário anterior</h3><ObservationTimeline loading={loading || (!error && snapshot.historyIncluded === false)} observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} /></div>
+      <div className="monitoring-filter-history"><h3>Escolher um horário anterior</h3>{session ? <ObservationTimeline loading={loading || (!error && snapshot.historyIncluded === false)} observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} /> : <div className="filter-history-access"><LockKeyhole size={20} aria-hidden="true" /><div><strong>Seu histórico em um só lugar</strong><p>Entre para explorar a linha do tempo das coletas.</p><Link to={loginLocation("/dashboard?" + new URLSearchParams({...Object.fromEntries(params), painel: "historico"}).toString())}>Entrar para ver histórico</Link></div></div>}</div>
     </div><p className="monitoring-filter-note">Limpar filtros mantém o período escolhido.</p></FiltersDialog>}
     {!administration && <>
     {analysis.invalidDate && <p className="monitoring-notice" role="alert">Escolha uma data válida até o momento atual. <button onClick={goLive}>Voltar para agora</button></p>}
     {analysis.observationMissing && <p className="monitoring-notice" role="alert">Este instante não está disponível no histórico consultado. <button onClick={goLive}>Voltar para agora</button></p>}
-    {error && <div className="monitoring-notice" role="alert"><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button><details><summary>Detalhes da conexão</summary><p>{error}</p></details></div>}
+    {error && !showFilters && <div className="monitoring-notice" role="alert"><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button><details><summary>Detalhes da conexão</summary><p>{error}</p></details></div>}
     {selectedId && historicalView && dataContext}
     {analysis.observedAt && <div className="monitoring-past-banner" role="status"><Clock3 size={18} aria-hidden="true" /><span>Você está consultando o passado: <strong>{stamp(analysis.observedAt)}</strong></span><button type="button" onClick={goLive}>Voltar para agora</button></div>}
     {snapshot.warning && <details className="monitoring-notice"><summary>Parte dos dados não pôde ser atualizada</summary>
@@ -233,131 +236,20 @@ export function DashboardPage() {
     {!selectedId && <MonitoringTabs label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
     {!selectedId && !administration && (tab === "evolucao" || tab === "comparar") && <MonitoringSummary context={dataContext} latest={comparisonLatest} services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={tab === "comparar"} loading={loading} onRefresh={() => void refresh()} />}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : administration ? "Administração do ambiente" : tab === "comparar" ? "Comparação de aplicações" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
-      <div className={"monitoring-overview" + (selected ? " service-overview" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
+      <div className={"monitoring-overview" + (selected ? " service-overview service-detail-layout" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
         {!selectedId && latestOverview && (
-          <MonitoringSummary latest services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={false} />
+          <MonitoringSummary hideStatusCounts latest services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={false} />
         )}
+        {!selected && (
         <section className="monitoring-location" aria-label="Localização dos serviços">
-          {selected && (
-            <div className="monitoring-location-header">
-              <h2>Localização do serviço</h2>
-              <span className="monitoring-location-badge">
-                <Globe2 size={14} aria-hidden="true" />
-                <span>Nó geográfico</span>
-              </span>
-            </div>
-          )}
-          {selected && (selected.latitude === undefined || selected.longitude === undefined) && <p className="monitoring-explanation">Sem coordenadas para marcar esta aplicação no globo. Os recursos e as estimativas continuam disponíveis ao lado.</p>}
-          <RegionMap key="world" services={mapServices} allServices={analysis.environmentServices} selectedServiceId={selected?.id} onSelectService={openService} history={selected ? analysis.history : history} lens={lens} highlightedServiceIds={highlightedIds} focusServiceId={selected ? undefined : focusServiceId} onHighlightServices={setMapHighlightedIds} />
+          <RegionMap key="world" services={mapServices} allServices={analysis.environmentServices} onSelectService={openService} history={history} lens={lens} highlightedServiceIds={highlightedIds} focusServiceId={focusServiceId} onHighlightServices={setMapHighlightedIds} />
         </section>
+        )}
         {selected ? (
           <section className="monitoring-service-summary">
             {detailTab !== "evolucao" ? (
-              <div className="monitoring-service-unified">
-                <div className="monitoring-detail-card monitoring-card-impact">
-                  <div className="monitoring-section-heading">
-                    <div>
-                      <h2>Impacto estimado na última coleta</h2>
-                      <p className="monitoring-section-subtitle">Estimativa instantânea de pegada de carbono e energia</p>
-                    </div>
-                  </div>
-                  <dl className="monitoring-facts">
-                    <div className="monitoring-fact-card monitoring-fact-card--energy">
-                      <div className="monitoring-fact-card__header">
-                        <span className="monitoring-fact-card__icon monitoring-fact-card__icon--energy" aria-hidden="true">
-                          <Zap size={18} />
-                        </span>
-                        <dt>Energia na última coleta</dt>
-                      </div>
-                      <dd>{formatNumber(selected.energyKwh)} <small>kWh</small></dd>
-                    </div>
-                    <div className="monitoring-fact-card monitoring-fact-card--carbon">
-                      <div className="monitoring-fact-card__header">
-                        <span className="monitoring-fact-card__icon monitoring-fact-card__icon--carbon" aria-hidden="true">
-                          <Leaf size={18} />
-                        </span>
-                        <dt>CO₂e na última coleta</dt>
-                      </div>
-                      <dd>{formatNumber(selected.emissionsG)} <small>g CO₂e</small></dd>
-                    </div>
-                    <div className="monitoring-fact-card monitoring-fact-card--intensity">
-                      <div className="monitoring-fact-card__header">
-                        <span className="monitoring-fact-card__icon monitoring-fact-card__icon--intensity" aria-hidden="true">
-                          <Gauge size={18} />
-                        </span>
-                        <dt>Intensidade de carbono da última coleta</dt>
-                      </div>
-                      <dd className="fact-text">{formatNumber(selected.carbonIntensity ?? null)} g CO₂e/kWh</dd>
-                    </div>
-                    <div className="monitoring-fact-card monitoring-fact-card--clock">
-                      <div className="monitoring-fact-card__header">
-                        <span className="monitoring-fact-card__icon monitoring-fact-card__icon--clock" aria-hidden="true">
-                          <Clock3 size={18} />
-                        </span>
-                        <dt>Última coleta válida</dt>
-                      </div>
-                      <dd className="fact-text">{stamp(selected.lastCollectionAt)}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <section className="monitoring-resources monitoring-detail-card monitoring-card-resources">
-                  <div className="monitoring-section-heading">
-                    <div>
-                      <h2>Recursos da última coleta</h2>
-                      <p className="monitoring-section-subtitle">Uso instantâneo de processamento, memória e rede</p>
-                    </div>
-                    <span className="monitoring-resource-timestamp">{stamp(selected.lastCollectionAt)}</span>
-                  </div>
-                  <dl className="monitoring-resource-list">
-                    {[
-                      ["CPU", selected.cpuPercent, "%", Cpu],
-                      ["Memória", selected.memoryGb, "GB", Activity],
-                      ["Disco", selected.diskGb, "GB", HardDrive],
-                      ["Rede", selected.networkGb, "GB", Wifi],
-                      ["Tempo representado pela leitura", selected.collectionIntervalSeconds ?? null, "s", Clock3],
-                    ].map(([label, value, unit, Icon]) => {
-                      const IconComp = Icon as typeof Cpu;
-                      const numVal = typeof value === "number" ? value : null;
-                      return (
-                        <div key={String(label)} className="monitoring-resource-item">
-                          <div className="monitoring-resource-item__title">
-                            <span className="monitoring-resource-item__icon" aria-hidden="true">
-                              <IconComp size={17} />
-                            </span>
-                            <dt>{label as string}</dt>
-                          </div>
-                          <dd>
-                            {formatNumber(numVal)} <span>{unit as string}</span>
-                          </dd>
-                          {label === "CPU" && numVal !== null && (
-                            <div className="monitoring-resource-meter" aria-hidden="true">
-                              <div
-                                className="monitoring-resource-meter__fill"
-                                style={{ width: `${Math.min(Math.max(numVal, 0), 100)}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </dl>
-                  <div className="monitoring-detail-actions">
-                    <button
-                      type="button"
-                      className="monitoring-text-button monitoring-detail-action-btn"
-                      onClick={() => update({ detalhe: "evolucao" })}
-                    >
-                      <span>Ver totais e histórico</span>
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </button>
-                  </div>
-                  {selected.statusMessage && <p className="service-message">{selected.statusMessage}</p>}
-                  <p className="monitoring-explanation">
-                    Valores ausentes são exibidos como “—”. Métricas antigas preservam o estado de desatualização da aplicação.
-                  </p>
-                </section>
-              </div>
+              <ServiceDetailOverview service={selected} services={mapServices} allServices={analysis.environmentServices}
+                history={selectedHistory} period={period} onSelectService={openService} />
             ) : (
               <EvolutionPanel
                 collectionEvents={analysis.collectionEvents}
@@ -537,7 +429,7 @@ export function DashboardPage() {
                 </tbody>
               </table>
             </div>
-            {services.length > 0 && <><nav className="monitoring-list-pagination" aria-label="Páginas das aplicações"><span>{page * 5 + 1}–{Math.min(page * 5 + 5, latestImpacts.length)} de {latestImpacts.length} aplicações</span><div><button type="button" aria-label="Aplicações anteriores" disabled={page === 0} onClick={() => setApplicationPage(page - 1)}><ChevronLeft size={17} /></button><button type="button" aria-label="Próximas aplicações" disabled={page === lastPage} onClick={() => setApplicationPage(page + 1)}><ChevronRight size={17} /></button></div></nav></>}
+            {services.length > 0 && <><nav className="monitoring-list-pagination" aria-label="Páginas das aplicações"><div className="monitoring-pagination-reading"><span>{page * 5 + 1}–{Math.min(page * 5 + 5, latestImpacts.length)} de {latestImpacts.length} aplicações</span><OperationalCounts services={services} /></div><div><button type="button" aria-label="Aplicações anteriores" disabled={page === 0} onClick={() => setApplicationPage(page - 1)}><ChevronLeft size={17} /></button><button type="button" aria-label="Próximas aplicações" disabled={page === lastPage} onClick={() => setApplicationPage(page + 1)}><ChevronRight size={17} /></button></div></nav></>}
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>

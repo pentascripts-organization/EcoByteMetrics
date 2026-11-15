@@ -37,6 +37,12 @@ export function getGlobeViewport(viewport: Viewport, anchor: Anchor, fieldOfView
   };
 }
 
+export function expandedGlobeAnchor(viewport: Viewport) {
+  const padding = viewport.width <= 680 ? 16 : 48;
+  const size = Math.max(1, Math.min(viewport.width, viewport.height) - padding * 2);
+  return { left: (viewport.width - size) / 2, top: (viewport.height - size) / 2, width: size, height: size };
+}
+
 export function isGlobeInteractionPoint(anchor: Anchor, x: number, y: number) {
   return anchor.width > 0 && anchor.height > 0 && x >= anchor.left && x <= anchor.left + anchor.width &&
     y >= anchor.top && y <= anchor.top + anchor.height;

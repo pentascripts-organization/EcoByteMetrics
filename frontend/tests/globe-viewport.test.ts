@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PerspectiveCamera, Vector3 } from "three";
-import { animateGlobeViewport, getGlobePixelRatio, getGlobeViewport, isGlobeInteractionPoint, restoreGlobeViewport } from "../src/features/monitoring/components/map/globeViewport.ts";
+import { animateGlobeViewport, expandedGlobeAnchor, getGlobePixelRatio, getGlobeViewport, isGlobeInteractionPoint, restoreGlobeViewport } from "../src/features/monitoring/components/map/globeViewport.ts";
 
 test("o globo mobile ocupa quase toda a menor dimensão do mapa, centralizado em retrato e paisagem", () => {
   for (const [width, height, mapWidth, mapHeight] of [[320, 720, 284, 284], [390, 844, 354, 354], [680, 900, 644, 644], [844, 390, 796, 260]]) {
@@ -192,4 +192,28 @@ test("a precisão da câmera distingue contornos e superfícies no afastamento m
   assert.ok(separation > 8 / (2 ** 24 - 1));
   assert.ok(camera.near < 115 - 101.1);
   assert.ok(camera.far > 500 + 114);
+});
+
+
+test("expanded view centers the same projection, enlarges it and restores the initial framing", () => {
+  for (const viewport of [{width:1920,height:1080}, {width:390,height:844}, {width:844,height:390}]) {
+    const anchor = expandedGlobeAnchor(viewport);
+    assert.equal(anchor.left + anchor.width / 2, viewport.width / 2);
+    assert.equal(anchor.top + anchor.height / 2, viewport.height / 2);
+    assert.ok(anchor.width <= viewport.width && anchor.height <= viewport.height);
+    const original = getGlobeViewport(viewport, {left:20,top:100,width:200,height:200});
+    const expanded = getGlobeViewport(viewport, anchor);
+    assert.deepEqual(expanded.offset, [0,0]);
+    assert.ok(expanded.fieldOfView < original.fieldOfView);
+    const camera = new PerspectiveCamera();
+    camera.position.set(12,34,250);
+    const position = camera.position.clone();
+    animateGlobeViewport(camera, original, 0, () => 0, () => {});
+    animateGlobeViewport(camera, expanded, 0, () => 0, () => {});
+    assert.ok(Math.abs(camera.fov - expanded.fieldOfView) < 1e-9);
+    assert.deepEqual(camera.position, position);
+    animateGlobeViewport(camera, original, 0, () => 0, () => {});
+    assert.ok(Math.abs(camera.fov - original.fieldOfView) < 1e-9);
+    assert.ok(Math.abs(camera.view!.offsetX + original.offset[0]) < 1e-9);
+  }
 });
