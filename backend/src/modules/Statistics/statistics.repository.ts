@@ -10,8 +10,8 @@ export interface GlobalStatistics {
 }
 export type EnergyPeriod = "week" | "month" | "year";
 export interface EnergyComparisonParams {
-  serviceA: number;
-  serviceB: number;
+  serviceA: string;
+  serviceB: string;
   start: string;
   end: string;
   period: EnergyPeriod;
@@ -418,9 +418,10 @@ export class StatisticRepository {
         const sql = `WITH selected_services AS (
                             SELECT
                                 id_service,
+                                name_service,
                                 id_location
                             FROM services
-                            WHERE id_service IN ($1, $2)
+                            WHERE name_service IN ($1, $2)
                         ),
 
                         -- 1. Busca as métricas do período e a última amostra
@@ -756,6 +757,7 @@ export class StatisticRepository {
                         final_data AS (
                             SELECT
                                 s.id_service,
+                                s.name_service,
                                 b.bucket_key,
                                 b.bucket_start,
                                 b.bucket_end,
@@ -787,6 +789,7 @@ export class StatisticRepository {
                         -- 14. Resultado final.
                         SELECT
                             id_service,
+                            name_service,
                             bucket_start,
                             bucket_end,
                             sample_count,
@@ -807,6 +810,7 @@ export class StatisticRepository {
                         param.period]);
         return rows.map((row) => ({
             id_service: Number(row.id_service),
+            name_service: row.name_service,
             bucket_start: row.bucket_start,
             bucket_end: row.bucket_end,
             sample_count: Number(row.sample_count),

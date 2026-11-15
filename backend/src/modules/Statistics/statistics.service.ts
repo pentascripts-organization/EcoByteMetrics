@@ -50,14 +50,13 @@ export class StatisticService{
         return result; 
     }
 
-    async compare(serviceA:number, serviceB:number, period:EnergyPeriod){
-            if (
-            !Number.isInteger(serviceA) ||
-            serviceA <= 0 ||
-            !Number.isInteger(serviceB) ||
-            serviceB <= 0
-            ) {
-            throw new Error("IDs dos serviços inválidos.");
+    async compare(serviceA:string, serviceB:string, period:EnergyPeriod){
+            if (!serviceA?.trim() || !serviceB?.trim()) {
+                throw new Error("Os nomes dos serviços são obrigatórios.");
+            }
+
+            if (serviceA.trim() === serviceB.trim()) {
+                throw new Error("Selecione dois serviços diferentes.");
             }
 
             if (serviceA === serviceB) {

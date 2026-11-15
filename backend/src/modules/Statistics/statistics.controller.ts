@@ -116,8 +116,8 @@ export class StatisticController {
 
   compare = async(req: Request, res: Response) => {
         try {
-            const serviceA = Number(req.query.serviceA);
-            const serviceB = Number(req.query.serviceB);
+            const serviceA = String(req.query.serviceA);
+            const serviceB = String(req.query.serviceB);
             const period = String(req.query.period) as EnergyPeriod;
 
             const data = await this.statisticService.compare(
