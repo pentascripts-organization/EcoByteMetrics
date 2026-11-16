@@ -96,7 +96,6 @@ const GlideSelect: React.FC<GlideSelectProps> = ({
   const pillRef = useRef<HTMLSpanElement>(null);
   const instant = useRef(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const scrub = useRef<{ id: number; top: number } | null>(null);
   const id = useId();
   const S = SIZES[size] ?? SIZES.md;
   const step = S.row + GAP;
@@ -107,15 +106,26 @@ const GlideSelect: React.FC<GlideSelectProps> = ({
     const el = menuRef.current;
     const root = rootRef.current;
     if (!el || !root) return;
-    const r = root.getBoundingClientRect();
-    const need = el.offsetHeight + MENU_GAP;
-    setSide(
-      placement === 'bottom' && r.bottom + need > window.innerHeight
-        ? 'top'
-        : placement === 'top' && r.top - need < 0
-          ? 'bottom'
-          : placement
-    );
+    const measure = () => {
+      const r = root.getBoundingClientRect();
+      let top = 8, bottom = window.innerHeight - 8;
+      for (let parent = root.parentElement; parent; parent = parent.parentElement) {
+        if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(parent).overflowY)) {
+          const box = parent.getBoundingClientRect();
+          top = Math.max(top, box.top); bottom = Math.min(bottom, box.bottom);
+        }
+      }
+      const below = Math.max(0, bottom - r.bottom - MENU_GAP);
+      const above = Math.max(0, r.top - top - MENU_GAP);
+      const need = Math.min(320, items.length * step + PAD * 2);
+      const nextSide = placement === 'bottom' ? (below >= need || below >= above ? 'bottom' : 'top')
+        : (above >= need || above >= below ? 'top' : 'bottom');
+      setSide(nextSide);
+      el.style.setProperty('--gs-menu-max-height', `${Math.min(320, nextSide === 'bottom' ? below : above)}px`);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
     el.style.transitionDuration = instant.current ? '0ms' : '';
     el.dataset.state = 'closed';
     void el.offsetHeight;
@@ -128,6 +138,7 @@ const GlideSelect: React.FC<GlideSelectProps> = ({
       void p.offsetHeight;
       p.style.transition = '';
     }
+    return () => { window.removeEventListener('resize', measure); window.removeEventListener('scroll', measure, true); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -143,6 +154,7 @@ const GlideSelect: React.FC<GlideSelectProps> = ({
     p.style.transform = `translateY(${active * step}px)`;
     p.style.opacity = '1';
     instant.current = false;
+    menuRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({block: 'nearest'});
   }, [active, phase, step]);
 
   const open = (viaKey: boolean) => {
@@ -224,35 +236,8 @@ const GlideSelect: React.FC<GlideSelectProps> = ({
   }, [disabled]);
   useEffect(() => () => clearTimeout(closeTimer.current), []);
 
-  const rowAt = (y: number) => {
-    const s = scrub.current;
-    if (!s) return null;
-    const i = Math.floor((y - s.top - PAD) / step);
-    return i >= 0 && i < items.length ? i : null;
-  };
-  const onListDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (scrub.current) return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch { /* Pointer capture may end when the menu closes. */ }
-    scrub.current = { id: e.pointerId, top: e.currentTarget.getBoundingClientRect().top };
-    instant.current = true;
-    setActive(rowAt(e.clientY));
-  };
-  const onListMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrub.current || scrub.current.id !== e.pointerId) return;
-    const i = rowAt(e.clientY);
-    if (i !== active) setActive(i);
-  };
-  const onListUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrub.current || scrub.current.id !== e.pointerId) return;
-    const i = e.type === 'pointerup' ? rowAt(e.clientY) : null;
-    scrub.current = null;
-    if (i !== null) pick(i, false);
-    else if (!rememberPosition) setActive(null);
-  };
   const onListOver = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'touch' || scrub.current) return;
+    if (e.pointerType === 'touch') return;
     const row = (e.target as HTMLElement).closest<HTMLElement>('[data-index]');
     if (!row) return;
     const i = Number(row.dataset.index);
@@ -324,19 +309,15 @@ const GlideSelect: React.FC<GlideSelectProps> = ({
             data-live={active !== null ? '' : undefined}
             onPointerOver={onListOver}
             onPointerLeave={() => {
-              if (!scrub.current && !rememberPosition) setActive(null);
+              if (!rememberPosition) setActive(null);
             }}
-            onPointerDown={onListDown}
-            onPointerMove={onListMove}
-            onPointerUp={onListUp}
-            onPointerCancel={onListUp}
-            onLostPointerCapture={onListUp}
           >
             <span ref={pillRef} className="glide-select__pill" aria-hidden="true" />
             {items.map((it, i) => (
               <div
                 key={it.value}
                 id={`${id}-${i}`}
+                onClick={() => pick(i, false)}
                 role="option"
                 aria-selected={i === selected}
                 data-index={i}

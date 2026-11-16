@@ -156,7 +156,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const table = markup.split('class="monitoring-app-table"')[1]!.split('</tbody>')[0]!.split('<tbody>')[1]!;
       assert.equal((table.match(/<tr\b/g)??[]).length,5);
       assert.ok(!table.includes("Aplicação 0"));
-      assert.match(markup,/1–5 de 8 aplicações/);
+      assert.doesNotMatch(markup,/1–5 de 8 aplicações/);
       assert.match(markup,/Totais das 8 aplicações filtradas/);
       assert.match(markup,/<strong>36 <small>g CO₂e/);
       assert.match(markup,/Indicador:/);
@@ -454,7 +454,8 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       for (const tab of ["resumo", "recursos"]) {
         const markup = render("/dashboard?servico=a&detalhe=" + tab).replace(/<!--.*?-->/g, "");
         assert.ok(markup.indexOf('id="service-resources-title"') < markup.indexOf('id="service-impact-title"'));
-        assert.ok(markup.indexOf('id="service-resources-title"') < markup.indexOf('id="service-location-title"'));
+        assert.ok(!markup.includes('id="service-location-title"'));
+        assert.ok(!markup.includes("Consulta da interface a cada 30 s"));
         assert.match(markup, /Sem coordenadas disponíveis/);
         assert.match(markup, /São Paulo/);
         assert.doesNotMatch(markup, /class="monitoring-map"/);

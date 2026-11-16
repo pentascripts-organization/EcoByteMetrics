@@ -318,11 +318,11 @@
 }
 .globe-exploration-controls > div { display: flex; flex-direction: column; gap: 4px; }
 .globe-exploration-controls strong { font-size: 19px; color: #103a40; }
-.globe-exploration-controls span { color: #526b78; font-size: 12px; }
+.globe-exploration-controls > div > span { color: #526b78; font-size: 12px; }
 .monitoring-shell .globe-exploration-controls button {
   pointer-events: auto; display: inline-flex; align-items: center; gap: 10px;
-  min-height: 44px; padding: 10px 16px; background: #fff; border: 1px solid #b9d9c9;
-  border-radius: 12px; color: #086445; font-size: 13px; font-weight: 600;
+  min-height: 46px; padding: 8px 22px; background: #fff; border: 1px solid #10b981;
+  border-radius: 26px; color: #10b981; font-size: 15px; font-weight: 650;
 }
 .globe-exploration-controls button:focus-visible { outline: 2px solid #087e59; outline-offset: 4px; }
 .globe-exploration-controls kbd { font: inherit; font-size: 10px; padding: 2px 5px; border: 1px solid #dce8e1; border-radius: 4px; }
@@ -330,7 +330,7 @@
 @media (max-width: 680px) {
   .monitoring-shell .globe-expand-button { top: 8px; right: 8px; }
   .globe-exploration-controls { inset: 16px 16px auto; }
-  .globe-exploration-controls span, .globe-exploration-controls kbd { display: none; }
+  .globe-exploration-controls > div > span, .globe-exploration-controls kbd { display: none; }
   .globe-exploration-controls strong { font-size: 16px; }
   .is-globe-expanded .monitoring-location .map-popup-card { top: 80px; right: 12px; }
 }

@@ -15,7 +15,7 @@ import { createGlobeSelection, INITIAL_GLOBE_POSITION, scheduleGlobeFocus } from
 import { countryObject, createCountryLayer, keepCountryObject } from "./countryLayer";
 import { createGlobeResolution, globeExperiments } from "./globePerformance";
 
-export const NEON_STATUS_COLORS: Record<string, string> = {
+const NEON_STATUS_COLORS: Record<string, string> = {
   default: "#ffffff",
   available: "#00ff88",
   unavailable: "#ff1744",

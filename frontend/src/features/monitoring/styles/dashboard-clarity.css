@@ -180,17 +180,13 @@ html:has(.monitoring-filter-dialog[open]) { overflow: hidden; }
 @media (max-width: 400px) { .monitoring-filter-dialog > header { padding: 22px 18px; } .filter-dialog-body { padding: 0 18px 20px; } .monitoring-filter-dialog > footer { padding: 16px 18px; } }
 @media (prefers-reduced-motion: reduce) { .monitoring-filter-dialog[open] { animation: none; } }
 
-/* The overview tab shares the live markers' neon accent. */
-.monitoring-tabs[aria-label="Visualização do monitoramento"] > button:first-child[aria-selected="true"] {
-  color: #00e881;
-  border-bottom-color: #00ff88;
-  text-shadow: 0 0 12px rgb(0 255 136 / 35%);
-  position: relative;
-}
-.monitoring-tabs[aria-label="Visualização do monitoramento"] > button:first-child[aria-selected="true"]::after {
-  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px;
-  background: #00ff88; box-shadow: 0 0 8px rgb(0 255 136 / 55%); pointer-events: none;
-}
+/* A single underline follows the selected dashboard tab. */
+.monitoring-tabs[data-sliding-indicator] { position:relative; }
+.monitoring-tabs[data-sliding-indicator] > button { color:var(--monitoring-muted); border-bottom-color:transparent; text-shadow:none; transition:color 350ms ease-in-out, text-shadow 350ms ease-in-out; }
+.monitoring-tabs[data-sliding-indicator] > button[data-highlighted="true"] { color:#00e881; border-bottom-color:transparent; text-shadow:0 0 12px rgb(0 255 136 / 35%); }
+.monitoring-tab-indicator { position:absolute; top:0; left:0; height:2px; background:#00ff88; box-shadow:0 0 8px rgb(0 255 136 / 55%); pointer-events:none; visibility:hidden; }
+.monitoring-tab-indicator[data-ready] { transition:transform 350ms cubic-bezier(.4,0,.2,1), width 350ms cubic-bezier(.4,0,.2,1); }
+@media (prefers-reduced-motion:reduce) { .monitoring-tabs[data-sliding-indicator] > button, .monitoring-tab-indicator[data-ready] { transition:none; } }
 
 .monitoring-list-pagination > .monitoring-pagination-reading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
 .monitoring-pagination-reading .monitoring-operational-counts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0; padding: 0; list-style: none; width: auto; flex-basis: auto; font-size: 12px; }

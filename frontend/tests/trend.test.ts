@@ -85,14 +85,14 @@ test("calculateTrend trata dados insuficientes com fallback seguro", () => {
   const emptyTrend = calculateTrend([], "emissions", "24h", null);
   assert.equal(emptyTrend.hasEnoughData, false);
   assert.equal(emptyTrend.direction, "neutral");
-  assert.equal(emptyTrend.formattedPercentage, "Estável");
+  assert.equal(emptyTrend.formattedPercentage, "Dados insuficientes");
   assert.equal(emptyTrend.arrow, "→");
 
   // Apenas 1 ponto
   const singleTrend = calculateTrend([sample("app-1", 0, 15, 0.01)], "emissions", "24h");
   assert.equal(singleTrend.hasEnoughData, false);
   assert.equal(singleTrend.direction, "neutral");
-  assert.equal(singleTrend.formattedPercentage, "Estável");
+  assert.equal(singleTrend.formattedPercentage, "Dados insuficientes");
 });
 
 test("calculateTrend alterna corretamente entre métrica de energia e emissão", () => {
@@ -124,4 +124,14 @@ test("generateSparklinePaths cria curvas SVG válidas e áreas fechadas", () => 
   assert.ok(path.includes("Q"));
   assert.ok(path.includes("T 94,"));
   assert.ok(area.includes("L 94,26 L 2,26 Z"));
+});
+
+
+test("trend compares equal power across different collection durations", () => {
+  const points = [{...sample("a",0,1,1),intervalSeconds:30},{...sample("a",1,2,2),intervalSeconds:60}];
+  for (const metric of ["energy","emissions"] as const) assert.equal(calculateTrend(points,metric).percentage,0);
+});
+test("trend cannot infer a change when duration is missing or invalid", () => {
+  const points = [sample("a",0,1),{...sample("a",1,2),intervalSeconds:undefined},{...sample("a",2,3),intervalSeconds:0}];
+  assert.equal(calculateTrend(points,"energy").hasEnoughData,false);
 });

@@ -16,84 +16,65 @@ export function useServiceTrend({
   service,
   metric,
   period = "24h",
+  until,
   preloadedHistory = [],
   isExpanded = false,
 }: {
   service: MonitoredService;
   metric: DashboardMetric;
   period?: Period;
+  until?: string;
   preloadedHistory?: CollectionPoint[];
   isExpanded?: boolean;
 }): { trend: ServiceTrend; loading: boolean } {
   const serviceId = service.id;
-  const cacheKey = `${serviceId}:${period}`;
+  const cacheKey = JSON.stringify([serviceId, period, until ?? null]);
 
   // Filtra histórico pré-carregado que já pertença a este serviço
   const preloadedServicePoints = useMemo(
-    () => preloadedHistory.filter((p) => p.serviceId === serviceId),
-    [preloadedHistory, serviceId],
+    () => preloadedHistory.filter((p) => p.serviceId === serviceId && (!until || Date.parse(p.collectedAt) <= Date.parse(until))),
+    [preloadedHistory, serviceId, until],
   );
 
-  const [fetchedPoints, setFetchedPoints] = useState<CollectionPoint[]>(() => {
-    const cached = trendHistoryCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-      return cached.points;
-    }
-    return [];
-  });
-
-  const [loading, setLoading] = useState(false);
-
+  const enabled = isExpanded && preloadedServicePoints.length < 2;
+  const [result, setResult] = useState<{key: string; points: CollectionPoint[]; loading: boolean}>(
+    {key: "", points: [], loading: false},
+  );
   useEffect(() => {
-    // Se o card não está expandido ou já temos histórico suficiente pré-carregado, não busca
-    if (!isExpanded || preloadedServicePoints.length >= 2) {
-      return;
-    }
-
-    const cached = trendHistoryCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-      setFetchedPoints(cached.points);
-      return;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-
-    getMonitoringSnapshot(controller.signal, {
-      period,
-      serviceIds: [serviceId],
-      includeHistory: true,
-    })
-      .then((snapshot) => {
-        if (!controller.signal.aborted) {
-          const points = snapshot.history.filter((p) => p.serviceId === serviceId);
-          trendHistoryCache.set(cacheKey, { points, timestamp: Date.now() });
-          setFetchedPoints(points);
-        }
-      })
-      .catch(() => {
-        // Falha de rede preserva pontos vazios e não quebra a interface
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      controller.abort();
+    if (!enabled) return;
+    let disposed = false;
+    let controller: AbortController | undefined;
+    let timer: ReturnType<typeof setTimeout>;
+    const load = async () => {
+      const cached = trendHistoryCache.get(cacheKey);
+      const remaining = cached ? CACHE_TTL_MS - (Date.now() - cached.timestamp) : 0;
+      if (cached && remaining > 0) {
+        setResult({key: cacheKey, points: cached.points, loading: false});
+        timer = setTimeout(() => void load(), remaining);
+        return;
+      }
+      controller = new AbortController();
+      setResult(previous => ({key: cacheKey, points: previous.key === cacheKey ? previous.points : [], loading: true}));
+      try {
+        const snapshot = await getMonitoringSnapshot(controller.signal, {period, until, serviceIds: [serviceId], includeHistory: true});
+        if (disposed) return;
+        const points = snapshot.history.filter(point => point.serviceId === serviceId && (!until || Date.parse(point.collectedAt) <= Date.parse(until)));
+        trendHistoryCache.set(cacheKey, {points, timestamp: Date.now()});
+        setResult({key: cacheKey, points, loading: false});
+      } catch {
+        if (disposed) return;
+        setResult(previous => ({key: cacheKey, points: previous.key === cacheKey ? previous.points : [], loading: false}));
+      }
+      if (!disposed) timer = setTimeout(() => void load(), CACHE_TTL_MS);
     };
-  }, [isExpanded, serviceId, period, preloadedServicePoints.length, cacheKey]);
+    timer = setTimeout(() => void load(), 0);
+    return () => { disposed = true; clearTimeout(timer); controller?.abort(); };
+  }, [enabled, cacheKey, period, until, serviceId]);
 
-  const effectivePoints = useMemo(() => {
-    if (preloadedServicePoints.length >= 2) {
-      return preloadedServicePoints;
-    }
-    if (fetchedPoints.length > 0) {
-      return fetchedPoints;
-    }
-    return preloadedServicePoints;
-  }, [preloadedServicePoints, fetchedPoints]);
+  const cached = trendHistoryCache.get(cacheKey);
+  const effectivePoints = preloadedServicePoints.length >= 2 ? preloadedServicePoints
+    : result.key === cacheKey ? result.points : cached?.points ?? preloadedServicePoints;
+  const loading = enabled && (result.key === cacheKey ? result.loading : !cached);
 
   const fallbackValue = metric === "energy" ? service.energyKwh : service.emissionsG;
 

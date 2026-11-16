@@ -260,7 +260,7 @@ export function DashboardPage() {
       <p>{snapshot.warning}</p>
     </details>}
     </>}
-    {!selectedId && <MonitoringTabs label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
+    {!selectedId && <MonitoringTabs slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
     {!selectedId && !administration && (tab === "evolucao" || tab === "comparar") && <MonitoringSummary context={dataContext} latest={comparisonLatest} services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={tab === "comparar"} loading={loading} onRefresh={() => void refresh()} />}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : administration ? "Administração do ambiente" : tab === "comparar" ? "Comparação de aplicações" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
       <div className={"monitoring-overview" + (selected ? " service-overview service-detail-layout" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
@@ -274,7 +274,7 @@ export function DashboardPage() {
         )}
         {selected ? (
           <section className="monitoring-service-summary">
-            <ServiceDetailOverview service={selected} services={mapServices} allServices={analysis.environmentServices}
+            <ServiceDetailOverview until={analysis.observedAt || undefined} service={selected} services={mapServices} allServices={analysis.environmentServices}
               header={detailHeading} onMapAnchor={setMapAnchor} animateEntry={detailEntryId === selectedId} historyPanel={detailTab === "evolucao" ? <>{dataContext}<EvolutionPanel
                 collectionEvents={analysis.collectionEvents}
                 history={selectedHistory}
@@ -433,7 +433,7 @@ export function DashboardPage() {
                                 <MapPin size={17} className="monitoring-card-meta-icon" aria-hidden="true" />
                                 <div>
                                   <span className="monitoring-card-meta-label">Região</span>
-                                  <span className="monitoring-card-meta-value">{[service.city, service.region, service.country].filter(Boolean).join(" · ") || "América do Norte"}</span>
+                                  <span className="monitoring-card-meta-value">{[service.city, service.region, service.country].filter(Boolean).join(" · ") || "Localização não informada"}</span>
                                 </div>
                               </div>
 
@@ -441,6 +441,7 @@ export function DashboardPage() {
                                 service={service}
                                 metric={metric}
                                 period={period}
+                                until={analysis.observedAt || undefined}
                                 preloadedHistory={history}
                                 isExpanded={isExpanded}
                               />
@@ -453,7 +454,7 @@ export function DashboardPage() {
                 </tbody>
               </table>
             </div>
-            {services.length > 0 && <><nav className="monitoring-list-pagination" aria-label="Páginas das aplicações"><div className="monitoring-pagination-reading"><span>{page * 5 + 1}–{Math.min(page * 5 + 5, latestImpacts.length)} de {latestImpacts.length} aplicações</span><OperationalCounts services={services} /></div><div><button type="button" aria-label="Aplicações anteriores" disabled={page === 0} onClick={() => setApplicationPage(page - 1)}><ChevronLeft size={17} /></button><button type="button" aria-label="Próximas aplicações" disabled={page === lastPage} onClick={() => setApplicationPage(page + 1)}><ChevronRight size={17} /></button></div></nav></>}
+            {services.length > 0 && <><nav className="monitoring-list-pagination" aria-label="Páginas das aplicações"><div className="monitoring-pagination-reading"><OperationalCounts services={services} /></div><div><button type="button" aria-label="Aplicações anteriores" disabled={page === 0} onClick={() => setApplicationPage(page - 1)}><ChevronLeft size={17} /></button><button type="button" aria-label="Próximas aplicações" disabled={page === lastPage} onClick={() => setApplicationPage(page + 1)}><ChevronRight size={17} /></button></div></nav></>}
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>

@@ -140,7 +140,10 @@
   position: relative;
   display: grid;
   gap: 1px;
-  touch-action: none;
+  max-height: max(0px, calc(var(--gs-menu-max-height, 320px) - 8px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .glide-select__pill {

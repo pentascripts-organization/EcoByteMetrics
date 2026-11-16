@@ -99,12 +99,13 @@ export function calculateTrend(
   const validPoints = points
     .filter((point) => {
       const val = metric === "energy" ? point.energyKwh : point.emissionsG;
-      return val !== null && Number.isFinite(val) && Number.isFinite(Date.parse(point.collectedAt));
+      return val !== null && Number.isFinite(val) && Number.isFinite(Date.parse(point.collectedAt)) &&
+        Number.isFinite(point.intervalSeconds) && (point.intervalSeconds ?? 0) > 0;
     })
     .sort((a, b) => Date.parse(a.collectedAt) - Date.parse(b.collectedAt));
 
   const values = validPoints.map((p) =>
-    metric === "energy" ? p.energyKwh : p.emissionsG!,
+    (metric === "energy" ? p.energyKwh : p.emissionsG!) * 3600 / p.intervalSeconds!,
   );
 
   // Se houver valor fallback e nenhum ponto no histórico
@@ -116,7 +117,7 @@ export function calculateTrend(
     const { path, area } = generateSparklinePaths(values);
     return {
       percentage: null,
-      formattedPercentage: "Estável",
+      formattedPercentage: "Dados insuficientes",
       direction: "neutral",
       arrow: "→",
       color: "var(--monitoring-muted, #526b78)",

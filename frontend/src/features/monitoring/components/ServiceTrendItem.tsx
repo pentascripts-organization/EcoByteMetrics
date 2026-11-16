@@ -8,12 +8,14 @@ export function ServiceTrendItem({
   service,
   metric,
   period = "24h",
+  until,
   preloadedHistory = [],
   isExpanded = true,
 }: {
   service: MonitoredService;
   metric: DashboardMetric;
   period?: Period;
+  until?: string;
   preloadedHistory?: CollectionPoint[];
   isExpanded?: boolean;
 }) {
@@ -21,6 +23,7 @@ export function ServiceTrendItem({
     service,
     metric,
     period,
+    until,
     preloadedHistory,
     isExpanded,
   });

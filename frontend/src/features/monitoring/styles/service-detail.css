@@ -41,8 +41,6 @@
 .service-resources .monitoring-explanation { font-size: 10px; color: #526b78; line-height: 1.6; margin-top: 14px; }
 .service-resources .service-message { font-size: 12px; margin-top: 12px; }
 .service-resources .monitoring-card-trend-item { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e1ebe5; }
-.service-location .monitoring-section-heading { margin-bottom: 8px; }
-.service-location-name { font-size: 13px; color: #355b53; margin: 0; padding-left: 31px; line-height: 1.6; }
 .service-globe { grid-area: globe; position: relative; align-self: center; min-width: 0; width: 100%; aspect-ratio: 1; display: grid; align-items: center; isolation: isolate; }
 .service-globe::before { content: ""; position: absolute; inset: -10%; z-index: -1; border-radius: 50%; background: radial-gradient(circle,#00e78028 25%,#00e78018 50%,transparent 70%); pointer-events: none; }
 .service-globe .monitoring-map { width: 100%; position: relative; background: transparent !important; overflow: visible !important; border: 0 !important; display: block; }
@@ -87,10 +85,9 @@
 }
 @media (max-width: 899px) {
   .monitoring-shell:has(.service-detail-overview) :is(.monitoring-main,.monitoring-header) { width: calc(100% - 32px); }
-  .service-detail-overview { grid-template-columns: minmax(0,1fr); grid-template-areas: "identity" "resources" "globe" "location" "impact"; gap: 20px; }
+  .service-detail-overview { grid-template-columns: minmax(0,1fr); grid-template-areas: "identity" "resources" "globe" "impact"; gap: 20px; }
   .service-detail-columns { display: contents; }
   .service-resources { grid-area: resources; }
-  .service-location { grid-area: location; }
   .service-identity .detail-heading h1 { font-size: 36px; }
   .service-globe { max-width: 560px; justify-self: center; }
   .service-detail-overview .monitoring-detail-card { padding: 20px; }

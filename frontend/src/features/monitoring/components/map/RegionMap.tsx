@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, useCallback, useMemo, useState } from "react
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import type { CollectionPoint, MonitoredService } from "../../types";
+import { groupServiceLocations } from "../../domain/dashboard";
 import { impactLocations } from "../../domain/observatory";
 import type { ImpactLens } from "../../domain/observatory";
 import { findCountry } from "@/shared/geography/geography";
@@ -48,7 +49,10 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
   const groups = useMemo(() => impactLocations(services, history, lens), [services, history, lens]);
   const countryCodes = useMemo(() => [...new Set((allServices ?? services).map(service => findCountry(service.country ?? "")?.properties.code).filter(Boolean))].sort().join(","), [allServices, services]);
   const supportedCountries = useMemo(() => new Set(countryCodes.split(",").filter(Boolean)), [countryCodes]);
-  const selected = groups.find(group => group.services.some(service => service.id === selectedServiceId));
+  const selectedService = (allServices ?? services).find(service => service.id === selectedServiceId);
+  // Removed services retain their camera destination without reappearing as live markers.
+  const selected = groups.find(group => group.services.some(service => service.id === selectedServiceId))
+    ?? groupServiceLocations(selectedService ? [selectedService] : [], true)[0];
   const choosing = groups.find(group => group.id === groupId);
   const highlightedCityId = groups.find(group => group.services.some(service => highlightedServiceIds.includes(service.id)))?.id;
   const focusCity = groups.find(group => group.services.some(service => service.id === focusServiceId));

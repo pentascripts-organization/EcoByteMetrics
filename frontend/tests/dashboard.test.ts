@@ -150,3 +150,15 @@ test("ranking histórico ordena pelo impacto, preservando removidas ao final ape
     assert.deepEqual(applicationImpacts(services, history, metric, true).map(row => row.service.id), ["active", "removed"]);
   }
 });
+
+
+test("removed services retain a camera location without returning to live markers", () => {
+  const removed = service("removed", {status:"removed", latitude:43.65, longitude:-79.38});
+  assert.deepEqual(groupServiceLocations([removed]), []);
+  const focus = groupServiceLocations([removed], true)[0]!;
+  assert.equal(focus.latitude,43.65);
+  assert.equal(focus.longitude,-79.38);
+  assert.equal(focus.services[0]!.status,"removed");
+  assert.deepEqual(groupServiceLocations([{...removed,latitude:NaN}], true), []);
+  assert.deepEqual(groupServiceLocations([{...removed,longitude:181}], true), []);
+});

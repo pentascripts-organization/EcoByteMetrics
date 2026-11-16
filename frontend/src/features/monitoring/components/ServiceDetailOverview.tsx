@@ -22,12 +22,12 @@ export function ServiceReadingMeta({ service, observedAt }: { service: Monitored
     <span title={Number.isFinite(collected) ? new Date(collected).toLocaleString("pt-BR") : undefined}>
       Última coleta válida: {Number.isFinite(collected) ? observedAt ? new Date(collected).toLocaleString("pt-BR") : `há ${age}` : "ainda não realizada"}
     </span>
-    <span>Consulta da interface a cada 30 s</span>
     {service.status !== "available" && <strong>Leitura preservada · {service.status === "stale" ? "dados desatualizados" : "verifique o estado do monitoramento"}</strong>}
   </div>;
 }
 
-export function ServiceDetailOverview({ service, history, period, header, historyPanel, onMapAnchor, animateEntry = false }: {
+export function ServiceDetailOverview({ service, history, period, until, header, historyPanel, onMapAnchor, animateEntry = false }: {
+  until?: string;
   onMapAnchor?: (element: HTMLDivElement | null) => void; animateEntry?: boolean;
   header?: ReactNode; historyPanel?: ReactNode;
   service: MonitoredService; services: MonitoredService[]; allServices: MonitoredService[];
@@ -36,7 +36,6 @@ export function ServiceDetailOverview({ service, history, period, header, histor
   const energy = detailReading(service.energyKwh, "energy");
   const carbon = detailReading(service.emissionsG, "carbon");
   const coordinates = Number.isFinite(service.latitude) && Number.isFinite(service.longitude);
-  const location = [service.city, service.region, service.country].filter(Boolean).join(" · ") || "Localização não informada";
   const cpu = service.cpuPercent != null && Number.isFinite(service.cpuPercent) ? Math.max(0, Math.min(100, service.cpuPercent)) : null;
   return <div className="service-detail-overview" data-detail-view={historyPanel ? "history" : "overview"} data-detail-entry={animateEntry || undefined}>
     <div className="service-identity">{header}</div>
@@ -61,12 +60,7 @@ export function ServiceDetailOverview({ service, history, period, header, histor
         </div>
         {service.statusMessage && <p className="service-message">{service.statusMessage}</p>}
         <p className="monitoring-explanation">“—” indica dado ausente. Uma leitura preservada não representa uma nova coleta.</p>
-        {history.length >= 2 && <ServiceTrendItem service={service} metric="emissions" period={period} preloadedHistory={history} isExpanded={false} />}
-      </section>
-      <section className="monitoring-detail-card service-location" aria-labelledby="service-location-title">
-        <div className="monitoring-section-heading"><h2 id="service-location-title"><MapPin size={18} aria-hidden="true" />Localização</h2></div>
-        <p className="service-location-name">{location}</p>
-
+        {history.length >= 2 && <ServiceTrendItem service={service} metric="emissions" period={period} until={until} preloadedHistory={history} isExpanded={false} />}
       </section>
     </div>
     <section className="service-globe" aria-label="Localização geográfica da aplicação">
