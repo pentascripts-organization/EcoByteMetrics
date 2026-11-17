@@ -21,7 +21,8 @@ router.get("/energy", statistics.calculationEnergy);
 // http://localhost:3000/api/statistics/energy/billing-api
 router.get("/energy/:nome_service", statistics.calculationEnergyByUnit);
 
-//http://localhost:3000/api/statistics/compare?serviceA=1&serviceB=2&start=2026-11-01T&end=2026-11-14
+// GET - Comparação de serviços em uma janela temporal comum
+// http://localhost:3000/api/statistics/metrics/compare?ids=1,2&period=week
 router.get("/metrics/compare", statistics.compare)
 
 

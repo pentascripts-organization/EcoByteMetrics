@@ -9,13 +9,13 @@ import type {
 } from "./statistics.repository.js";
 
 export class StatisticsError extends Error {
-    constructor(
-        message: string,
-        public readonly statusCode: number
-    ) {
-        super(message);
-        this.name = "StatisticsError";
-    }
+  constructor(
+    message: string,
+    public readonly statusCode: number
+  ) {
+    super(message);
+    this.name = "StatisticsError";
+  }
 }
 
 export class StatisticService {
@@ -161,6 +161,24 @@ export class StatisticService {
       end: end.toISOString(),
     };
 
-    return this.statisticRepository.getMetricCompare(params);
+    const data =
+      await this.statisticRepository.getMetricCompare(params);
+
+    const returnedIds = new Set(
+      data.map(item => Number(item.id_service))
+    );
+
+    const missingIds = ids.filter(
+      id => !returnedIds.has(id)
+    );
+
+    if (missingIds.length > 0) {
+      throw new StatisticsError(
+        `Serviços não encontrados: ${missingIds.join(", ")}.`,
+        404
+      );
+    }
+
+    return data;
   }
 }
