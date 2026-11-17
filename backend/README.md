@@ -119,8 +119,8 @@ JWT_SECRET=sua_chave_secreta_jwt
 JWT_EXPIRES_IN=1h
 
 #Variaveis do ambiente do frontend
-FRONT_PORT=8080
-PGPORT=80
+FRONT_PORT=5173
+FRONTEND_INTERNAL_PORT=80
 ```
 
 O backend consulta `GET {CARBON_INTENSITY_URL}/regions`; a resposta deve conter `regions` com `code` e `carbon_intensity_gco2e_per_kwh`. A ausência de fator mantém consumo e ranking por kWh disponíveis, mas emissões ficam `null`/fora do ranking por CO₂e. O ranking da API mantém amostras em memória por até 7 dias e começa a acumular dados após a inicialização.
