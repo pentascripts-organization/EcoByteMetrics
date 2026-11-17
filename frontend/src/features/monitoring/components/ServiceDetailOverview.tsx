@@ -26,10 +26,10 @@ export function ServiceReadingMeta({ service, observedAt }: { service: Monitored
   </div>;
 }
 
-export function ServiceDetailOverview({ service, history, period, until, header, historyPanel, onMapAnchor, animateEntry = false }: {
+export function ServiceDetailOverview({ service, history, period, until, header, detailNavigation, historyPanel, onMapAnchor, animateEntry = false }: {
   until?: string;
   onMapAnchor?: (element: HTMLDivElement | null) => void; animateEntry?: boolean;
-  header?: ReactNode; historyPanel?: ReactNode;
+  header?: ReactNode; detailNavigation?: ReactNode; historyPanel?: ReactNode;
   service: MonitoredService; services: MonitoredService[]; allServices: MonitoredService[];
   history: CollectionPoint[]; period: Period; onSelectService: (id: string) => void;
 }) {
@@ -60,16 +60,14 @@ export function ServiceDetailOverview({ service, history, period, until, header,
         </div>
         {service.statusMessage && <p className="service-message">{service.statusMessage}</p>}
         <p className="monitoring-explanation">“—” indica dado ausente. Uma leitura preservada não representa uma nova coleta.</p>
-        {history.length >= 2 && <ServiceTrendItem service={service} metric="emissions" period={period} until={until} preloadedHistory={history} isExpanded={false} />}
+        <ServiceTrendItem service={service} metric="emissions" period={period} until={until} preloadedHistory={history} isExpanded={!historyPanel} />
       </section>
     </div>
     <section className="service-globe" aria-label="Localização geográfica da aplicação">
-      <div className="service-globe-orbit service-globe-orbit--one" aria-hidden="true" />
-      <div className="service-globe-orbit service-globe-orbit--two" aria-hidden="true" />
         {coordinates ? <div className="monitoring-map globe-anchor" ref={onMapAnchor}><div className="globe-stage" aria-hidden="true" /></div>
           : <div className="service-map-unavailable" role="status"><MapPin size={28} aria-hidden="true" /><strong>Sem coordenadas disponíveis</strong><span>A localização informada continua disponível acima.</span></div>}
     </section>
-    <aside className="service-impact-column">{historyPanel ? <div className="service-history-card">{historyPanel}</div> : <>
+    <aside className="service-impact-column">{detailNavigation}{historyPanel ? <div className="service-history-card">{historyPanel}</div> : <>
     <section className="service-impact" aria-labelledby="service-impact-title">
       <div className="monitoring-section-heading"><div>
         <h2 id="service-impact-title"><Leaf size={22} aria-hidden="true" />Impacto estimado na última coleta</h2>

@@ -1,4 +1,4 @@
-import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Clock3, TrendingDown, TrendingUp } from "lucide-react";
 import type { MonitoredService, CollectionPoint } from "../types";
 import type { DashboardMetric } from "../domain/dashboard";
 import type { Period } from "@/shared/lib/period";
@@ -28,12 +28,13 @@ export function ServiceTrendItem({
     isExpanded,
   });
 
-  const Icon =
-    trend.direction === "down"
+  const Icon = !trend.hasEnoughData
+    ? Clock3
+    : trend.direction === "down"
       ? TrendingDown
       : trend.direction === "up"
       ? TrendingUp
-      : Minus;
+      : Clock3;
 
   const gradientId = `sparkline-grad-${service.id.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 
@@ -53,12 +54,11 @@ export function ServiceTrendItem({
           style={{ color: trend.color }}
           title={`Tendência de ${metric === "energy" ? "consumo" : "emissão"} ${trend.periodLabel}`}
         >
-          <span className="trend-arrow">{trend.arrow}</span>{" "}
-          {trend.formattedPercentage}{" "}
+          {trend.hasEnoughData ? <><span className="trend-arrow">{trend.arrow}</span>{" "}{trend.formattedPercentage}</> : loading ? "Buscando tendência..." : "Aguardando mais coletas"}{" "}
           <small>{trend.periodLabel}</small>
         </span>
       </div>
-      <svg
+      {trend.hasEnoughData && <svg
         className="monitoring-card-sparkline"
         viewBox="0 0 96 26"
         fill="none"
@@ -82,7 +82,7 @@ export function ServiceTrendItem({
             <stop offset="100%" stopColor={trend.strokeColor} stopOpacity="0.0" />
           </linearGradient>
         </defs>
-      </svg>
+      </svg>}
     </div>
   );
 }

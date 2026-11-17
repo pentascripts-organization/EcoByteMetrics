@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Calendar,
+  CircleAlert,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -206,16 +207,8 @@ export function DashboardPage() {
       <div><strong title={formatRecordedPeriod(shownRange.first, shownRange.last)}>{((loading || (!error && snapshot.historyIncluded === false && !comparisonLatest)) && !summaryHistory.length) || discovering ? "Consultando os registros da seleção…" : tab === "comparar" && !summaryServices.length ? "Selecione aplicações para comparar" : formatDataPeriod(shownRange.first, shownRange.last)}</strong><p>Estimativas de energia e carbono dos registros disponíveis.<InfoTooltip label="estimativas ambientais">Os valores são estimativas calculadas a partir do uso das aplicações, e não medições diretas de eletricidade ou CO₂ na atmosfera. CO₂e significa dióxido de carbono equivalente.</InfoTooltip></p></div>
       <span>{comparisonLatest ? "Uma leitura por aplicação" : <>Filtro: {period === "7d" ? "até 7 dias" : "até 24 horas"}{analysis.observedAt && " anteriores ao horário escolhido"}</>}</span>
     </section>);
-  const detailHeading = (<div className="monitoring-heading detail-heading">
-      <div className="monitoring-detail-toolbar">
-        <button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>
-
-      </div>
-      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
-      {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
-      {selected && <ServiceReadingMeta service={selected} observedAt={analysis.observedAt} />}
-        {selected && (
-          <MonitoringTabs
+  const detailNavigation = selected ? (
+    <MonitoringTabs className="monitoring-tabs service-detail-tabs"
             label="Informações da aplicação"
             value={detailTab === "evolucao" ? "evolucao" : "resumo"}
             tabs={[
@@ -224,7 +217,16 @@ export function DashboardPage() {
             ]}
             onChange={value => update({ detalhe: value })}
           />
-        )}
+  ) : null;
+  const detailHeading = (<div className="monitoring-heading detail-heading">
+      <div className="monitoring-detail-toolbar">
+        <button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>
+
+      </div>
+      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
+      {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
+      {selected && <ServiceReadingMeta service={selected} observedAt={analysis.observedAt} />}
+
     </div>);
   return <>
     <TopographicSides key="topography" />
@@ -256,8 +258,8 @@ export function DashboardPage() {
     {analysis.observationMissing && <p className="monitoring-notice" role="alert">Este instante não está disponível no histórico consultado. <button onClick={goLive}>Voltar para agora</button></p>}
     {error && !showFilters && <div className="monitoring-notice" role="alert"><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button><details><summary>Detalhes da conexão</summary><p>{error}</p></details></div>}
     {analysis.observedAt && <div className="monitoring-past-banner" role="status"><Clock3 size={18} aria-hidden="true" /><span>Você está consultando o passado: <strong>{stamp(analysis.observedAt)}</strong></span><button type="button" onClick={goLive}>Voltar para agora</button></div>}
-    {snapshot.warning && <details className="monitoring-notice"><summary>Parte dos dados não pôde ser atualizada</summary>
-      <p>{snapshot.warning}</p>
+    {snapshot.warning && <details className="monitoring-notice monitoring-notice--toast" role="status"><summary><CircleAlert size={17} aria-hidden="true" /><span>Parte dos dados não pôde ser atualizada</span><ChevronDown size={16} aria-hidden="true" /></summary>
+      <div className="monitoring-notice-toast-content"><p>{snapshot.warning}</p></div>
     </details>}
     </>}
     {!selectedId && <MonitoringTabs slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
@@ -275,7 +277,7 @@ export function DashboardPage() {
         {selected ? (
           <section className="monitoring-service-summary">
             <ServiceDetailOverview until={analysis.observedAt || undefined} service={selected} services={mapServices} allServices={analysis.environmentServices}
-              header={detailHeading} onMapAnchor={setMapAnchor} animateEntry={detailEntryId === selectedId} historyPanel={detailTab === "evolucao" ? <>{dataContext}<EvolutionPanel
+              header={detailHeading} detailNavigation={detailNavigation} onMapAnchor={setMapAnchor} animateEntry={detailEntryId === selectedId} historyPanel={detailTab === "evolucao" ? <EvolutionPanel
                 collectionEvents={analysis.collectionEvents}
                 history={selectedHistory}
                 services={[selected]}
@@ -289,7 +291,7 @@ export function DashboardPage() {
                 loading={loading || (!error && snapshot.historyIncluded === false)}
                 observedAt={analysis.observedAt}
                 onOpenService={openService}
-              /></> : undefined}
+              /> : undefined}
               history={selectedHistory} period={period} onSelectService={openService} />
           </section>
         ) : <section className="monitoring-applications">
@@ -408,7 +410,7 @@ export function DashboardPage() {
 
                             <div className="monitoring-card-status-col">
                               <ServiceStatus service={service} />
-                              {service.statusMessage && <small className="service-message">{service.statusMessage}</small>}
+
                             </div>
 
                             <div className="monitoring-card-metric-col" title={"Última coleta: " + stamp(service.lastCollectionAt)}>
@@ -418,6 +420,8 @@ export function DashboardPage() {
                               </span>
                             </div>
                           </div>
+
+                          {service.statusMessage && <div className="monitoring-card-status-note" data-status={service.status} role="note"><CircleAlert size={16} aria-hidden="true" /><span>{service.statusMessage}</span></div>}
 
                           {isExpanded && (
                             <div className="monitoring-card-accordion-body">

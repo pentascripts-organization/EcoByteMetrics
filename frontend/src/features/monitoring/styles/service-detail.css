@@ -15,9 +15,7 @@
 .service-identity .monitoring-status--available { background: #c5f8b4; color: #064525; }
 .service-reading-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 10px; margin-top: 12px; color: #355c53; font-size: 11px; line-height: 1.6; }
 .service-reading-meta strong { color: #8a540a; font-weight: 600; }
-.service-identity .monitoring-tabs { margin-top: 20px; box-shadow: none; border: 0; background: #eef3f3; border-radius: 14px; padding: 4px; display: inline-flex; gap: 4px; }
-.service-identity .monitoring-tabs button { min-height: 44px; padding: 8px 18px; font-size: 14px; color: #23464d; border-radius: 10px; }
-.service-identity .monitoring-tabs button[aria-selected="true"] { background: linear-gradient(120deg,#edfff7,#beffe4); color: #062e27; box-shadow: 0 3px 0 #00e885, 0 5px 16px #00e88525; }
+.service-detail-tabs { align-self: flex-end; flex: 0 0 auto; margin: 0 0 12px !important; }
 .service-detail-columns { grid-area: resources; display: grid; gap: 14px; min-width: 0; z-index: 2; }
 .service-detail-overview .monitoring-detail-card { border-radius: 24px; border: 1px solid #e6eeea; padding: 22px; background: #ffffffed; box-shadow: 0 6px 22px rgb(8 47 53 / 7%); }
 .service-detail-overview .monitoring-section-heading { margin: 0 0 18px; }
@@ -50,28 +48,24 @@
 .service-globe .globe-marker-label { max-width: 220px; white-space: normal; width: max-content; font-size: 13px; border-radius: 99px; padding: 8px 14px; border-color: #00df7c; }
 .service-globe .map-popup-card { z-index: 10; max-height: min(480px,70dvh); }
 .service-globe .globe-fallback, .service-map-unavailable { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 300px; padding: 24px; text-align: center; font-size: 13px; color: #526b78; line-height: 1.6; }
-.service-globe-orbit { position: absolute; inset: 4% -3%; border: 1px solid #c8ffeb; border-radius: 50%; transform: rotate(-24deg) scaleY(.85); pointer-events: none; z-index: -1; }
-.service-globe-orbit--two { inset: 18% -5%; transform: rotate(28deg) scaleY(.65); }
-.service-globe-orbit::after { content: ""; position: absolute; left: 17%; top: 8%; width: 8px; height: 8px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #00ff8850; }
-.service-impact-column { grid-area: impact; align-self: center; min-width: 0; z-index: 2; }
-.service-impact { position: relative; padding: 28px; border-radius: 28px; background: linear-gradient(155deg,#00613f,#004b38 48%,#009759); color: #fff; box-shadow: 0 10px 36px #005c3e12; }
-.service-impact::after { content: ""; position: absolute; width: 28px; height: 28px; right: 8px; top: 8px; border: 3px solid #d9ed36; border-left: 0; border-bottom: 0; border-radius: 0 18px 0 0; pointer-events: none; }
-.service-impact .monitoring-section-heading h2 { color: #fff; font-size: 17px; }
-.service-impact h2 svg { color: #bfff42; }
-.service-impact .monitoring-section-subtitle { color: #e0f7ea; margin-left: 31px; }
+.service-impact-column { grid-area: impact; display: flex; flex-direction: column; align-self: center; min-width: 0; z-index: 2; }
+.service-impact { position: relative; padding: 22px; border: 1px solid #e6eeea; border-radius: 24px; background: linear-gradient(145deg,#fff 0%,#fbfefc 100%); color: #103a40; box-shadow: 0 6px 22px rgb(8 47 53 / 7%); }
+.service-impact .monitoring-section-heading h2 { color: #103a40; font-size: 17px; }
+.service-impact h2 svg { color: #00bb60; }
+.service-impact .monitoring-section-subtitle { color: #526b78; margin-left: 31px; }
 .service-impact-grid { margin: 0; display: grid; }
-.service-kpi { padding: 16px 0; border-bottom: 1px solid #c0e8d39c; }
+.service-kpi { padding: 16px 0; border-bottom: 1px solid #e1ebe5; }
 .service-kpi:last-child { padding-bottom: 0; border: 0; }
-.service-kpi dt { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #f0fff5; }
-.service-kpi dt svg { color: #dcf65c; flex-shrink: 0; }
-.service-kpi dd { margin: 6px 0 0 28px; color: #fff; font-size: clamp(28px,2.6vw,42px); font-weight: 800; line-height: 1.15; letter-spacing: -.9px; font-variant-numeric: tabular-nums; }
-.service-kpi small { font-size: 16px; font-weight: 400; letter-spacing: 0; white-space: nowrap; }
-.service-kpi--carbon dd { color: #b8f968; }
-.service-history-card { background: #fff; border: 1px solid #e0ece4; border-radius: 24px; padding: 18px; box-shadow: 0 6px 22px #082f3510; max-height: max(420px,calc(100dvh - 160px)); overflow: auto; }
+.service-kpi dt { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #526b78; }
+.service-kpi dt svg { color: #00a965; flex-shrink: 0; }
+.service-kpi dd { margin: 6px 0 0 28px; color: #103a40; font-size: clamp(28px,2.6vw,42px); font-weight: 800; line-height: 1.15; letter-spacing: -.9px; font-variant-numeric: tabular-nums; }
+.service-kpi small { color: #526b78; font-size: 16px; font-weight: 450; letter-spacing: 0; white-space: nowrap; }
+.service-kpi--carbon dd { color: #009955; }
+.service-history-card { display: flex; flex-direction: column; min-height: 0; background: #fff; border: 1px solid #e0ece4; border-radius: 24px; padding: 18px; box-shadow: 0 6px 22px #082f3510; max-height: max(420px,calc(100dvh - 160px)); overflow: auto; }
 .service-history-card .monitoring-data-context { padding: 0 0 12px; border-top: 0; }
 .service-history-card .monitoring-data-context strong { font-size: 12px; }
 .service-history-card .monitoring-data-context p { font-size: 11px; }
-.service-history-card .evolution-panel { width: 100%; min-width: 0; padding: 0; margin: 0; --evolution-plot-height: 240px; }
+.service-history-card .evolution-panel { display: flex; flex-direction: column; flex: 1; height: 100%; min-height: 0; width: 100%; min-width: 0; padding: 0; margin: 0; --evolution-plot-height: clamp(130px, calc(100dvh - 820px), 230px); }
 .service-history-card .evolution-section, .service-history-card .evolution-chart-panel { min-width: 0; }
 .service-history-card .evolution-details-grid { grid-template-columns: minmax(0,1fr); }
 .service-history-card :is(.evolution-heading,.evolution-chart-heading,.evolution-chart-reading) { flex-wrap: wrap; gap: 10px; }
@@ -93,7 +87,9 @@
   .service-detail-overview .monitoring-detail-card { padding: 20px; }
   .service-resource-layout { grid-template-columns: minmax(110px,.8fr) minmax(0,1.2fr); }
   .service-impact { padding: 24px; }
-  .service-history-card { max-height: none; overflow: visible; }
+  .service-history-card { max-height: none; height: auto; overflow: visible; }
+  .service-history-card .evolution-panel { height: auto; flex: initial; }
+  .service-history-card .evolution-panel--compact .evolution-section { overflow: visible; }
   .service-globe .globe-marker-label { max-width: 140px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { .service-detail-overview *, .detail-heading * { animation: none !important; transition: none !important; } }
@@ -114,12 +110,23 @@
 /* Historical content scrolls inside its column instead of moving the shared globe. */
 @media (min-width: 900px) {
   .service-impact-column:has(.service-history-card) { align-self: stretch; position: relative; }
-  .service-impact-column .service-history-card { position: absolute; inset: 0; max-height: none; }
+  .service-impact-column .service-history-card { position: relative; inset: auto; flex: 1; min-height: 0; height: auto; max-height: none; }
 }
 
 /* Match the HUD exchange to the globe flight. */
 .monitoring-header { transition: width 1100ms cubic-bezier(.4,0,.2,1); }
 .service-detail-overview[data-detail-entry] .service-impact-column { animation-delay: 760ms; }
-.service-detail-overview[data-detail-entry] :is(.service-globe::before,.service-globe-orbit) { animation: detailGlobeAtmosphere 700ms ease-out 380ms backwards; }
+.service-detail-overview[data-detail-entry] :is(.service-globe::before) { animation: detailGlobeAtmosphere 700ms ease-out 380ms backwards; }
 @keyframes detailGlobeAtmosphere { from {opacity:0;} to {opacity:1;} }
-@media (prefers-reduced-motion: reduce) { .monitoring-header { transition:none; } .service-detail-overview[data-detail-entry] :is(.service-globe::before,.service-globe-orbit) { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .monitoring-header { transition:none; } .service-detail-overview[data-detail-entry] :is(.service-globe::before) { animation:none; } }
+
+/* Keep the application history chart visible without an inner scroll area. */
+@media (min-width: 900px) {
+  .service-impact-column .service-history-card { overflow: hidden; }
+  .service-history-card .evolution-panel--compact .evolution-section { flex: 1; min-height: 0; overflow: hidden; }
+  .service-history-card .evolution-panel--compact .evolution-section:has(.evolution-samples),
+  .service-history-card .evolution-panel--compact .evolution-section:has(.evolution-details) { overflow: auto; overscroll-behavior: contain; padding-right: 4px; }
+  .service-history-card .evolution-panel--compact .evolution-chart-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  .service-history-card .evolution-panel--compact .evolution-chart { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+  .service-history-card .evolution-panel--compact .evolution-recharts { flex: 1; min-height: 125px; height: auto; }
+}

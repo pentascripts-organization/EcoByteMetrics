@@ -78,6 +78,7 @@ function WorldGlobe({
   const rotation = useRef<ReturnType<typeof createGlobeRotation> | null>(null);
   const resolution = useRef<ReturnType<typeof createGlobeResolution> | null>(null);
   const cancelCameraMotion = useRef<() => void>(() => {});
+  const viewportMotion = useRef<(() => void) | null>(null);
   const markerElements = useRef(new Map<string, HTMLButtonElement>());
   const touch = useRef<{ id: number; x: number; y: number } | null>(null);
   const [viewport, setViewport] = useState({
@@ -230,6 +231,13 @@ function WorldGlobe({
     rotation.current?.setEnabled(viewport.visible && !rotationPaused && !highlightedCityId && motionAllowed && settings.parallaxEnabled);
   }, [ready, viewport.visible, rotationPaused, highlightedCityId, motionAllowed, settings.parallaxEnabled]);
 
+  const interactionPointAllowed = (x: number, y: number) => {
+    const anchor = expanded
+      ? { left: 0, top: 0, width: viewport.width, height: viewport.height }
+      : (anchorElement ?? host.current)?.getBoundingClientRect();
+    return Boolean(anchor && isGlobeInteractionPoint(anchor, x, y));
+  };
+
   useLayoutEffect(() => {
     const element = anchorElement === undefined ? host.current : anchorElement;
     const portalRoot = inline && element ? element : host.current?.closest(".monitoring-shell") ?? document.body;
@@ -310,14 +318,21 @@ function WorldGlobe({
     projectionAnchor.current = viewport.anchor;
     projectionInitialized.current = true;
     const cancel = animateGlobeViewport(camera, viewport, duration, requestAnimationFrame, cancelAnimationFrame);
+    viewportMotion.current = cancel;
     const controls = globe.current?.controls();
     const surface = sceneSurface.current;
     const enabled = controls?.enabled;
     const restore = () => { if (controls && enabled !== undefined) controls.enabled = enabled; if (surface) surface.inert = false; };
-    if (duration && shared) { if (controls) controls.enabled = false; if (surface) surface.inert = true; }
-    const timer = window.setTimeout(restore, duration);
-    return () => { window.clearTimeout(timer); cancel(); restore(); };
-  }, [ready, viewport, motionAllowed, settings.parallaxEnabled]);
+    const lockInteraction = Boolean(duration && shared && !expanded);
+    if (lockInteraction) { if (controls) controls.enabled = false; if (surface) surface.inert = true; }
+    const timer = lockInteraction ? window.setTimeout(restore, duration) : undefined;
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      cancel();
+      if (viewportMotion.current === cancel) viewportMotion.current = null;
+      restore();
+    };
+  }, [ready, viewport, motionAllowed, settings.parallaxEnabled, expanded]);
 
   useEffect(() => {
     if (!ready || !globe.current) return;
@@ -450,10 +465,12 @@ function WorldGlobe({
       style={{ visibility: viewport.visible && (painted || lost) ? "visible" : "hidden" }}
       aria-label={readOnly ? "Globo 3D para visualização" : "Globo 3D interativo"}
       onPointerDownCapture={(event) => {
-        if (event.target instanceof HTMLCanvasElement && (!host.current || !isGlobeInteractionPoint((expanded ? expandedGlobeAnchor({ width: viewport.width, height: viewport.height }) : (anchorElement ?? host.current).getBoundingClientRect()), event.clientX, event.clientY))) {
+        if (event.target instanceof HTMLCanvasElement && !interactionPointAllowed(event.clientX, event.clientY)) {
           event.stopPropagation();
           return;
         }
+        viewportMotion.current?.();
+        viewportMotion.current = null;
         cancelCameraMotion.current();
         resolution.current?.start();
         rotation.current?.start();
@@ -480,10 +497,12 @@ function WorldGlobe({
       }}
       onPointerUpCapture={event => { resolution.current?.end(); rotation.current?.end(); selectTouch(event); }}
       onWheelCapture={event => {
-        if (!host.current || !isGlobeInteractionPoint((expanded ? expandedGlobeAnchor({ width: viewport.width, height: viewport.height }) : (anchorElement ?? host.current).getBoundingClientRect()), event.clientX, event.clientY)) {
+        if (!interactionPointAllowed(event.clientX, event.clientY)) {
           event.stopPropagation();
           return;
         }
+        viewportMotion.current?.();
+        viewportMotion.current = null;
         resolution.current?.start(); resolution.current?.end(); cancelCameraMotion.current(); rotation.current?.pause();
       }}
     >

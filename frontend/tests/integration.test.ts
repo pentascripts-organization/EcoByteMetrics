@@ -564,8 +564,9 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.ok(markup.includes('Explorar detalhes'));
       assert.ok(!markup.includes('<dialog'));
       assert.equal((markup.match(/type="range"/g)??[]).length,1);
-      assert.ok(markup.includes('aria-label="Anéis temporais dos serviços"'));
-      assert.ok(markup.includes('Portal temporal'));
+      assert.ok(markup.includes('aria-label="Treemap de impacto por aplicação"'));
+      assert.ok(markup.includes('Impacto por aplicação'));
+      assert.ok(markup.includes('aria-label="Sobre estimativas ambientais"'));
       assert.ok(markup.includes('aria-label="Explorar intervalos do histórico"'));
       for (const text of ["evolution-details-grid", "evolution-contributors", "evolution-samples", "observation-range"]) assert.ok(!markup.includes(text), text);
       const details = render("/dashboard?aba=evolucao&painel=detalhes");
