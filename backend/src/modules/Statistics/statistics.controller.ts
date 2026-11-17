@@ -24,31 +24,46 @@ export class StatisticController {
         }
     };
 
-    ranking = async (req: Request,res: Response): Promise<void> => {
-        try {
-            const requestedPeriod = req.query.periodo;
-            const requestedOrder = req.query.ordenarPor;
+    ranking = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const requestedPeriod =
+            typeof req.query.periodo === "string"
+                ? req.query.periodo
+                : "24h";
 
-            const ranking =
-                await this.statisticService.getServicesRanking(
-                    typeof requestedPeriod === "string"
-                        ? requestedPeriod
-                        : "24h",
-                    typeof requestedOrder === "string"
-                        ? requestedOrder
-                        : "co2e"
-                );
+        const requestedOrder =
+            typeof req.query.ordenarPor === "string"
+                ? req.query.ordenarPor
+                : "co2e";
 
-            res.status(200).json(ranking);
-        } catch (error: unknown) {
-            console.error(
-                "Falha ao buscar ranking de serviços:",
-                error
+        if (!["1h", "24h", "7d", "30d"].includes(requestedPeriod)) {
+            res.status(400).json({
+                error: "Período inválido.",
+            });
+            return;
+        }
+
+        if (!["kwh", "co2e"].includes(requestedOrder)) {
+            res.status(400).json({
+                error: "Métrica de ordenação inválida.",
+            });
+            return;
+        }
+
+        const ranking =
+            await this.statisticService.getServicesRanking(
+                requestedPeriod,
+                requestedOrder
             );
 
-            res.status(500).json({
-                error: "Erro ao calcular o ranking de serviços."
-            });
+        res.status(200).json(ranking);
+
+    } catch (error: unknown) {
+        console.error("Falha ao buscar ranking de serviços:", error);
+
+        res.status(500).json({
+            error: "Erro ao calcular o ranking de serviços.",
+        });
         }
     };
 
@@ -114,51 +129,58 @@ export class StatisticController {
     }
   };
 
-  compare = async(req: Request, res: Response) => {
-        try {
-            const idsParam = req.query.ids;
-            const period = String(req.query.period) as EnergyPeriod;
+  compare = async (req: Request, res: Response) => {
+    try {
+        const idsParam = req.query.ids;
+        const periodParam = req.query.period;
 
-            if (typeof idsParam !== "string") {
-                return res.status(400).json({
+        if (typeof idsParam !== "string") {
+            return res.status(400).json({
                 success: false,
-                message: "Informe os IDs dos serviços."
-                });
-            }
-
-            const ids = idsParam.split(",").map(Number);
-
-            if (
-                ids.length < 2 ||
-                ids.some(id => !Number.isInteger(id) || id <= 0) ||
-                new Set(ids).size !== ids.length
-            ) {
-                return res.status(400).json({
-                success: false,
-                message: "Informe pelo menos dois IDs válidos e distintos."
-                });
-            }
-
-            const data = await this.statisticService.compare(
-                ids,
-                period,
-            );
-
-            return res.status(200).json({
-                success: true,
-                period,
-                data,
+                message: "Informe os IDs dos serviços.",
             });
-        } catch (error) {
-            const message =
-                error instanceof Error
-                ? error.message
-                : "Erro ao comparar serviços.";
+        }
 
-            return res.status(500).json({
+        if (
+            typeof periodParam !== "string" ||
+            !["week", "month", "year"].includes(periodParam)
+        ) {
+            return res.status(400).json({
                 success: false,
-                message,
+                message: "Informe um período válido: week, month ou year.",
             });
+        }
+
+        const ids = idsParam.split(",").map(Number);
+
+        if (
+            ids.length < 2 ||
+            ids.some(id => !Number.isSafeInteger(id) || id <= 0) ||
+            new Set(ids).size !== ids.length
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Informe pelo menos dois IDs válidos e distintos.",
+            });
+        }
+
+        const period = periodParam as EnergyPeriod;
+
+        const data = await this.statisticService.compare(ids, period);
+
+        return res.status(200).json({
+            success: true,
+            period,
+            data,
+        });
+
+    } catch (error: unknown) {
+        console.error("Erro ao comparar serviços:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Erro interno ao comparar serviços.",
+        });
     }
-  }
+    };
 }

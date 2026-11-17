@@ -37,11 +37,10 @@ export class CarbonAPISevice{
         try{
             data = await response.json();
         }catch{
-            CarbonApiError.isNotlist(data);
             throw new CarbonApiError(
-            "A API externa retornou um JSON inválido ou vazio.",
-            502,
-            "EXTERNAL_API_INVALID_JSON"
+                "A API externa retornou um JSON inválido ou vazio.",
+                502,
+                "EXTERNAL_API_INVALID_JSON"
             );
         }
         return data as {service:string, status:string};
@@ -76,11 +75,10 @@ export class CarbonAPISevice{
         try {
             data = await response.json();
         } catch {
-            CarbonApiError.isNotlist(data);
             throw new CarbonApiError(
-            "A API externa retornou um JSON inválido ou vazio.",
-            502,
-            "EXTERNAL_API_INVALID_JSON"
+                "A API externa retornou um JSON inválido ou vazio.",
+                502,
+                "EXTERNAL_API_INVALID_JSON"
             );
         }
         CarbonApiError.validarEstruturaLista(data)
@@ -114,11 +112,10 @@ export class CarbonAPISevice{
         try{
             data= await response.json();
         }catch(error:unknown){
-            CarbonApiError.isNotlist(data);
             throw new CarbonApiError(
-            "A API externa retornou um JSON inválido ou vazio.",
-            502,
-            "EXTERNAL_API_INVALID_JSON"
+                "A API externa retornou um JSON inválido ou vazio.",
+                502,
+                "EXTERNAL_API_INVALID_JSON"
             );
         }
         CarbonApiError.validarEstrutura(data)
@@ -176,7 +173,7 @@ export class CarbonApiError extends Error implements ApiError {
         }
     }
     //Validação da estrutura do carbono
-    static validarEstrutura(item:unknown){
+    static validarEstrutura(item: unknown): asserts item is CarbonRegion {
         if (
             typeof item !== "object" ||
             item === null ||
@@ -228,7 +225,7 @@ export class CarbonApiError extends Error implements ApiError {
             }
     }
     //Validação da estrutura da lista
-    static validarEstruturaLista(data:unknown){
+    static validarEstruturaLista(data: unknown): asserts data is ListCarbon {
         if (
             typeof data !== "object" ||
             data === null ||
@@ -248,6 +245,15 @@ export class CarbonApiError extends Error implements ApiError {
         for (const item of data.regions) {
             this.validarEstrutura(item);
         }
+        const codes = data.regions.map((region) => region.code);
+
+        if (new Set(codes).size !== codes.length) {
+            throw new CarbonApiError(
+                "A API retornou códigos de regiões duplicados.",
+                502,
+                "EXTERNAL_API_INVALID_DATA"
+            );
+        }
     } 
 }
 
@@ -261,47 +267,37 @@ type CarbonFactorFetcher = () => Promise<CarbonRegionFactor[]>;
 const carbonApiUrl = process.env.API_CARBON;
 
 export async function fetchCarbonRegions(): Promise<CarbonRegionFactor[]> {
-  if (!carbonApiUrl) {
-    throw new Error("A variável API_CARBON não foi configurada no ambiente.");
-  }
-
-  const baseUrl = carbonApiUrl.replace(/\/+$/, "");
-  const response = await fetch(`${baseUrl}/regions`, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Erro ao consultar regiões de carbono: HTTP ${response.status}`);
-  }
-
-  const data: unknown = await response.json();
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    !("regions" in data) ||
-    !Array.isArray(data.regions)
-  ) {
-    throw new Error("Resposta inválida ao consultar regiões de carbono.");
-  }
-
-  return data.regions.flatMap((value): CarbonRegionFactor[] => {
-    if (typeof value !== "object" || value === null) return [];
-    if (
-      !("code" in value) || typeof value.code !== "string" ||
-      !("carbon_intensity_gco2e_per_kwh" in value) ||
-      typeof value.carbon_intensity_gco2e_per_kwh !== "number" ||
-      !Number.isFinite(value.carbon_intensity_gco2e_per_kwh) ||
-      value.carbon_intensity_gco2e_per_kwh < 0
-    ) {
-      return [];
+    if (!carbonApiUrl) {
+        throw new Error("A variável API_CARBON não foi configurada no ambiente.");
     }
 
-    return [{
-      code: value.code,
-      carbonIntensity: value.carbon_intensity_gco2e_per_kwh,
-    }];
-  });
+    const baseUrl = carbonApiUrl.replace(/\/+$/, "");
+
+    const response = await fetch(`${baseUrl}/regions`, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `Erro ao consultar regiões de carbono: HTTP ${response.status}`
+        );
+    }
+
+    let data: unknown;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error("A API retornou um JSON inválido.");
+    }
+
+    CarbonApiError.validarEstruturaLista(data);
+
+    return data.regions.map((region) => ({
+        code: region.code,
+        carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
+    }));
 }
 
 let carbonFactors = new Map<string, number>();

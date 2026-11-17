@@ -18,6 +18,8 @@ import {
     resetServicesFetcher,
     setMetricsFetcherForTesting,
     setServicesFetcherForTesting,
+    setCarbonRegionsFetcherForTesting,
+    resetCarbonRegionsFetcher,
 } from "../src/modules/Services/services.service.js";
 
 const serviceA: AggregatorService = {
@@ -94,10 +96,14 @@ before(async () => {
         }
         return metricsById[serviceId]!;
     });
-    setCarbonFactorsFetcherForTesting(async () => [
+    const carbonFactors = [
         { code: "REGION-A", carbonIntensity: 100 },
         { code: "REGION-B", carbonIntensity: 500 },
-    ]);
+    ];
+
+    setCarbonFactorsFetcherForTesting(async () => carbonFactors);
+    setCarbonRegionsFetcherForTesting(async () => carbonFactors);
+
     await refreshDiscoveredServices();
     await refreshServiceMetrics();
     await refreshCarbonRegionFactors();
@@ -122,6 +128,7 @@ after(async () => {
     resetMetricsFetcher();
     resetCollectedMetricsForTesting();
     resetCarbonFactorsForTesting();
+    resetCarbonRegionsFetcher();
 });
 
 describe("contrato das rotas de resumo e ranking do dashboard", () => {
@@ -137,9 +144,11 @@ describe("contrato das rotas de resumo e ranking do dashboard", () => {
             dataHoraUltimaAtualizacao: string | null;
         };
         const serviceAEnergy =
-            (60 + 2 * 0.375 + 8 * 0.01 + 0.4 * 0.02) * 30 / 3_600_000;
+            (60 / 100 * 120 + 2 * 0.375 + 8 * 0.01 + 0.4 * 0.02) * 30 / 3_600_000;
+
         const serviceBEnergy =
-            (20 + 1 * 0.375 + 4 * 0.01 + 0.2 * 0.02) * 30 / 3_600_000;
+            (20 / 100 * 120 + 1 * 0.375 + 4 * 0.01 + 0.2 * 0.02) * 30 / 3_600_000;
+
         const expectedEnergy = serviceAEnergy + serviceBEnergy;
 
         assert.equal(response.status, 200);
@@ -213,38 +222,54 @@ describe("contrato das rotas de resumo e ranking do dashboard", () => {
 
     it("não inventa emissões quando o fator regional não está disponível", async () => {
         setCarbonFactorsFetcherForTesting(async () => []);
+        setCarbonRegionsFetcherForTesting(async () => []);
+
         await refreshCarbonRegionFactors();
+        await refreshServiceMetrics();
+
         const [summaryResponse, rankingResponse] = await Promise.all([
             fetch(`${baseUrl}/api/dashboard/summary`),
             fetch(`${baseUrl}/api/dashboard/ranking?ordenarPor=co2e`),
         ]);
+
         const summaryBody = await summaryResponse.json() as {
             emissaoTotalCo2e: number | null;
         };
+
         const rankingBody = await rankingResponse.json() as {
             ranking: unknown[];
         };
 
         assert.equal(summaryResponse.status, 200);
         assert.equal(summaryBody.emissaoTotalCo2e, null);
+
         assert.equal(rankingResponse.status, 200);
         assert.deepEqual(rankingBody.ranking, []);
     });
 
     it("preserva fatores de carbono válidos quando a API auxiliar falha", async () => {
-        setCarbonFactorsFetcherForTesting(async () => [
+        const carbonFactors = [
             { code: "REGION-A", carbonIntensity: 100 },
             { code: "REGION-B", carbonIntensity: 500 },
-        ]);
+        ];
+
+        setCarbonFactorsFetcherForTesting(async () => carbonFactors);
+        setCarbonRegionsFetcherForTesting(async () => carbonFactors);
+
         await refreshCarbonRegionFactors();
+        await refreshServiceMetrics();
+
         setCarbonFactorsFetcherForTesting(async () => {
             throw new Error("TimeoutError: carbon API indisponível");
         });
+
         await assert.rejects(refreshCarbonRegionFactors());
+
         const [summaryResponse, healthResponse] = await Promise.all([
             fetch(`${baseUrl}/api/dashboard/summary`),
             fetch(`${baseUrl}/health`),
         ]);
+
         const summaryBody = await summaryResponse.json() as {
             emissaoTotalCo2e: number | null;
         };

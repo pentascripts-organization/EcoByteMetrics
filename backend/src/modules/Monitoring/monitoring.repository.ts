@@ -18,7 +18,7 @@ export async function readMonitoring(query: HistoryQuery) {
     const catalog: AggregatorService[] = cycle?.catalog ?? [];
     const active = new Map(catalog.map(service => [service.id, service]));
     const extent = includeHistory ? await client.query(`SELECT min(m.date_houry) AS first, max(m.date_houry) AS last FROM metrics m JOIN services s USING(id_service)
-      WHERE m.date_houry > $1 AND m.date_houry <= $2 AND s.external_id IS NOT NULL
+      WHERE m.date_houry >= $1 AND m.date_houry < $2 AND s.external_id IS NOT NULL
       AND (cardinality($3::text[])=0 OR s.external_id=ANY($3::text[]))`, args) : {rows: [{first:null,last:null}]};
     const span = extent.rows[0].last ? extent.rows[0].last.getTime() - extent.rows[0].first.getTime() : 0;
     const bucketSeconds = span <= 3600_000 ? 30 : span <= 86400_000 ? 300 : 3600;
@@ -32,12 +32,18 @@ export async function readMonitoring(query: HistoryQuery) {
         CASE WHEN m.cpu_metric IS NOT NULL AND m.ram_metric IS NOT NULL AND m.hd_metric IS NOT NULL AND m.network_metric IS NOT NULL
           THEN m.colletion_interval_metric ELSE 0 END AS resource_seconds
       FROM metrics m JOIN services s USING(id_service)
-      WHERE m.date_houry > $1 AND m.date_houry <= $2 AND s.external_id IS NOT NULL
+      WHERE m.date_houry >= $1 AND m.date_houry < $2 AND s.external_id IS NOT NULL
       AND (cardinality($3::text[])=0 OR s.external_id=ANY($3::text[])))
       SELECT external_id, place, min(date_houry) AS first_collected_at, max(date_houry) AS collected_at, sum(energy)::float8 AS energy,
-        sum(energy * carbon_intensity)::float8 AS emissions,
-        sum(colletion_interval_metric)::float8 AS seconds, count(*)::int AS samples,
-        count(carbon_intensity)::int AS covered,
+        CASE
+          WHEN COUNT(carbon_intensity) = COUNT(*)
+          THEN SUM(energy * carbon_intensity)::float8
+          ELSE NULL
+        END AS emissions,
+
+SUM(colletion_interval_metric)::float8 AS seconds,
+COUNT(*)::int AS samples,
+COUNT(carbon_intensity)::int AS covered,
         sum(resource_seconds)::float8 AS resource_seconds,
         (sum(cpu_metric * resource_seconds) / nullif(sum(resource_seconds),0))::float8 AS average_cpu,
         (sum(ram_metric * resource_seconds) / nullif(sum(resource_seconds),0))::float8 AS average_memory,
@@ -47,14 +53,34 @@ export async function readMonitoring(query: HistoryQuery) {
       ORDER BY max(date_houry),external_id LIMIT 20001`, [...args, bucketSeconds]) : {rows: []};
     if (historyRows.rows.length > 20000) throw new Error("HISTORY_TOO_LARGE");
     const history = historyRows.rows.map(row => ({
-      serviceId: row.external_id, regionCode: row.place.region_code,
-      country: row.place.country ?? null, city: row.place.city ?? null,
-      collectedAt: iso(row.collected_at), cycleAt: iso(row.collected_at), cycleId: iso(row.collected_at),
+      serviceId: row.external_id,
+      regionCode: row.place.region_code,
+
+      country: row.place.country ?? null,
+      city: row.place.city ?? null,
+
+      collectedAt: iso(row.collected_at),
+      cycleAt: iso(row.collected_at),
+      cycleId: iso(row.collected_at),
       firstCollectedAt: iso(row.first_collected_at),
-      energyKwh: row.energy, emissionsG: row.emissions, intervalSeconds: row.seconds,
-      sampleCount: row.samples, emissionCount: row.covered, bucketSeconds,
-      resources: row.resource_seconds > 0 ? {cpuPercent: row.average_cpu, memoryGb: row.average_memory,
-        diskGb: row.average_disk, networkGb: row.average_network, durationSeconds: row.resource_seconds} : null,
+
+      energyKwh: row.energy == null ? null : Number(row.energy),
+      emissionsG: row.emissions == null ? null : Number(row.emissions),
+
+      intervalSeconds: Number(row.seconds),
+      sampleCount: Number(row.samples),
+      emissionCount: Number(row.covered),
+      bucketSeconds,
+
+      resources: Number(row.resource_seconds) > 0
+        ? {
+            cpuPercent: row.average_cpu,
+            memoryGb: row.average_memory,
+            diskGb: row.average_disk,
+            networkGb: row.average_network,
+            durationSeconds: Number(row.resource_seconds),
+          }
+        : null,
     }));
     const serviceRows = await client.query(`SELECT s.*, row_to_json(m) AS sample,
       m.date_houry AS collected_at, (${energy})::float8 AS energy
@@ -87,17 +113,20 @@ export async function readMonitoring(query: HistoryQuery) {
     const regionRows = await client.query(`SELECT DISTINCT ON (l.id_location) l.*,c.intesity_co2e_kwh_carbon AS intensity,
       c.renewable_percent_carbon AS renewable FROM locations l JOIN carbons c USING(id_location)
       WHERE c.date_houry <= $1 ORDER BY l.id_location,c.date_houry DESC`, [end]);
-    const regions = regionRows.rows.map(row => ({code: row.name_location, country: row.country_location, region: row.region_location,
+    const regions = regionRows.rows.map(row => ({code: row.name_location, country: row.country_location, region: row.region_location, 
       city: row.city_location, latitude: row.latitude_location, longitude: row.longitude_location,
-      carbonIntensity: Number(row.intensity), renewablePercent: Number(row.renewable)}));
+      carbonIntensity: row.intensity == null ? null : Number(row.intensity),
+      renewablePercent: row.renewable == null ? null : Number(row.renewable),
+}));
     const instants = includeHistory ? await client.query(`SELECT max(collected_at) AS at, count(*)::int AS collection_count FROM monitoring_collections
-      WHERE collected_at > $1 AND collected_at <= $2
+      WHERE collected_at >= $1 AND collected_at < $2
       GROUP BY date_bin(($3::text || ' seconds')::interval,collected_at,'2000-01-01T00:00:00Z'::timestamptz)
       ORDER BY max(collected_at) LIMIT 20000`, [start, end, bucketSeconds]) : {rows: []};
-    const failures = includeHistory ? await client.query("SELECT collected_at,errors FROM monitoring_collections WHERE collected_at > $1 AND collected_at <= $2 AND errors <> '{}'::jsonb ORDER BY collected_at DESC LIMIT 3000", [start, end]) : {rows: []};
+    const failures = includeHistory ? await client.query(`SELECT collected_at, errors FROM monitoring_collections WHERE collected_at >= $1 AND collected_at < $2 AND errors <> '{}'::jsonb ORDER BY collected_at DESC LIMIT 3000`, [start, end]) : { rows: [] };
     await client.query("COMMIT");
     const covered = history.reduce((count, point) => count + point.emissionCount, 0);
     const count = history.reduce((total, point) => total + point.sampleCount, 0);
+    const completeEmissionCoverage = count > 0 && covered === count;
     const collectionWarnings = [
       ...(!cycle ? ["Não há rodada unificada gravada até este horário. Amostras antigas preservam energia; fatores de carbono não são inferidos."] : []),
       ...(cycle && !cycle.carbon_available ? ["Não foi possível obter os fatores da API de carbono na última coleta deste recorte. As amostras dessa rodada não têm estimativa de CO₂."] : []),
@@ -113,10 +142,9 @@ export async function readMonitoring(query: HistoryQuery) {
       })),
       discoveryUpdatedAt: iso(cycle?.collected_at ?? null), discoveryComplete: true,
       lastCollectionAt: iso(serviceRows.rows.reduce<Date | null>((last, row) => row.collected_at && (!last || row.collected_at > last) ? row.collected_at : last, null)),
-      totalEnergyKwh: history.length ? history.reduce((sum, point) => sum + point.energyKwh, 0) : null,
-      totalEmissionsG: covered ? history.reduce((sum, point) => sum + (point.emissionsG ?? 0), 0) : null,
+      totalEnergyKwh: history.length ? history.reduce((sum, point) => sum + (point.energyKwh ?? 0), 0) : null,
       collectionWarning: collectionWarnings.join(" ") || null,
-      warning: [...collectionWarnings, ...(covered < count ? [`CO₂ calculado com ${covered} de ${count} amostras. ${count - covered} amostras não têm fator de carbono registrado e não entram na soma.`] : [])].join(" ") || undefined };
+      warning: [...collectionWarnings, ...(covered < count ? [`CO₂ não foi totalizado porque somente ${covered} de ${count} amostras possuem fator de carbono registrado.`] : [])].join(" ") || undefined };
   } catch (error) { await client.query("ROLLBACK"); throw error; }
   finally { client.release(); }
 }
