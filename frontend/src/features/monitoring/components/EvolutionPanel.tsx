@@ -1,3 +1,5 @@
+import Observatory from "./Observatory";
+import type {ReactNode} from "react";
 import { useId, useMemo, useState } from "react";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Clock3, Leaf, Zap } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -12,12 +14,13 @@ import { MonitoringTabs } from "./MonitoringTabs";
 import { emissionScale, formatEmissions, formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
 import "../styles/evolution.css";
 
-export function EvolutionPanel({ history, services, collectionEvents, metric, onMetric, period, onPeriod, mode, onMode, compact = false, loading, observedAt, impacts = [], onOpenService }: {
+function LegacyEvolutionPanel({ history, services, collectionEvents, metric, onMetric, period, onPeriod, mode, onMode, compact = false, loading, observedAt, impacts = [], onOpenService, filterControl }: {
   history: CollectionPoint[]; services: MonitoredService[]; metric: DashboardMetric; onMetric: (metric: string) => void;
   period: string; onPeriod: (period: string) => void; mode: EvolutionMode; onMode: (mode: EvolutionMode) => void;
   compact?: boolean; loading: boolean; observedAt: string;
   impacts?: ReturnType<typeof applicationImpacts>; onOpenService: (id: string) => void;
   collectionEvents?: CollectionEvent[];
+  filterControl?: ReactNode;
 }) {
   const data = useMemo(() => evolutionData(history, metric, mode), [history, metric, mode]);
   const chartData = useMemo(() => {
@@ -35,7 +38,7 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
   const [params, setParams] = useSearchParams();
   const panelId = useId();
   const sections = [
-    { value: "grafico", label: "Gráfico" },
+    { value: "grafico", label: compact ? "Gráfico" : "Observatório" },
     ...(!compact ? [{ value: "aplicacoes", label: "Aplicações" }] : []),
     { value: "coletas", label: "Valores" },
     { value: "detalhes", label: "Sobre os dados" },
@@ -47,7 +50,7 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
   return <section className={"monitoring-evolution evolution-panel" + (compact ? " evolution-panel--compact" : "")}>
     <div className="evolution-heading">
       <div><h2>Evolução {compact ? "da aplicação" : "do ambiente"}</h2><span className="evolution-session-label">{observedAt && "Instante em revisão · "}{formatRecordedPeriod(data.first, data.last)}</span></div>
-      <div className="evolution-toolbar">
+      <div className="evolution-toolbar">{filterControl}
         <div className="evolution-segmented" role="group" aria-label="Métrica da evolução"><button type="button" aria-pressed={metric === "emissions"} onClick={() => onMetric("emissions")}><Leaf size={15} aria-hidden="true" />Emissões</button><button type="button" aria-pressed={metric === "energy"} onClick={() => onMetric("energy")}><Zap size={15} aria-hidden="true" />Energia</button></div>
         <label className="evolution-period"><Clock3 size={16} aria-hidden="true" /><select aria-label="Período da evolução" value={period} onChange={event => onPeriod(event.target.value)}><option value="24h">Até 24 horas</option><option value="7d">Até 7 dias</option></select></label>
       </div>
@@ -93,4 +96,9 @@ export function EvolutionPanel({ history, services, collectionEvents, metric, on
       </section>}
     </div>
   </section>;
+}
+
+export type EvolutionPanelProps = Parameters<typeof LegacyEvolutionPanel>[0];
+export function EvolutionPanel(props: EvolutionPanelProps) {
+ return !props.compact ? <Observatory {...props}/> : <LegacyEvolutionPanel {...props}/>;
 }

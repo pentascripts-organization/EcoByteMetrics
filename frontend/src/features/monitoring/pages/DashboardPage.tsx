@@ -75,7 +75,7 @@ export function DashboardPage() {
   const analysis = useAnalysis();
   const { session } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico");
+  const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico" && params.get("aba") !== "evolucao");
   const [applicationPage, setApplicationPage] = useState(0);
   const [mapAnchor, setMapAnchor] = useState<HTMLDivElement | null>(null);
   const [detailEntryId, setDetailEntryId] = useState("");
@@ -109,7 +109,7 @@ export function DashboardPage() {
   const administration = !selectedId && tab === "administracao";
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
   const historicalView = selectedId ? detailTab === "evolucao" : tab === "evolucao" || tab === "comparar";
-  const showFilters = filtersOpen && !administration && !historicalView;
+  const showFilters = filtersOpen && !administration && (!historicalView || (!selectedId && tab === "evolucao"));
   useEffect(() => { setHistoryOpen?.(showFilters && Boolean(session)); return () => setHistoryOpen?.(false); }, [showFilters, setHistoryOpen, session]);
   const evolutionMode = params.get("serie") === "intervalos" ? "intervals" : "cumulative";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || params.has("periodo"));
@@ -261,7 +261,7 @@ export function DashboardPage() {
     </details>}
     </>}
     {!selectedId && <MonitoringTabs slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
-    {!selectedId && !administration && (tab === "evolucao" || tab === "comparar") && <MonitoringSummary context={dataContext} latest={comparisonLatest} services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={tab === "comparar"} loading={loading} onRefresh={() => void refresh()} />}
+    {!selectedId && !administration && tab === "comparar" && <MonitoringSummary context={dataContext} latest={comparisonLatest} services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={tab === "comparar"} loading={loading} onRefresh={() => void refresh()} />}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : administration ? "Administração do ambiente" : tab === "comparar" ? "Comparação de aplicações" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
       <div className={"monitoring-overview" + (selected ? " service-overview service-detail-layout" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
         {!selectedId && latestOverview && (
@@ -458,7 +458,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={loading || (!error && snapshot.historyIncluded === false)} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel filterControl={filterButton} collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={loading || (!error && snapshot.historyIncluded === false)} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
       {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>

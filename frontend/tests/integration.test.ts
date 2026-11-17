@@ -255,8 +255,8 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(detail,/>Histórico<\/button>/);
       assert.doesNotMatch(detail,/Ver totais e histórico/);
       assert.match(detail,/Última coleta válida/);
-      assert.match(render("/dashboard?aba=evolucao&serie=acumulado",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/CO₂e acumulado no período/);
-      assert.match(render("/dashboard?aba=evolucao&serie=intervalos",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/CO₂e no último intervalo/);
+      assert.match(render("/dashboard?aba=evolucao&serie=acumulado&painel=detalhes",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/Maior intervalo/);
+      assert.match(render("/dashboard?aba=evolucao&serie=intervalos&painel=detalhes",DashboardPage,{snapshot:mixed}).replace(/<!--.*?-->/g,""),/Maior intervalo/);
     });
 
     await t.test("visão geral mostra a última coleta, evolução mantém o histórico e o passado usa a leitura daquele corte", () => {
@@ -272,7 +272,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.ok(!table.includes("96,3"));
       assert.match(overview,/<strong>0,3 <small>g CO₂e/);
       const evolution=render("/dashboard?aba=evolucao",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
-      assert.match(evolution,/<strong>96,3 <small>g CO₂e/);
+      assert.match(evolution,/<dd>96,3 <small>g CO₂e/);
       const selectedAt=old;
       const historical={...data,source:"database",historyPeriod:"24h",historyUntil:old,selectedAt,services:[{...service,emissionsG:0.1,lastCollectionAt:old}],history:[]};
       const past=render("/dashboard?instante="+encodeURIComponent(old),DashboardPage,{snapshot:historical}).replace(/<!--.*?-->/g,"");
@@ -294,8 +294,8 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     await t.test("filtros respeitam o escopo da tela, bloqueiam futuro e explicam aplicação excluída", () => {
       const overview=render("/dashboard?painel=historico");
       assert.ok(!overview.includes("<label>Período<select"));
-      assert.doesNotMatch(render("/dashboard?aba=evolucao&painel=historico"),/class="monitoring-(tools|filter-button|filter-dialog)"/);
-      assert.doesNotMatch(render("/dashboard?aba=comparar&painel=historico"),/class="monitoring-(tools|filter-button|filter-dialog)"/);
+      assert.doesNotMatch(render("/dashboard?aba=evolucao&painel=historico"),/class="monitoring-(tools|filter-dialog)"/);
+      assert.doesNotMatch(render("/dashboard?aba=comparar&painel=historico"),/class="monitoring-(tools|filter-dialog)"/);
       assert.match(overview,/type="datetime-local" max="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"/);
       const future=new Date(Date.now()+86400_000).toISOString();
       const invalid=getAnalysis(snapshot,"24h","?instante="+encodeURIComponent(future));
@@ -538,7 +538,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const history = snapshot.history.map(point => ({...point,resources,emissionsG:point.serviceId === "b" ? 10 : 1}));
       const data = {...snapshot,history};
       const ranked = render("/dashboard?aba=evolucao&painel=aplicacoes",DashboardPage,{snapshot:data});
-      const list = ranked.split('class="evolution-contributors"')[1]!.split('</ol>')[0]!;
+      const list = ranked.split('class="evolution-contributors portal-analysis-section"')[1]!.split('</ol>')[0]!;
       assert.ok(list.indexOf("Audit") < list.indexOf("Billing API"));
       const markup = render("/dashboard?aba=comparar&app=a&app=b",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g, "");
       assert.match(markup, /class="comparison-table"/);
@@ -559,13 +559,20 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
 
     await t.test("evolution reveals only the selected section and keeps optional information out of the chart", () => {
       const markup = render("/dashboard?aba=evolucao").replace(/<!--.*?-->/g, "");
-      assert.ok(markup.includes('aria-label="Se\u00e7\u00f5es da evolu\u00e7\u00e3o"'));
-      assert.ok(markup.includes('data-engine="recharts"'));
-      assert.ok(markup.includes('aria-label="Emiss\u00f5es estimadas ao longo do tempo"'));
+      assert.ok(!markup.includes('aria-label="Se\u00e7\u00f5es da evolu\u00e7\u00e3o"'));
+      assert.doesNotMatch(markup, /temporal-portal-intervals|observatory-legend/);
+      assert.ok(markup.includes('Explorar detalhes'));
+      assert.ok(!markup.includes('<dialog'));
+      assert.equal((markup.match(/type="range"/g)??[]).length,1);
+      assert.ok(markup.includes('aria-label="Anéis temporais dos serviços"'));
+      assert.ok(markup.includes('Portal temporal'));
+      assert.ok(markup.includes('aria-label="Explorar intervalos do histórico"'));
       for (const text of ["evolution-details-grid", "evolution-contributors", "evolution-samples", "observation-range"]) assert.ok(!markup.includes(text), text);
       const details = render("/dashboard?aba=evolucao&painel=detalhes");
       assert.match(details, /evolution-details-grid/);
-      assert.ok(!details.includes('class="evolution-chart-panel"'));
+      assert.match(details,/observatory-stage evolution-chart-panel/);
+      assert.match(details,/<dialog[^>]*portal-analysis-dialog/);
+      assert.ok(details.includes('aria-label="Seções da evolução"'));
       const legacyHistory = render("/dashboard?aba=evolucao&painel=historico");
       assert.doesNotMatch(legacyHistory, /monitoring-filter-history/);
       assert.match(legacyHistory, /evolution-chart-panel/);
@@ -599,7 +606,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
         assert.ok(!past.includes('class="observation-timeline"'));
         const open=render(path+"&painel=historico",DashboardPage,{snapshot:observed});
         if(path.includes("evolucao")) {
-          assert.doesNotMatch(open,/class="monitoring-(tools|filter-button|filter-dialog)"/);
+          assert.doesNotMatch(open,/class="monitoring-(tools|filter-dialog)"/);
           continue;
         }
         assert.match(open,/<dialog[^>]*aria-labelledby="filter-dialog-title"/);
@@ -628,14 +635,14 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
 
     await t.test("long lists show five entries per page instead of growing the evolution panel", () => {
       const points = Array.from({ length: 11 }, (_, index) => ({ serviceId: "a", collectedAt: new Date(Date.parse(at) - 600_000 + index * 30_000).toISOString(), energyKwh: .001, emissionsG: .085 }));
-      const samples = render("/dashboard?aba=evolucao&painel=coletas", DashboardPage, { snapshot: { ...snapshot, history: points } }).split('class="evolution-samples"')[1]!;
+      const samples = render("/dashboard?aba=evolucao&painel=coletas", DashboardPage, { snapshot: { ...snapshot, history: points } }).split('class="evolution-samples portal-analysis-section"')[1]!;
       const body = samples.match(/<tbody>(.*?)<\/tbody>/)?.[1] ?? "";
       assert.equal((body.match(/<tr>/g) ?? []).length, 5);
       assert.match(samples, /de <!-- -->11<!-- --> intervalos/);
       assert.match(samples, /aria-label="Pr\u00f3xima p\u00e1gina de coletas"/);
       const services = Array.from({ length: 8 }, (_, index) => ({ ...service, id: String(index), name: "App " + index }));
       const history = services.map(entry => ({ ...points[0]!, serviceId: entry.id }));
-      const apps = render("/dashboard?aba=evolucao&painel=aplicacoes", DashboardPage, { snapshot: { ...snapshot, services, history } }).split('class="evolution-contributors"')[1]!;
+      const apps = render("/dashboard?aba=evolucao&painel=aplicacoes", DashboardPage, { snapshot: { ...snapshot, services, history } }).split('class="evolution-contributors portal-analysis-section"')[1]!;
       assert.equal((apps.match(/<li>/g) ?? []).length, 5);
       assert.match(apps, /de <!-- -->8<!-- --> aplica/);
     });
@@ -643,7 +650,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     await t.test("aba removida de dados incompletos retorna ao gráfico no ambiente e na aplicação", () => {
       for (const url of ["/dashboard?aba=evolucao&painel=lacunas", "/dashboard?servico=a&detalhe=evolucao&painel=lacunas"]) {
         const markup = render(url);
-        assert.match(markup, /class="evolution-chart-panel"/);
+        assert.match(markup, /class="(?:observatory-stage )?evolution-chart-panel"/);
         assert.ok(!markup.includes("Dados incompletos"));
         assert.ok(!markup.includes("evolution-gap-detail"));
         assert.ok(!markup.includes("Alguns dados estão incompletos"));
@@ -667,15 +674,16 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const data={...snapshot,services:[service],history};
       const cumulative=render("/dashboard?aba=evolucao",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
       assert.match(cumulative,/0,49 <small>kg CO₂e/);
-      assert.match(cumulative,/5 minutos · kg CO₂e/);
+      assert.match(cumulative,/ACUMULADO ATÉ/);
       assert.ok(!cumulative.includes("489,9287"));
       const samples=render("/dashboard?aba=evolucao&painel=coletas",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
       assert.match(samples,/Total acumulado no período \(kg CO₂e\)/);
-      assert.match(samples,/<td[^>]*>0,49<\/td>/);
+      assert.match(samples,/<td[^>]*>0,49 kg CO₂e<\/td>/);
       const intervals=render("/dashboard?aba=evolucao&serie=intervalos",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
-      assert.match(intervals,/5 minutos · g CO₂e/);
+      assert.match(intervals,/INTERVALO SELECIONADO/);
+      assert.match(intervals,/g CO₂e/);
       const energy=render("/dashboard?aba=evolucao&ordem=energy",DashboardPage,{snapshot:data}).replace(/<!--.*?-->/g,"");
-      assert.match(energy,/5 minutos · kWh/);
+      assert.match(energy,/kWh/);
       const tooltip=renderToString(h(EvolutionTooltip,{active:true,payload:[{payload:{timestamp:Date.parse(at),value:489.9287}}],seriesLabel:"Emissões estimadas",unit:"kg CO₂e",divisor:1000})).replace(/<!--.*?-->/g,"");
       assert.match(tooltip,/0,49 kg CO₂e/);
       assert.equal(JSON.stringify(history),original);
