@@ -81,12 +81,21 @@ export async function collectOnce(dependencies = {
   }
 
   // Publicar somente os dados confirmados para manter o endpoint legado e o SQL sincronizados.
-  publishCollection(catalog, cycle.metrics, cycle.at, cycle.errors);
+  const carbonFactors = (cycle.regions ?? []).map(region => ({
+    code: region.code,
+    carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
+  }));
+
+  publishCollection(
+    catalog,
+    cycle.metrics,
+    cycle.at,
+    cycle.errors,
+    carbonFactors,
+  );
+
   if (cycle.regions) {
-    setCarbonRegionFactors(cycle.regions.map(region => ({
-      code: region.code,
-      carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
-    })));
+    setCarbonRegionFactors(carbonFactors);
   }
   return cycle;
 }

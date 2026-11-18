@@ -1,4 +1,3 @@
-import { getCarbonIntensity } from "../../integrations/carbon-api.js";
 import {
     getCollectedMetricsByServiceId,
     getCollectedMetricsHistory,
@@ -25,9 +24,12 @@ interface ImpactSample {
 
 function calculateImpact(
     collected: CollectedServiceMetrics,
-    regionCode: string,
-): ImpactSample | null {
-    const { collection_interval_seconds: seconds, metrics } = collected.metrics;
+    ): ImpactSample | null {
+    const {
+        collection_interval_seconds: seconds,
+        metrics,
+    } = collected.metrics;
+
     const values = [
         metrics.cpu_percent,
         metrics.memory_gb,
@@ -35,8 +37,11 @@ function calculateImpact(
         metrics.network_gb,
         seconds,
     ];
+
     if (
-        values.some((value) => !Number.isFinite(value) || value < 0) ||
+        values.some(
+            value => !Number.isFinite(value) || value < 0,
+        ) ||
         metrics.cpu_percent > 100 ||
         seconds <= 0
     ) {
@@ -44,20 +49,33 @@ function calculateImpact(
     }
 
     const estimatedPower =
-        (metrics.cpu_percent / 100) * 100 +
+        (metrics.cpu_percent / 100) * 120 +
         metrics.memory_gb * 0.375 +
         metrics.disk_gb * 0.01 +
         metrics.network_gb * 0.02;
-    const energyKwh = (estimatedPower * (seconds / 3600)) / 1000;
-    if (!Number.isFinite(energyKwh) || energyKwh < 0) return null;
 
-    const intensity = getCarbonIntensity(regionCode);
+    const energyKwh =
+        (estimatedPower * (seconds / 3600)) / 1000;
+
+    if (
+        !Number.isFinite(energyKwh) ||
+        energyKwh < 0
+    ) {
+        return null;
+    }
+
+    const intensity = collected.carbonIntensity;
+
     const emissionsCo2e =
-        intensity === undefined ? null : energyKwh * intensity;
+        intensity === null
+            ? null
+            : energyKwh * intensity;
+
     return {
         energyKwh,
         emissionsCo2e:
-            emissionsCo2e !== null && Number.isFinite(emissionsCo2e)
+            emissionsCo2e !== null &&
+            Number.isFinite(emissionsCo2e)
                 ? emissionsCo2e
                 : null,
     };
@@ -83,7 +101,7 @@ export function getDashboardSummary() {
         } else if (failure?.reason === "unavailable") {
             unavailableCount++;
         } else if (collected && age !== null && age <= ACTIVE_METRICS_MAX_AGE_MS) {
-            const impact = calculateImpact(collected, service.location.region_code);
+            const impact = calculateImpact(collected);
             if (!impact) {
                 noMetricsCount++;
             } else {
@@ -141,11 +159,16 @@ export function getDashboardRanking(
     for (const sample of getCollectedMetricsHistory()) {
         const service = currentServices.get(sample.serviceId);
         const timestamp = Date.parse(sample.updatedAt);
-        if (!service || timestamp < minimumTimestamp || timestamp > now) {
+        if (
+            !service ||
+            !Number.isFinite(timestamp) ||
+            timestamp < minimumTimestamp ||
+            timestamp >= now
+        ) {
             continue;
         }
 
-        const impact = calculateImpact(sample, service.location.region_code);
+        const impact = calculateImpact(sample);
         if (!impact) continue;
 
         const entry = groups.get(service.id) ?? {

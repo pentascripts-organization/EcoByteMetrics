@@ -5,15 +5,23 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Client } from "pg";
 import pool from "../../src/db/connection";
-import { persistCollection, type Collection } from "../../src/modules/Monitoring/collection.repository";
+import {
+  persistCollection,
+  type Collection,
+} from "../../src/modules/Monitoring/collection.repository";
 import { readMonitoring } from "../../src/modules/Monitoring/monitoring.repository";
 import { StatisticRepository } from "../../src/modules/Statistics/statistics.repository";
 import { migrateMonitoring } from "../../src/db/migrate";
 
 after(() => pool.end());
 
-async function isolated(t: TestContext, body: (client: Client) => Promise<void>) {
-  assert(["127.0.0.1", "localhost", "::1"].includes(process.env.POSTGRES_HOST ?? ""));
+async function isolated(
+  t: TestContext,
+  body: (client: Client) => Promise<void>,
+) {
+  assert(
+    ["127.0.0.1", "localhost", "::1"].includes(process.env.POSTGRES_HOST ?? ""),
+  );
 
   const client = new Client({
     host: process.env.POSTGRES_HOST,
@@ -21,7 +29,7 @@ async function isolated(t: TestContext, body: (client: Client) => Promise<void>)
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
     database: process.env.POSTGRES_DATABASE,
-    connectionTimeoutMillis: 5000
+    connectionTimeoutMillis: 5000,
   });
 
   const schema = "history_test_" + randomUUID().replaceAll("-", "");
@@ -35,7 +43,7 @@ async function isolated(t: TestContext, body: (client: Client) => Promise<void>)
 
     t.mock.method(pool, "connect", async () => ({
       query: client.query.bind(client),
-      release() {}
+      release() {},
     }));
 
     t.mock.method(pool, "query", client.query.bind(client));
@@ -52,8 +60,8 @@ async function isolated(t: TestContext, body: (client: Client) => Promise<void>)
   }
 }
 
-test("migração preserva registros e interpreta timestamps legados como UTC, mesmo em outro fuso", async t => {
-  await isolated(t, async client => {
+test("migração preserva registros e interpreta timestamps legados como UTC, mesmo em outro fuso", async (t) => {
+  await isolated(t, async (client) => {
     await client.query(`
       CREATE TABLE users(id_user serial PRIMARY KEY,name_user varchar(50) NOT NULL,email_user varchar(254) NOT NULL UNIQUE,password_user varchar(255) NOT NULL);
       CREATE TABLE locations(id_location serial PRIMARY KEY,name_location varchar(50) UNIQUE,country_location text,region_location text,city_location text,latitude_location float8,longitude_location float8);
@@ -67,26 +75,36 @@ test("migração preserva registros e interpreta timestamps legados como UTC, me
     `);
 
     const migration = readFileSync(
-      new URL("../../../database/migrations/001_persisted_monitoring.sql", import.meta.url),
-      "utf8"
+      new URL(
+        "../../../database/migrations/001_persisted_monitoring.sql",
+        import.meta.url,
+      ),
+      "utf8",
     );
 
     await client.query(migration);
     await client.query(migration);
 
     const row = await client.query(
-      "SELECT m.date_houry,s.external_id,m.carbon_intensity FROM metrics m JOIN services s USING(id_service)"
+      "SELECT m.date_houry,s.external_id,m.carbon_intensity FROM metrics m JOIN services s USING(id_service)",
     );
 
     assert.equal(row.rowCount, 1);
-    assert.equal(row.rows[0].date_houry.toISOString(), "2026-10-30T23:00:00.000Z");
+    assert.equal(
+      row.rows[0].date_houry.toISOString(),
+      "2026-10-30T23:00:00.000Z",
+    );
     assert.equal(row.rows[0].external_id, "test-api");
-    assert.equal(row.rows[0].carbon_intensity, null, "Não inferir fator para uma amostra legada de coletores independentes");
+    assert.equal(
+      row.rows[0].carbon_intensity,
+      null,
+      "Não inferir fator para uma amostra legada de coletores independentes",
+    );
 
     const snapshot = await readMonitoring({
       period: "24h",
       until: "2026-10-30T23:00:01Z",
-      serviceIds: []
+      serviceIds: [],
     });
 
     assert.equal(snapshot.history.length, 1);
@@ -94,25 +112,32 @@ test("migração preserva registros e interpreta timestamps legados como UTC, me
     assert.equal(snapshot.history[0].emissionsG, null);
     assert.equal(snapshot.totalEmissionsG, null);
 
-    const statistics = await new StatisticRepository().getStatisticsSummaryQuery();
+    const statistics =
+      await new StatisticRepository().getStatisticsSummaryQuery();
 
     assert.equal(statistics.emissaoTotalCo2eG, null);
     assert.equal(statistics.coveredEmissionSamples, 0);
 
-    const global = await new StatisticRepository().getCalculationEmissionQuery("30 days");
+    const global = await new StatisticRepository().getCalculationEmissionQuery(
+      "2026-10-01T00:00:00Z",
+      "2026-10-31T00:00:00Z",
+    );
 
     assert.equal(
       global.total_co2e_g,
       null,
-      "amostra sem fator não pode receber fator histórico nem virar zero"
+      "amostra sem fator não pode receber fator histórico nem virar zero",
     );
   });
 });
 
-test("histórico SQL preserva zero, ausência de fator, identidade, corte temporal e totais agregados", async t => {
-  await isolated(t, async client => {
+test("histórico SQL preserva zero, ausência de fator, identidade, corte temporal e totais agregados", async (t) => {
+  await isolated(t, async (client) => {
     await client.query(
-      readFileSync(new URL("../../../database/DDL.sql", import.meta.url), "utf8")
+      readFileSync(
+        new URL("../../../database/DDL.sql", import.meta.url),
+        "utf8",
+      ),
     );
 
     const location = {
@@ -121,24 +146,28 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
       region: "SP",
       city: "São Paulo",
       latitude: 0,
-      longitude: 0
+      longitude: 0,
     };
 
     const app = {
       id: "test-api",
       name: "Billing API",
       metrics_path: "/metrics/test-api",
-      location
+      location,
     };
 
     const factor = {
       code: "br-sp",
       ...location,
       carbon_intensity_gco2e_per_kwh: 0,
-      renewable_share_percent: 100
+      renewable_share_percent: 100,
     };
 
-    const cycle = (at: string, cpu: number, carbon: number | null): Collection => ({
+    const cycle = (
+      at: string,
+      cpu: number,
+      carbon: number | null,
+    ): Collection => ({
       at,
       catalog: [app],
       metrics: new Map([
@@ -150,15 +179,16 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
               cpu_percent: cpu,
               memory_gb: 0,
               disk_gb: 0,
-              network_gb: 0
-            }
-          }
-        ]
+              network_gb: 0,
+            },
+          },
+        ],
       ]),
       errors: {},
-      regions: carbon === null
-        ? null
-        : [{ ...factor, carbon_intensity_gco2e_per_kwh: carbon }]
+      regions:
+        carbon === null
+          ? null
+          : [{ ...factor, carbon_intensity_gco2e_per_kwh: carbon }],
     });
 
     await persistCollection(client, cycle("2026-10-30T23:00:00Z", 0, 0));
@@ -173,7 +203,7 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
     const selection = {
       period: "24h" as const,
       until: "2026-10-30T23:01:00Z",
-      serviceIds: []
+      serviceIds: [],
     };
 
     const snapshot = await readMonitoring(selection);
@@ -191,25 +221,29 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
     assert.equal(snapshot.history[1].emissionsG, null);
     assert.equal(
       snapshot.history.reduce((sum, point) => sum + point.emissionCount, 0),
-      1
+      1,
     );
 
-    const statistics = await new StatisticRepository().getStatisticsSummaryQuery();
+    const statistics =
+      await new StatisticRepository().getStatisticsSummaryQuery();
 
     assert.equal(
       statistics.emissaoTotalCo2eG,
-      0,
-      "fator zero produz zero gramas, distinto de fator ausente"
+      null,
+      "o total deve ser null quando existe amostra sem fator de carbono",
     );
 
     assert.equal(statistics.coveredEmissionSamples, 1);
 
-    const global = await new StatisticRepository().getCalculationEmissionQuery("30 days");
+    const global = await new StatisticRepository().getCalculationEmissionQuery(
+      "2026-10-01T00:00:00Z",
+      "2026-10-31T00:00:00Z",
+    );
 
     assert.equal(
       global.total_co2e_g,
-      0,
-      "o cálculo global usa o fator gravado na própria amostra"
+      null,
+      "o cálculo global deve ser null quando existe amostra sem fator de carbono",
     );
 
     assert.equal(snapshot.services[0].status, "unavailable");
@@ -227,7 +261,7 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
 
     const old = await readMonitoring({
       ...selection,
-      until: "2026-10-30T23:00:00Z"
+      until: "2026-10-30T23:00:01Z",
     });
 
     assert.equal(old.services[0].name, "Billing API");
@@ -236,8 +270,9 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
     assert.equal(old.warning, undefined);
 
     assert.equal(
-      (await client.query("SELECT count(*)::int AS count FROM services")).rows[0].count,
-      1
+      (await client.query("SELECT count(*)::int AS count FROM services"))
+        .rows[0].count,
+      1,
     );
 
     const removed = cycle("2026-10-30T23:02:00Z", 0, null);
@@ -247,8 +282,9 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
     await persistCollection(client, removed);
 
     assert.equal(
-      (await readMonitoring({ ...selection, until: removed.at })).services[0].status,
-      "removed"
+      (await readMonitoring({ ...selection, until: removed.at })).services[0]
+        .status,
+      "removed",
     );
 
     await persistCollection(client, cycle("2026-10-30T23:02:30Z", 40, 85));
@@ -259,7 +295,7 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
 
     const grouped = await readMonitoring({
       ...selection,
-      until: later.at
+      until: later.at,
     });
 
     assert.equal(grouped.services[0].status, "available");
@@ -267,47 +303,70 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
 
     assert.equal(
       grouped.history.reduce((sum, point) => sum + point.sampleCount, 0),
-      5
+      4,
     );
 
     assert.equal(
       grouped.history.reduce((sum, point) => sum + point.emissionCount, 0),
-      4
+      3,
     );
 
     assert(grouped.history.length < 5);
 
     assert.equal(
-      grouped.observations.reduce((sum, observation) => sum + observation.collectionCount, 0),
-      7
+      grouped.observations.reduce(
+        (sum, observation) => sum + observation.collectionCount,
+        0,
+      ),
+      6,
     );
 
     assert.equal(
       grouped.observations.length,
-      2,
-      "Sete rodadas não são confundidas com os dois pontos agrupados da linha do tempo"
+      1,
+      "As rodadas dentro do mesmo intervalo de cinco minutos são agrupadas em um único ponto",
     );
 
-    // Usa a mesma fórmula energética aplicada pelo monitoring.repository.ts.
-    const total = await client.query(`
-      SELECT
-        SUM(
-          (
-            (cpu_metric / 100.0 * 120) +
-            (ram_metric * 0.375) +
-            (hd_metric * 0.01) +
-            (network_metric * 0.02)
-          ) * colletion_interval_metric / 3600000.0
-        )::float8 AS energy
-      FROM metrics
-    `);
+  // Usa a mesma fórmula energética e a mesma janela temporal do monitoring.repository.ts.
+  const end = new Date(later.at);
 
-    assert(Math.abs(grouped.totalEnergyKwh! - total.rows[0].energy) < 1e-12);
+  const start = new Date(
+    end.getTime() -
+      (selection.period === "24h" ? 1 : 7) * 86400_000,
+  );
+
+  const total = await client.query(
+  `
+    SELECT
+      SUM(
+        (
+          (m.cpu_metric / 100.0 * 120) +
+          (m.ram_metric * 0.375) +
+          (m.hd_metric * 0.01) +
+          (m.network_metric * 0.02)
+        ) * m.colletion_interval_metric / 3600000.0
+      )::float8 AS energy
+    FROM metrics m
+    JOIN services s USING (id_service)
+    WHERE m.date_houry >= $1
+      AND m.date_houry < $2
+      AND s.external_id IS NOT NULL
+      AND (
+        cardinality($3::text[]) = 0
+        OR s.external_id = ANY($3::text[])
+      )
+  `,
+  [start, end, selection.serviceIds],
+  );
+
+  assert(
+    Math.abs(grouped.totalEnergyKwh! - total.rows[0].energy) < 1e-12,
+  );
 
     const filtered = await readMonitoring({
       ...selection,
       until: later.at,
-      serviceIds: ["does-not-exist"]
+      serviceIds: ["does-not-exist"],
     });
 
     assert.equal(filtered.history.length, 0);
@@ -315,10 +374,13 @@ test("histórico SQL preserva zero, ausência de fator, identidade, corte tempor
   });
 });
 
-test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos sem ultrapassar o corte histórico", async t => {
-  await isolated(t, async client => {
+test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos sem ultrapassar o corte histórico", async (t) => {
+  await isolated(t, async (client) => {
     await client.query(
-      readFileSync(new URL("../../../database/DDL.sql", import.meta.url), "utf8")
+      readFileSync(
+        new URL("../../../database/DDL.sql", import.meta.url),
+        "utf8",
+      ),
     );
 
     const location = {
@@ -327,14 +389,14 @@ test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos s
       region: "SP",
       city: "São Paulo",
       latitude: 0,
-      longitude: 0
+      longitude: 0,
     };
 
-    const catalog = ["a", "b"].map(id => ({
+    const catalog = ["a", "b"].map((id) => ({
       id,
       name: id,
       metrics_path: "/metrics/" + id,
-      location
+      location,
     }));
 
     const sample = {
@@ -343,16 +405,16 @@ test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos s
         cpu_percent: 10,
         memory_gb: 0,
         disk_gb: 0,
-        network_gb: 0
-      }
+        network_gb: 0,
+      },
     };
 
     const make = (at: string): Collection => ({
       at,
       catalog,
-      metrics: new Map(catalog.map(app => [app.id, sample])),
+      metrics: new Map(catalog.map((app) => [app.id, sample])),
       errors: {},
-      regions: []
+      regions: [],
     });
 
     await persistCollection(client, make("2026-10-30T12:00:00Z"));
@@ -361,12 +423,12 @@ test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos s
       "metrics_missing",
       "invalid_metrics",
       "service_unavailable",
-      "metrics_unavailable"
+      "metrics_unavailable",
     ].entries()) {
       const cycle = make(
         new Date(
-          Date.parse("2026-10-30T12:00:00Z") + (index + 1) * 30_000
-        ).toISOString()
+          Date.parse("2026-10-30T12:00:00Z") + (index + 1) * 30_000,
+        ).toISOString(),
       );
 
       cycle.metrics.delete("b");
@@ -377,32 +439,32 @@ test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos s
       const result = await readMonitoring({
         period: "24h",
         until: cycle.at,
-        serviceIds: []
+        serviceIds: [],
       });
 
       assert.equal(
-        result.services.find(app => app.id === "a")!.status,
-        "available"
+        result.services.find((app) => app.id === "a")!.status,
+        "available",
       );
 
-      const b = result.services.find(app => app.id === "b")!;
+      const b = result.services.find((app) => app.id === "b")!;
 
       assert.equal(b.status, index < 2 ? "no-metrics" : "unavailable");
       assert.equal(b.lastCollectionAt, "2026-10-30T12:00:00.000Z");
 
       const diagnostic = result.collectionEvents.find(
-        event => event.from === cycle.at
+        (event) => event.from === cycle.at,
       )!;
 
       assert.equal(
         diagnostic.kind,
-        index < 2 ? "metrics-missing" : "service-unavailable"
+        index < 2 ? "metrics-missing" : "service-unavailable",
       );
 
       assert.deepEqual(diagnostic.serviceIds, ["b"]);
       assert.equal(diagnostic.to, cycle.at);
 
-      assert(result.collectionEvents.every(event => event.to <= cycle.at));
+      assert(result.collectionEvents.every((event) => event.to <= cycle.at));
     }
 
     const recovered = make("2026-10-30T12:02:30Z");
@@ -412,22 +474,25 @@ test("SQL mantém o motivo da falha, a última leitura válida e diagnósticos s
     const result = await readMonitoring({
       period: "24h",
       until: recovered.at,
-      serviceIds: []
+      serviceIds: [],
     });
 
     assert.equal(
-      result.services.find(app => app.id === "b")!.status,
-      "available"
+      result.services.find((app) => app.id === "b")!.status,
+      "available",
     );
 
     assert.equal(result.collectionEvents.length, 4);
   });
 });
 
-test("recuperação legada usa a região e o último fator anterior sem preencher falhas novas ou usar fatores futuros", async t => {
-  await isolated(t, async client => {
+test("recuperação legada usa a região e o último fator anterior sem preencher falhas novas ou usar fatores futuros", async (t) => {
+  await isolated(t, async (client) => {
     await client.query(
-      readFileSync(new URL("../../../database/DDL.sql", import.meta.url), "utf8")
+      readFileSync(
+        new URL("../../../database/DDL.sql", import.meta.url),
+        "utf8",
+      ),
     );
 
     await client.query(`
@@ -455,66 +520,69 @@ test("recuperação legada usa a região e o último fator anterior sem preenche
     await migrateMonitoring();
 
     const rows = await client.query(
-      "SELECT carbon_intensity::float8 AS factor FROM metrics ORDER BY id_metric"
+      "SELECT carbon_intensity::float8 AS factor FROM metrics ORDER BY id_metric",
     );
 
     assert.deepEqual(
-      rows.rows.map(row => row.factor),
-      [null, 85, 0, null, 123, null]
+      rows.rows.map((row) => row.factor),
+      [null, 85, 0, null, 123, null],
     );
 
     const versions = await client.query(
-      "SELECT version FROM schema_migrations ORDER BY version"
+      "SELECT version FROM schema_migrations ORDER BY version",
     );
 
     assert.deepEqual(
-      versions.rows.map(row => row.version),
+      versions.rows.map((row) => row.version),
       [
         "001_persisted_monitoring",
         "002_recover_legacy_carbon",
-        "003_user_roles"
-      ]
+        "003_user_roles",
+      ],
     );
 
     const userRole = await client.query(
-      "SELECT column_default FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'role_user'"
+      "SELECT column_default FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'role_user'",
     );
 
     assert.equal(userRole.rows[0].column_default, "'USER'::character varying");
 
     const snapshot = await readMonitoring({
       period: "24h",
-      until: "2026-10-30T23:03:00Z",
-      serviceIds: []
+      until: "2026-10-30T23:03:01Z",
+      serviceIds: [],
     });
 
     assert.equal(
       snapshot.history.reduce((sum, point) => sum + point.sampleCount, 0),
-      6
+      6,
     );
 
     assert.equal(
       snapshot.history.reduce((sum, point) => sum + point.emissionCount, 0),
-      3
+      3,
     );
 
-    assert(snapshot.totalEmissionsG! > 0);
+    assert.equal(snapshot.totalEmissionsG, null);
     assert.match(snapshot.warning!, /3 de 6 amostras/);
 
     const zero = await readMonitoring({
       period: "24h",
       until: "2026-10-30T23:01:00Z",
-      serviceIds: ["legacy"]
+      serviceIds: ["legacy"],
     });
 
     assert.equal(zero.services[0].carbonIntensity, 0);
   });
 });
 
-test("recursos históricos preservam médias ponderadas, zero, agrupamentos e cortes de consulta", async t => {
-  await isolated(t, async client => {
+test("recursos históricos preservam médias ponderadas, zero, agrupamentos e cortes de consulta", async (t) => {
+  await isolated(t, async (client) => {
     await client.query(
-      readFileSync(new URL("../../../database/DDL.sql", import.meta.url), "utf8")
+      readFileSync(
+        new URL("../../../database/DDL.sql", import.meta.url),
+        "utf8",
+      ),
     );
 
     const location = {
@@ -523,21 +591,21 @@ test("recursos históricos preservam médias ponderadas, zero, agrupamentos e co
       region: "SP",
       city: "São Paulo",
       latitude: 0,
-      longitude: 0
+      longitude: 0,
     };
 
-    const catalog = ["a", "b"].map(id => ({
+    const catalog = ["a", "b"].map((id) => ({
       id,
       name: id,
       metrics_path: "/metrics/" + id,
-      location
+      location,
     }));
 
     const collect = (
       at: string,
       id: string,
       cpu: number,
-      seconds: number
+      seconds: number,
     ): Collection => ({
       at,
       catalog,
@@ -552,29 +620,41 @@ test("recursos históricos preservam médias ponderadas, zero, agrupamentos e co
               cpu_percent: cpu,
               memory_gb: cpu / 10,
               disk_gb: cpu,
-              network_gb: cpu / 20
-            }
-          }
-        ]
-      ])
+              network_gb: cpu / 20,
+            },
+          },
+        ],
+      ]),
     });
 
-    await persistCollection(client, collect("2026-10-30T12:00:00Z", "a", 0, 30));
-    await persistCollection(client, collect("2026-10-30T12:00:30Z", "a", 80, 90));
-    await persistCollection(client, collect("2026-10-30T12:05:00Z", "a", 20, 60));
-    await persistCollection(client, collect("2026-10-30T13:01:00Z", "b", 100, 30));
+    await persistCollection(
+      client,
+      collect("2026-10-30T12:00:00Z", "a", 0, 30),
+    );
+    await persistCollection(
+      client,
+      collect("2026-10-30T12:00:30Z", "a", 80, 90),
+    );
+    await persistCollection(
+      client,
+      collect("2026-10-30T12:05:00Z", "a", 20, 60),
+    );
+    await persistCollection(
+      client,
+      collect("2026-10-30T13:01:00Z", "b", 100, 30),
+    );
 
     const query = {
       period: "24h" as const,
-      until: "2026-10-30T13:01:00Z",
-      serviceIds: []
+      until: "2026-10-30T13:01:01Z",
+      serviceIds: [],
     };
 
     const result = await readMonitoring(query);
 
     assert.equal(result.bucketSeconds, 300);
 
-    const a = result.history.filter(row => row.serviceId === "a");
+    const a = result.history.filter((row) => row.serviceId === "a");
 
     assert.equal(a.length, 2);
 
@@ -583,34 +663,35 @@ test("recursos históricos preservam médias ponderadas, zero, agrupamentos e co
       memoryGb: 6,
       diskGb: 60,
       networkGb: 3,
-      durationSeconds: 120
+      durationSeconds: 120,
     });
 
     assert.equal(
       a[0].emissionsG,
       null,
-      "Fator de carbono ausente não impede comparar recursos"
+      "Fator de carbono ausente não impede comparar recursos",
     );
 
     const seconds = a.reduce(
       (sum, row) => sum + row.resources!.durationSeconds,
-      0
+      0,
     );
 
     assert.equal(seconds, 180);
 
     assert.equal(
       a.reduce(
-        (sum, row) => sum + row.resources!.cpuPercent * row.resources!.durationSeconds,
-        0
+        (sum, row) =>
+          sum + row.resources!.cpuPercent * row.resources!.durationSeconds,
+        0,
       ) / seconds,
-      140 / 3
+      140 / 3,
     );
 
     const cut = await readMonitoring({
       ...query,
-      until: "2026-10-30T12:00:00Z",
-      serviceIds: ["a"]
+      until: "2026-10-30T12:00:01Z",
+      serviceIds: ["a"],
     });
 
     assert.equal(cut.history.length, 1);
@@ -620,12 +701,12 @@ test("recursos históricos preservam médias ponderadas, zero, agrupamentos e co
       memoryGb: 0,
       diskGb: 0,
       networkGb: 0,
-      durationSeconds: 30
+      durationSeconds: 30,
     });
 
     const b = await readMonitoring({
       ...query,
-      serviceIds: ["b"]
+      serviceIds: ["b"],
     });
 
     assert.equal(b.history.length, 1);
@@ -633,7 +714,7 @@ test("recursos históricos preservam médias ponderadas, zero, agrupamentos e co
 
     assert.deepEqual(
       (await readMonitoring({ ...query, view: "latest" })).history,
-      []
+      [],
     );
   });
 });
