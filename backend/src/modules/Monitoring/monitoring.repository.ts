@@ -20,7 +20,7 @@ export async function readMonitoring(query: HistoryQuery) {
     const extent = includeHistory ? await client.query(`SELECT min(m.date_houry) AS first, max(m.date_houry) AS last FROM metrics m JOIN services s USING(id_service)
       WHERE m.date_houry >= $1 AND m.date_houry < $2 AND s.external_id IS NOT NULL
       AND (cardinality($3::text[])=0 OR s.external_id=ANY($3::text[]))`, args) : {rows: [{first:null,last:null}]};
-    const span = extent.rows[0].last ? extent.rows[0].last.getTime() - extent.rows[0].first.getTime() : 0;
+    const span = extent.rows[0].first ? end.getTime() - extent.rows[0].first.getTime() : 0;
     const bucketSeconds = span <= 3600_000 ? 30 : span <= 86400_000 ? 300 : 3600;
     const historyRows = includeHistory ? await client.query(`WITH samples AS (
       SELECT s.external_id, m.date_houry, jsonb_build_object(
@@ -35,11 +35,10 @@ export async function readMonitoring(query: HistoryQuery) {
       WHERE m.date_houry >= $1 AND m.date_houry < $2 AND s.external_id IS NOT NULL
       AND (cardinality($3::text[])=0 OR s.external_id=ANY($3::text[])))
       SELECT external_id, place, min(date_houry) AS first_collected_at, max(date_houry) AS collected_at, sum(energy)::float8 AS energy,
-        CASE
-          WHEN COUNT(carbon_intensity) = COUNT(*)
-          THEN SUM(energy * carbon_intensity)::float8
-          ELSE NULL
-        END AS emissions,
+        (
+          SUM(energy * carbon_intensity)
+          FILTER (WHERE carbon_intensity IS NOT NULL)
+        )::float8 AS emissions,
 
 SUM(colletion_interval_metric)::float8 AS seconds,
 COUNT(*)::int AS samples,
@@ -122,29 +121,101 @@ COUNT(carbon_intensity)::int AS covered,
       WHERE collected_at >= $1 AND collected_at < $2
       GROUP BY date_bin(($3::text || ' seconds')::interval,collected_at,'2000-01-01T00:00:00Z'::timestamptz)
       ORDER BY max(collected_at) LIMIT 20000`, [start, end, bucketSeconds]) : {rows: []};
-    const failures = includeHistory ? await client.query(`SELECT collected_at, errors FROM monitoring_collections WHERE collected_at >= $1 AND collected_at < $2 AND errors <> '{}'::jsonb ORDER BY collected_at DESC LIMIT 3000`, [start, end]) : { rows: [] };
+    const failures = includeHistory
+    ? await client.query(
+      `SELECT collected_at, errors
+       FROM monitoring_collections
+       WHERE collected_at >= $1
+         AND collected_at <= $2
+         AND errors <> '{}'::jsonb
+       ORDER BY collected_at DESC
+       LIMIT 3000`,
+      [start, end],
+    )
+  : { rows: [] };
     await client.query("COMMIT");
     const covered = history.reduce((count, point) => count + point.emissionCount, 0);
     const count = history.reduce((total, point) => total + point.sampleCount, 0);
     const completeEmissionCoverage = count > 0 && covered === count;
+    const totalEmissionsG = completeEmissionCoverage ? history.reduce((sum, point) => sum + (point.emissionsG ?? 0), 0) : null;
     const collectionWarnings = [
       ...(!cycle ? ["Não há rodada unificada gravada até este horário. Amostras antigas preservam energia; fatores de carbono não são inferidos."] : []),
       ...(cycle && !cycle.carbon_available ? ["Não foi possível obter os fatores da API de carbono na última coleta deste recorte. As amostras dessa rodada não têm estimativa de CO₂."] : []),
       ...(cycle && Object.keys(cycle.errors).length ? ["Não foi possível obter métricas de algumas aplicações na última coleta deste recorte. As últimas amostras gravadas foram preservadas."] : []),
       ...(cycle && end.getTime() - cycle.collected_at.getTime() > 90_000 ? ["O coletor está desatualizado neste recorte; exibindo os últimos dados gravados."] : []),
     ];
-    return { source: "database", services, regions, history, historyIncluded: includeHistory, historyPeriod: query.period, historyUntil: end.toISOString(), selectedAt: query.until ?? null, bucketSeconds,
-      observations: instants.rows.map(row => ({ observedAt: iso(row.at), collectionCount: row.collection_count, services: [], samples: [] })),
-      collectionEvents: failures.rows.flatMap(row => ["metrics-missing", "service-unavailable"].flatMap(kind => {
-        const serviceIds = Object.entries(row.errors).filter(([, code]) =>
-          (code === "metrics_missing" || code === "invalid_metrics") === (kind === "metrics-missing")).map(([id]) => id);
-        return serviceIds.length ? [{from: iso(row.collected_at), to: new Date(Math.min(row.collected_at.getTime() + 30_000, end.getTime())).toISOString(), kind, serviceIds}] : [];
+    return {
+      source: "database",
+      services,
+      regions,
+      history,
+      historyIncluded: includeHistory,
+      historyPeriod: query.period,
+      historyUntil: end.toISOString(),
+      selectedAt: query.until ?? null,
+      bucketSeconds,
+
+      observations: instants.rows.map(row => ({
+        observedAt: iso(row.at),
+        collectionCount: row.collection_count,
+        services: [],
+        samples: [],
       })),
-      discoveryUpdatedAt: iso(cycle?.collected_at ?? null), discoveryComplete: true,
-      lastCollectionAt: iso(serviceRows.rows.reduce<Date | null>((last, row) => row.collected_at && (!last || row.collected_at > last) ? row.collected_at : last, null)),
-      totalEnergyKwh: history.length ? history.reduce((sum, point) => sum + (point.energyKwh ?? 0), 0) : null,
+
+      collectionEvents: failures.rows.flatMap(row =>
+        ["metrics-missing", "service-unavailable"].flatMap(kind => {
+          const serviceIds = Object.entries(row.errors)
+            .filter(([, code]) =>
+              (code === "metrics_missing" || code === "invalid_metrics") ===
+              (kind === "metrics-missing")
+            )
+            .map(([id]) => id);
+
+          return serviceIds.length
+            ? [{
+                from: iso(row.collected_at),
+                to: new Date(
+                  Math.min(row.collected_at.getTime() + 30_000, end.getTime())
+                ).toISOString(),
+                kind,
+                serviceIds,
+              }]
+            : [];
+        })
+      ),
+
+      discoveryUpdatedAt: iso(cycle?.collected_at ?? null),
+      discoveryComplete: true,
+
+      lastCollectionAt: iso(
+        serviceRows.rows.reduce<Date | null>(
+          (last, row) =>
+            row.collected_at && (!last || row.collected_at > last)
+              ? row.collected_at
+              : last,
+          null
+        )
+      ),
+
+      totalEnergyKwh: history.length
+        ? history.reduce((sum, point) => sum + (point.energyKwh ?? 0), 0)
+        : null,
+
+      totalEmissionsG,
+
       collectionWarning: collectionWarnings.join(" ") || null,
-      warning: [...collectionWarnings, ...(covered < count ? [`CO₂ não foi totalizado porque somente ${covered} de ${count} amostras possuem fator de carbono registrado.`] : [])].join(" ") || undefined };
-  } catch (error) { await client.query("ROLLBACK"); throw error; }
-  finally { client.release(); }
+
+      warning: [
+        ...collectionWarnings,
+        ...(covered < count
+          ? [`Estimativa parcial de CO₂: somente ${covered} de ${count} amostras possuem fator de carbono registrado.`]
+          : []),
+      ].join(" ") || undefined,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }

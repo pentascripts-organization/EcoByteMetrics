@@ -26,7 +26,6 @@ export interface EnergyChartRecord {
   emissions_gco2e: number | null;
 }
 
-
 export class StatisticRepository {
   private readonly sampleImpactQuery = `
         WITH sample_energy AS (
@@ -81,15 +80,13 @@ export class StatisticRepository {
                 )::float8 AS "consumoTotalKwh",
 
                 CASE
-                    WHEN COUNT(*) = 0
-                        OR COUNT(emissions_co2e_kg) < COUNT(*)
+                    WHEN COUNT(emissions_co2e_kg) < COUNT(*)
                     THEN NULL
                     ELSE SUM(emissions_co2e_kg)
                 END::float8 AS "emissaoTotalCo2eKg",
 
                 CASE
-                    WHEN COUNT(*) = 0
-                        OR COUNT(emissions_co2e_kg) < COUNT(*)
+                    WHEN COUNT(emissions_co2e_kg) < COUNT(*)
                     THEN NULL
                     ELSE SUM(emissions_co2e_kg) * 1000
                 END::float8 AS "emissaoTotalCo2eG",
@@ -113,15 +110,12 @@ export class StatisticRepository {
   async getServicesRankingQuery(
     start: string,
     end: string,
-    orderBy: "kwh" | "co2e"
-    ) {
-    const sortColumn =
-        orderBy === "kwh"
-        ? '"consumoKwh"'
-        : '"emissaoCo2eKg"';
+    orderBy: "kwh" | "co2e",
+  ) {
+    const sortColumn = orderBy === "kwh" ? '"consumoKwh"' : '"emissaoCo2eKg"';
 
     const result = await pool.query(
-        `
+      `
         ${this.sampleImpactQuery}
 
         SELECT
@@ -161,17 +155,17 @@ export class StatisticRepository {
             ${sortColumn} DESC NULLS LAST,
             nome ASC;
         `,
-        [start, end]
+      [start, end],
     );
 
-        return result.rows;
-    }
+    return result.rows;
+  }
 
   async getCalculationEmissionQuery(
-        start: string,
-        end: string
-    ): Promise<GlobalStatistics> {
-        const query = `
+    start: string,
+    end: string,
+  ): Promise<GlobalStatistics> {
+    const query = `
             WITH service_status AS (
                 SELECT
                     COUNT(*) FILTER (
@@ -224,20 +218,18 @@ export class StatisticRepository {
                             OR COUNT(ic.carbon_intensity) < COUNT(ic.date_houry)
                         THEN NULL
                         ELSE SUM(
-                            ic.consumption_kwh *
-                            ic.carbon_intensity / 1000.0
+                            ic.consumption_kwh * ic.carbon_intensity / 1000.0
                         )
-                    END::float8 AS total_co2e_kg,
+                    END AS total_co2e_kg,
 
                     CASE
                         WHEN COUNT(ic.date_houry) = 0
                             OR COUNT(ic.carbon_intensity) < COUNT(ic.date_houry)
                         THEN NULL
                         ELSE SUM(
-                            ic.consumption_kwh *
-                            ic.carbon_intensity
+                            ic.consumption_kwh * ic.carbon_intensity
                         )
-                    END::float8 AS total_co2e_g,
+                    END AS total_co2e_g,
 
                     ss.active_services,
                     ss.unavailable_services,
@@ -254,32 +246,26 @@ export class StatisticRepository {
                     ss.total_services;
             `;
 
-  const result = await pool.query(query, [start, end]);
+    const result = await pool.query(query, [start, end]);
 
-  const row = result.rows[0];
+    const row = result.rows[0];
 
-  return {
-    total_consumption_kwh: Number(row.total_consumption_kwh),
+    return {
+      total_consumption_kwh: Number(row.total_consumption_kwh),
 
-    total_co2e_kg:
-      row.total_co2e_kg == null
-        ? null
-        : Number(row.total_co2e_kg),
+      total_co2e_kg:
+        row.total_co2e_kg == null ? null : Number(row.total_co2e_kg),
 
-    total_co2e_g:
-      row.total_co2e_g == null
-        ? null
-        : Number(row.total_co2e_g),
+      total_co2e_g: row.total_co2e_g == null ? null : Number(row.total_co2e_g),
 
-    active_services: Number(row.active_services),
-    unavailable_services: Number(row.unavailable_services),
-    total_services: Number(row.total_services),
-  };
-}
+      active_services: Number(row.active_services),
+      unavailable_services: Number(row.unavailable_services),
+      total_services: Number(row.total_services),
+    };
+  }
 
-  
-async getEnergyCalculationUnitService(nome_service: string) {
-  const query = `
+  async getEnergyCalculationUnitService(nome_service: string) {
+    const query = `
     SELECT DISTINCT ON (s.id_service)
       s.id_service,
       s.name_service,
@@ -346,15 +332,13 @@ async getEnergyCalculationUnitService(nome_service: string) {
       m.id_metric DESC;
   `;
 
-  const result = await pool.query(query, [nome_service]);
+    const result = await pool.query(query, [nome_service]);
 
-  return result.rows[0];
-}
+    return result.rows[0];
+  }
 
-
-  
-async getEnergyCalculation() {
-  const result = await pool.query(`
+  async getEnergyCalculation() {
+    const result = await pool.query(`
     SELECT DISTINCT ON (s.id_service)
       s.id_service,
       s.name_service,
@@ -419,15 +403,13 @@ async getEnergyCalculation() {
       m.id_metric DESC;
   `);
 
-  return result.rows;
-}
+    return result.rows;
+  }
 
-
-  
-async getMetricCompare(
-  param: EnergyComparisonParams
-): Promise<EnergyChartRecord[]> {
-  const sql = `
+  async getMetricCompare(
+    param: EnergyComparisonParams,
+  ): Promise<EnergyChartRecord[]> {
+    const sql = `
     WITH selected_services AS (
       SELECT
         id_service,
@@ -753,27 +735,22 @@ async getMetricCompare(
       id_service;
   `;
 
-  const { rows } = await pool.query(sql, [
-    param.ids,
-    param.start,
-    param.end,
-    param.period,
-  ]);
+    const { rows } = await pool.query(sql, [
+      param.ids,
+      param.start,
+      param.end,
+      param.period,
+    ]);
 
-  return rows.map((row) => ({
-    id_service: Number(row.id_service),
-    name_service: row.name_service,
-    bucket_start: row.bucket_start,
-    bucket_end: row.bucket_end,
-    sample_count: Number(row.sample_count),
-    energy_kwh: row.energy_kwh == null
-      ? null
-      : Number(row.energy_kwh),
-    emissions_gco2e: row.emissions_gco2e == null
-      ? null
-      : Number(row.emissions_gco2e),
-  }));
-}
-
-
+    return rows.map((row) => ({
+      id_service: Number(row.id_service),
+      name_service: row.name_service,
+      bucket_start: row.bucket_start,
+      bucket_end: row.bucket_end,
+      sample_count: Number(row.sample_count),
+      energy_kwh: row.energy_kwh == null ? null : Number(row.energy_kwh),
+      emissions_gco2e:
+        row.emissions_gco2e == null ? null : Number(row.emissions_gco2e),
+    }));
+  }
 }
