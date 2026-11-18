@@ -224,9 +224,6 @@ export function SitePreloader({
         <div className="site-preloader__meta">
           <span>{progress}%</span>
         </div>
-        <button className="site-preloader__skip" type="button" onClick={dismiss}>
-          Pular animação
-        </button>
       </div>
     </div>
   );
