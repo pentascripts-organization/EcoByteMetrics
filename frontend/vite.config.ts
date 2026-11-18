@@ -14,6 +14,23 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+    build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: "globe-vendor",
+                test: /node_modules[\\/](?:react-globe\.gl|globe\.gl|three|three-globe|three-render-objects|three-geojson-geometry|three-conic-polygon-geometry|d3-geo)[\\/]/,
+                priority: 20,
+                entriesAware: true,
+                maxSize: 400_000,
+              },
+            ],
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       proxy,

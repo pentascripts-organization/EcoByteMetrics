@@ -1,18 +1,52 @@
 html[data-route-transition="dashboard"]::view-transition-old(root) {
-  animation: pageDepart 280ms ease both;
+  animation: pageDepart 600ms cubic-bezier(.22, 1, .36, 1) both;
 }
 html[data-route-transition="dashboard"]::view-transition-new(root) {
-  animation: pageArrive 440ms cubic-bezier(.2, .7, .3, 1) both;
+  animation: pageArrive 600ms cubic-bezier(.22, 1, .36, 1) both;
 }
-html[data-route-transition="dashboard"]::view-transition-group(root) { animation-duration: 440ms; }
+html[data-route-transition="dashboard"]::view-transition-group(root) { animation-duration: 600ms; }
+html[data-route-transition="dashboard"]::view-transition-image-pair(root) { isolation: isolate; overflow: clip; }
+html[data-route-transition="dashboard"]::view-transition-old(root),
+html[data-route-transition="dashboard"]::view-transition-new(root) { mix-blend-mode: normal; }
 .monitoring-shell[data-entry="fade"] { animation: dashboardArrive 380ms ease-out; }
-.monitoring-shell[data-entry="crossfade"] :is(.monitoring-header, .monitoring-heading, .monitoring-tabs, .monitoring-applications) { animation: none; }
-@keyframes pageDepart { to { opacity: 0; } }
-@keyframes pageArrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.monitoring-shell[data-entry="crossfade"] :is(.monitoring-header, .monitoring-heading, .monitoring-tabs, .monitoring-applications, .monitoring-service-summary, .monitoring-evolution, .globe-background[data-intro="true"]) { animation: none; }
+@keyframes pageDepart { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes pageArrive { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes dashboardArrive { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .monitoring-shell[data-entry="fade"] { animation: none; }
   html[data-route-transition="dashboard"]::view-transition-old(root),
   html[data-route-transition="dashboard"]::view-transition-new(root),
   html[data-route-transition="dashboard"]::view-transition-group(root) { animation: none; }
+}
+
+/* The source is a non-interactive visual copy; only one live dashboard/globe is mounted. */
+.home-departure-frame { position: fixed; inset: 0; z-index: 10000; overflow: clip; background: #fff; pointer-events: auto; contain: paint; }
+html[data-home-cinema] .monitoring-shell { pointer-events: none; }
+html[data-home-cinema="waiting"] .monitoring-shell { opacity: 0; }
+html[data-home-cinema="globe"] .monitoring-shell[data-entry] :is(.monitoring-header,.monitoring-heading,.monitoring-tabs,.monitoring-summary) { animation: cinemaPanels 250ms cubic-bezier(.22,1,.36,1) 450ms backwards; }
+html[data-home-cinema="globe"] .monitoring-shell[data-entry] .monitoring-applications { animation: cinemaPanels 250ms cubic-bezier(.22,1,.36,1) 600ms backwards; }
+html[data-home-cinema="globe"] .monitoring-shell[data-entry] .globe-background { animation: cinemaGlobe 500ms cubic-bezier(.22,1,.36,1) 150ms backwards; }
+html[data-home-cinema="fallback"] .monitoring-shell { animation: pageArrive 600ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes cinemaGlobe { from { opacity: 0; transform: translateX(15vw) scale(1.08); } to { opacity: 1; transform: none; } }
+@keyframes cinemaPanels { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-home-cinema] .monitoring-shell, html[data-home-cinema] .monitoring-shell[data-entry] :is(.monitoring-header,.monitoring-heading,.monitoring-tabs,.monitoring-summary,.monitoring-applications,.globe-background) { animation: none; }
+}
+
+/* Return journey: the globe recedes right as the landscape enters from the left. */
+html[data-route-transition="home"] .globe-background:not(.globe-background--inline) { view-transition-name: return-globe; }
+html[data-route-transition="home"]::view-transition-old(root) { animation: returnPanels 300ms cubic-bezier(.22,1,.36,1) both; mix-blend-mode: normal; }
+html[data-route-transition="home"]::view-transition-new(root) { animation: returnLandscape 550ms cubic-bezier(.22,1,.36,1) 300ms both; mix-blend-mode: normal; }
+html[data-route-transition="home"]::view-transition-old(return-globe) { animation: returnGlobe 500ms cubic-bezier(.22,1,.36,1) both; }
+html[data-route-transition="home"]::view-transition-group(root), html[data-route-transition="home"]::view-transition-group(return-globe) { animation-duration: 850ms; }
+html[data-route-transition="home"]::view-transition-image-pair(root) { isolation: isolate; overflow: clip; }
+.ecobyte-home[data-return-entry] :is(.site-header, .hero-line > span, .hero-description, .hero-copy__actions) { animation: none; }
+@keyframes returnPanels { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(120px); } }
+@keyframes returnGlobe { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(25vw) scale(.88); } }
+@keyframes returnLandscape { from { opacity: 0; transform: translateX(-100%); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-route-transition="home"]::view-transition-old(root), html[data-route-transition="home"]::view-transition-new(root),
+  html[data-route-transition="home"]::view-transition-old(return-globe), html[data-route-transition="home"]::view-transition-group(root),
+  html[data-route-transition="home"]::view-transition-group(return-globe) { animation: none; }
 }

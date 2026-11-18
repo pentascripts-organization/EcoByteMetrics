@@ -31,7 +31,63 @@ const BACKEND_API = (import.meta.env?.VITE_BACKEND_URL ?? "/backend").replace(
   "",
 );
 
-async function request<T>(path: string, signal: AbortSignal): Promise<T> {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonNegativeNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function parseDashboardSummary(value: unknown): DashboardSummary {
+  if (
+    !isRecord(value) ||
+    !isNonNegativeInteger(value.totalServicos) ||
+    !isNonNegativeInteger(value.servicosAtivos) ||
+    !isNonNegativeInteger(value.servicosIndisponiveis) ||
+    !isNonNegativeInteger(value.servicosSemMetricas) ||
+    !isNonNegativeNumber(value.consumoTotalKwh) ||
+    (value.emissaoTotalCo2e !== null && !isNonNegativeNumber(value.emissaoTotalCo2e)) ||
+    (value.dataHoraUltimaAtualizacao !== null &&
+      (typeof value.dataHoraUltimaAtualizacao !== "string" ||
+        !Number.isFinite(Date.parse(value.dataHoraUltimaAtualizacao))))
+  ) {
+    throw new Error("A resposta do resumo do dashboard está fora do contrato.");
+  }
+
+  return value as unknown as DashboardSummary;
+}
+
+function parseDashboardRanking(value: unknown): DashboardRanking {
+  if (
+    !isRecord(value) ||
+    (value.periodo !== "24h" && value.periodo !== "7d") ||
+    (value.ordenadoPor !== "kwh" && value.ordenadoPor !== "co2e") ||
+    !Array.isArray(value.ranking) ||
+    !value.ranking.every((entry) =>
+      isRecord(entry) &&
+      Number.isSafeInteger(entry.posicao) && (entry.posicao as number) > 0 &&
+      typeof entry.id_servico === "string" && entry.id_servico.trim().length > 0 &&
+      typeof entry.nome === "string" && entry.nome.trim().length > 0 &&
+      isNonNegativeNumber(entry.consumoKwh) &&
+      (entry.emissaoCo2e === null || isNonNegativeNumber(entry.emissaoCo2e))
+    )
+  ) {
+    throw new Error("A resposta do ranking do dashboard está fora do contrato.");
+  }
+
+  return value as unknown as DashboardRanking;
+}
+
+async function request<T>(
+  path: string,
+  signal: AbortSignal,
+  parse: (value: unknown) => T,
+): Promise<T> {
   const response = await fetch(BACKEND_API + path, {
     signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
     cache: "no-store",
@@ -48,13 +104,13 @@ async function request<T>(path: string, signal: AbortSignal): Promise<T> {
         : `Backend respondeu HTTP ${response.status}.`;
     throw new Error(error);
   }
-  return body as T;
+  return parse(body);
 }
 
 export function getDashboardSummary(
   signal = new AbortController().signal,
 ): Promise<DashboardSummary> {
-  return request("/api/dashboard/summary", signal);
+  return request("/api/dashboard/summary", signal, parseDashboardSummary);
 }
 
 export function getDashboardRanking(
@@ -66,5 +122,5 @@ export function getDashboardRanking(
     periodo: period,
     ordenarPor: orderBy,
   });
-  return request(`/api/dashboard/ranking?${params}`, signal);
+  return request(`/api/dashboard/ranking?${params}`, signal, parseDashboardRanking);
 }

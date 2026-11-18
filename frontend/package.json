@@ -9,7 +9,10 @@
     "preview": "vite preview --host 0.0.0.0",
     "lint": "eslint .",
     "typecheck": "tsc -b",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "measure:build": "npm run build -- --manifest && node scripts/measure-build.mjs"
   },
   "dependencies": {
@@ -25,10 +28,12 @@
     "recharts": "3.10.1",
     "three": "^0.180.0",
     "three-conic-polygon-geometry": "^2.1.3",
-    "three-geojson-geometry": "^2.1.1"
+    "three-geojson-geometry": "^2.1.1",
+    "ztd-charts": "^0.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@types/d3-geo": "^3.1.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",

@@ -7,7 +7,7 @@ import {
   type DashboardRankingMetric,
 } from "@/features/monitoring/api/dashboard";
 import { formatNumber } from "@/shared/lib/format";
-import { EmptyState, Panel } from "@/components/UI";
+import { EmptyState, Panel } from "@/shared/ui/Presentation";
 
 export function ServiceImpactRanking({ period }: { period: Period }) {
   const [metric, setMetric] = useState<DashboardRankingMetric>("kwh");
@@ -66,8 +66,14 @@ export function ServiceImpactRanking({ period }: { period: Period }) {
   const ranking = loading ? null : result.ranking;
   const error = loading ? null : result.error;
   const entries = ranking?.ranking ?? [];
-  const visible = entries.slice(0, 5);
-  const max = Math.max(visible[0]?.[metric === "kwh" ? "consumoKwh" : "emissaoCo2e"] ?? 0, 1);
+  const rankedEntries = entries
+    .map((entry) => ({
+      entry,
+      value: metric === "kwh" ? entry.consumoKwh : entry.emissaoCo2e,
+    }))
+    .filter((item): item is { entry: DashboardRanking["ranking"][number]; value: number } => item.value !== null);
+  const visible = rankedEntries.slice(0, 5);
+  const max = Math.max(...visible.map(({ value }) => value), 1);
   const unit = metric === "kwh" ? "kWh" : "gCO₂e";
   return (
     <Panel title="Impacto por serviço" eyebrow="PERÍODO SELECIONADO" className="service-impact-ranking">
@@ -87,9 +93,7 @@ export function ServiceImpactRanking({ period }: { period: Period }) {
       {loading && <p className="globe-fallback" role="status">Carregando ranking…</p>}
       {visible.length ? (
         <ol className="collection-ranking service-impact-list">
-          {visible.map((entry) => {
-            const value = metric === "kwh" ? entry.consumoKwh : entry.emissaoCo2e;
-            if (value === null) return null;
+          {visible.map(({ entry, value }) => {
             return (
               <li key={entry.id_servico}>
                 <span>{entry.posicao}</span>
@@ -115,7 +119,7 @@ export function ServiceImpactRanking({ period }: { period: Period }) {
           title={metric === "kwh" ? "Sem dados válidos neste período." : "Emissões indisponíveis neste período."}
           description="O ranking aparecerá após o backend acumular estimativas válidas para o período." />
       ) : null}
-      {entries.length > 5 && <p className="service-impact-note">5 primeiros de {entries.length} serviços com estimativas.</p>}
+      {rankedEntries.length > 5 && <p className="service-impact-note">5 primeiros de {rankedEntries.length} serviços com estimativas.</p>}
     </Panel>
   );
 }
