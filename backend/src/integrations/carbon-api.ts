@@ -1,128 +1,5 @@
-import { Carbon } from "../modules/Carbons/carbon.repository";
-import {ApiError, CarbonRegion, ListCarbon}from "./api.types"
+import { ApiError, CarbonRegion, ListCarbon } from "./api.types";
 
-//Classe para validar API
-export class CarbonAPISevice{
-    private readonly carbonApi = process.env.API_CARBON;
-    //verifica se a api esta ativa
-    async checkHealth(): Promise<{service:string, status:string}>{
-        //Verifica variavel de ambiente de api não esta vazio
-        CarbonApiError.apiNull(this.carbonApi);
-        let response: Response;
-        try{
-        response = await fetch(`${this.carbonApi}/health`,{
-            signal: AbortSignal.timeout(5000),
-            headers: {
-                Accept: "application/json",
-            },
-        });
-        }catch(error: unknown){
-            //Verefica se a api passou muito tentando buscar
-            CarbonApiError.timeError(error);
-            throw new CarbonApiError(
-            "Não foi possível conectar à API externa.",
-            503,
-            "EXTERNAL_API_UNAVAILABLE"
-            );
-        }
-        if(!response.ok){
-           throw new CarbonApiError(
-            `A API externa respondeu com HTTP ${response.status}.`,
-            502,
-            "EXTERNAL_API_HTTP_ERROR"
-           )
-        }
-        CarbonApiError.httpError(response);
-        let data;
-        try{
-            data = await response.json();
-        }catch{
-            throw new CarbonApiError(
-                "A API externa retornou um JSON inválido ou vazio.",
-                502,
-                "EXTERNAL_API_INVALID_JSON"
-            );
-        }
-        return data as {service:string, status:string};
-    }
-    //pega todas as regiões na API
-    async listCabons():Promise<ListCarbon>{
-        CarbonApiError.apiNull(this.carbonApi);
-        let response: Response;
-        try{
-            //Pesquisa todas as regiões
-            response = await fetch(`${this.carbonApi}/regions`, {
-            signal: AbortSignal.timeout(5000),
-            headers: {
-                Accept: "application/json",
-            },
-            });
-       
-        }catch(error: unknown){
-            //Verefica se a api passou muito tentando buscar
-            CarbonApiError.timeError(error);
-            throw new CarbonApiError(
-            "Não foi possível conectar à API externa.",
-            503,
-            "EXTERNAL_API_UNAVAILABLE"
-            );
-        }
-        // O fetch não lança exceção automaticamente para HTTP 4xx ou 5xx.
-        CarbonApiError.httpError(response);
-
-        let data: unknown;
-
-        try {
-            data = await response.json();
-        } catch {
-            throw new CarbonApiError(
-                "A API externa retornou um JSON inválido ou vazio.",
-                502,
-                "EXTERNAL_API_INVALID_JSON"
-            );
-        }
-        CarbonApiError.validarEstruturaLista(data)
-        return data as ListCarbon;
-
-    }
-    //pega um região na API
-    async getRegionDetails(regionCode: string): Promise<CarbonRegion> {
-        CarbonApiError.apiNull(this.carbonApi);
-        let response;
-        try{
-            response = await fetch(`${this.carbonApi}/regions/${regionCode}`, {
-            signal: AbortSignal.timeout(5000),
-            headers: {
-                Accept: "application/json",
-            },
-            });
-        }catch(error:unknown){
-            CarbonApiError.timeError(error);
-            throw new CarbonApiError(
-            "Não foi possível conectar à API externa.",
-            503,
-            "EXTERNAL_API_UNAVAILABLE"
-            );
-        }
-        // O fetch não lança exceção automaticamente para HTTP 4xx ou 5xx.
-        CarbonApiError.httpError(response);
-
-        let data:unknown;
-
-        try{
-            data= await response.json();
-        }catch(error:unknown){
-            throw new CarbonApiError(
-                "A API externa retornou um JSON inválido ou vazio.",
-                502,
-                "EXTERNAL_API_INVALID_JSON"
-            );
-        }
-        CarbonApiError.validarEstrutura(data)
-        return data as CarbonRegion
-        
-    }
-}
 //Classe de Erro de Api
 export class CarbonApiError extends Error implements ApiError {
     constructor(message: string, public readonly statusCode: number, public readonly code: string) {
@@ -264,56 +141,97 @@ export interface CarbonRegionFactor {
 
 type CarbonFactorFetcher = () => Promise<CarbonRegionFactor[]>;
 
-const carbonApiUrl = process.env.API_CARBON;
+/**
+ * Consulta todas as regiões da API de carbono.
+ * Centraliza a comunicação HTTP e a validação dos dados.
+ */
+export async function fetchCarbonRegionList(): Promise<ListCarbon> {
+  const carbonApiUrl = process.env.API_CARBON;
 
-export async function fetchCarbonRegions(): Promise<CarbonRegionFactor[]> {
-    if (!carbonApiUrl) {
-        throw new Error("A variável API_CARBON não foi configurada no ambiente.");
-    }
+  if (!carbonApiUrl) {
+    CarbonApiError.apiNull(carbonApiUrl);
 
-    const baseUrl = carbonApiUrl.replace(/\/+$/, "");
+    throw new CarbonApiError(
+      "A URL da API de carbono não foi configurada.",
+      500,
+      "API_URL_MISSING",
+    );
+  }
 
-    const response = await fetch(`${baseUrl}/regions`, {
-        headers: { Accept: "application/json" },
-        signal: AbortSignal.timeout(10000),
+  const baseUrl = carbonApiUrl.replace(/\/+$/, "");
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${baseUrl}/regions`, {
+      headers: {
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(5000),
     });
+  } catch (error: unknown) {
+    CarbonApiError.timeError(error);
 
-    if (!response.ok) {
-        throw new Error(
-            `Erro ao consultar regiões de carbono: HTTP ${response.status}`
-        );
-    }
+    throw new CarbonApiError(
+      "Não foi possível conectar à API externa.",
+      503,
+      "EXTERNAL_API_UNAVAILABLE",
+    );
+  }
 
-    let data: unknown;
+  CarbonApiError.httpError(response);
 
-    try {
-        data = await response.json();
-    } catch {
-        throw new Error("A API retornou um JSON inválido.");
-    }
+  let data: unknown;
 
-    CarbonApiError.validarEstruturaLista(data);
+  try {
+    data = await response.json();
+  } catch {
+    throw new CarbonApiError(
+      "A API externa retornou um JSON inválido ou vazio.",
+      502,
+      "EXTERNAL_API_INVALID_JSON",
+    );
+  }
 
-    return data.regions.map((region) => ({
-        code: region.code,
-        carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
-    }));
+  CarbonApiError.validarEstruturaLista(data);
+
+  return data;
+}
+
+/**
+ * Retorna somente os fatores necessários ao módulo Services.
+ */
+export async function fetchCarbonRegions(): Promise<CarbonRegionFactor[]> {
+  const data = await fetchCarbonRegionList();
+
+  return data.regions.map(region => ({
+    code: region.code,
+    carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
+  }));
 }
 
 let carbonFactors = new Map<string, number>();
+
 let fetchFactors: CarbonFactorFetcher = fetchCarbonRegions;
 
 export async function refreshCarbonRegionFactors(): Promise<void> {
   setCarbonRegionFactors(await fetchFactors());
 }
 
-export function setCarbonRegionFactors(factors: CarbonRegionFactor[]): void {
+export function setCarbonRegionFactors(
+  factors: CarbonRegionFactor[],
+): void {
   carbonFactors = new Map(
-    factors.map((factor) => [factor.code, factor.carbonIntensity]),
+    factors.map(factor => [
+      factor.code,
+      factor.carbonIntensity,
+    ]),
   );
 }
 
-export function getCarbonIntensity(regionCode: string): number | undefined {
+export function getCarbonIntensity(
+  regionCode: string,
+): number | undefined {
   return carbonFactors.get(regionCode);
 }
 
