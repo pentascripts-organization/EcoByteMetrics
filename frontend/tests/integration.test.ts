@@ -462,7 +462,10 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
         assert.match(markup, />Visão geral<\/button>/);
         assert.match(markup, />Histórico<\/button>/);
       }
-      assert.match(render("/dashboard?servico=a&detalhe=evolucao"), /CO₂e acumulado no período/);
+      const history = render("/dashboard?servico=a&detalhe=evolucao");
+      assert.match(history, /data-detail-view="history"/);
+      assert.match(history, /class="service-history-card"/);
+      assert.match(history, /class="evolution-sparkline-wrap"/);
       const located = {...snapshot, services: [{...service, latitude: -23.55, longitude: -46.63}]};
       assert.match(render("/dashboard?servico=a", DashboardPage, {snapshot: located}), /class="monitoring-map globe-anchor"/);
       const stale = {...snapshot, services: [{...service, status: "stale", energyKwh: null, emissionsG: null}]};

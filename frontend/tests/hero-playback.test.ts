@@ -30,8 +30,10 @@ test("a background that could not start retries when ready or on a gesture", asy
   for (const event of ["canplay", "pointerdown", "keydown"]) {
     const s = setup(); s.video.blocked = true;
     const stop = s.bind();
+    s.visible(true);
     await Promise.resolve();
     assert.equal(s.video.paused, true);
+    assert.equal(s.plays(), 1);
     s.video.blocked = false;
     (event === "canplay" ? s.video : s.page).dispatchEvent(new Event(event));
     assert.equal(s.video.paused, false);
@@ -45,8 +47,9 @@ test("finished backgrounds restart and visibility and disposal control playback"
   const stop = s.bind();
   assert.equal(s.video.currentTime, 0);
   s.visible(false); assert.equal(s.video.paused, true);
-  s.video.dispatchEvent(new Event("canplay")); assert.equal(s.plays(), 1);
+  s.video.dispatchEvent(new Event("canplay")); assert.equal(s.plays(), 0);
   s.visible(true); assert.equal(s.video.paused, false);
+  assert.equal(s.plays(), 1);
   s.page.hidden = true; s.page.dispatchEvent(new Event("visibilitychange"));
   assert.equal(s.video.paused, true);
   s.page.hidden = false; s.page.dispatchEvent(new Event("visibilitychange"));
