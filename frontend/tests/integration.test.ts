@@ -103,9 +103,12 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     await t.test("trocar período ou instante não apresenta dados de outra consulta como se fossem o resultado novo", () => {
       const database = {...snapshot, source: "database", historyPeriod: "24h", selectedAt: null};
       assert.equal(getAnalysis(database, "24h", "").history.length, 2);
-      assert.equal(getAnalysis(database, "7d", "").history.length, 0);
+      const changedPeriod = getAnalysis(database, "7d", "");
+      assert.equal(changedPeriod.history.length, 0);
+      assert.deepEqual(changedPeriod.services.map((entry: MonitoredService) => entry.id), ["a", "b"]);
       const selection = "?instante=" + encodeURIComponent(at);
       assert.equal(getAnalysis(database, "24h", selection).history.length, 0);
+      assert.equal(getAnalysis(database, "24h", selection).services.length, 0);
       const ready = getAnalysis({...database, selectedAt: at}, "24h", selection);
       assert.equal(ready.history.length, 2);
       assert.equal(ready.observationMissing, false);
@@ -294,8 +297,12 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
     await t.test("filtros respeitam o escopo da tela, bloqueiam futuro e explicam aplicação excluída", () => {
       const overview=render("/dashboard?painel=historico");
       assert.ok(!overview.includes("<label>Período<select"));
-      assert.doesNotMatch(render("/dashboard?aba=evolucao&painel=historico"),/class="monitoring-(tools|filter-dialog)"/);
-      assert.doesNotMatch(render("/dashboard?aba=comparar&painel=historico"),/class="monitoring-(tools|filter-dialog)"/);
+      for (const path of ["/dashboard?aba=evolucao&painel=historico", "/dashboard?aba=comparar&painel=historico"]) {
+        const open = render(path);
+        assert.match(open, /class="monitoring-tools"/);
+        assert.match(open, /monitoring-filter-button/);
+        assert.match(open, /<dialog[^>]*aria-labelledby="filter-dialog-title"/);
+      }
       assert.match(overview,/type="datetime-local" max="\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"/);
       const future=new Date(Date.now()+86400_000).toISOString();
       const invalid=getAnalysis(snapshot,"24h","?instante="+encodeURIComponent(future));
@@ -478,6 +485,15 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(render("/dashboard", DashboardPage, { error: "Sem conexão" }), /Tentar novamente/);
     });
 
+    await t.test("a aplicação continua visível enquanto o histórico troca de período", () => {
+      const previousPeriod = {...snapshot, source: "database", historyPeriod: "24h", selectedAt: null, historyIncluded: true};
+      const markup = render("/dashboard?servico=a&detalhe=evolucao&periodo=7d", DashboardPage, {snapshot: previousPeriod, period: "7d", loading: true});
+      assert.match(markup, /data-detail-view="history"/);
+      assert.match(markup, /Billing API/);
+      assert.match(markup, /Aguardando as primeiras coletas/);
+      assert.doesNotMatch(markup, /Aplicação não encontrada/);
+    });
+
     await t.test("CPU circular preserva zero e ausência; histórico mantém um único globo central", () => {
       const zero = {...snapshot, services:[{...service,cpuPercent:0,latitude:-23.55,longitude:-46.63}]};
       const overview = render("/dashboard?servico=a",DashboardPage,{snapshot:zero}).replace(/<!--.*?-->/g,"");
@@ -578,7 +594,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(details,/<dialog[^>]*portal-analysis-dialog/);
       assert.ok(details.includes('aria-label="Seções da evolução"'));
       const legacyHistory = render("/dashboard?aba=evolucao&painel=historico");
-      assert.doesNotMatch(legacyHistory, /monitoring-filter-history/);
+      assert.match(legacyHistory, /monitoring-filter-history/);
       assert.match(legacyHistory, /evolution-chart-panel/);
       assert.doesNotMatch(markup, />Histórico<\/button>/);
       assert.match(render("/dashboard?aba=evolucao&painel=aplicacoes"), /evolution-contributors/);
@@ -609,10 +625,6 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
         assert.match(past,/Voltar para agora/);
         assert.ok(!past.includes('class="observation-timeline"'));
         const open=render(path+"&painel=historico",DashboardPage,{snapshot:observed});
-        if(path.includes("evolucao")) {
-          assert.doesNotMatch(open,/class="monitoring-(tools|filter-dialog)"/);
-          continue;
-        }
         assert.match(open,/<dialog[^>]*aria-labelledby="filter-dialog-title"/);
         assert.match(open,/Fechar filtros/);
         assert.equal((open.match(/class="observation-timeline"/g)??[]).length,0);

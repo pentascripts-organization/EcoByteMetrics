@@ -50,11 +50,17 @@ export function getAnalysis(
   const dateCutoff = snapshot.source === "database" ? parseLocalDate(params.get("ate") ?? "") : NaN;
   const observedAt = invalidDate ? "" : instant || (Number.isFinite(dateCutoff) ? new Date(dateCutoff).toISOString() : "");
   const observations = snapshot.observations ?? [];
-  const mismatchedQuery = snapshot.source === "database" && (snapshot.historyPeriod !== period ||
-    (Number.isFinite(requestedUntil) ? Date.parse(snapshot.selectedAt ?? "") !== requestedUntil : Boolean(snapshot.selectedAt)));
+  const mismatchedPeriod = snapshot.source === "database" && snapshot.historyPeriod !== period;
+  const mismatchedCutoff = snapshot.source === "database" &&
+    (Number.isFinite(requestedUntil) ? Date.parse(snapshot.selectedAt ?? "") !== requestedUntil : Boolean(snapshot.selectedAt));
+  const mismatchedQuery = mismatchedPeriod || mismatchedCutoff;
+  // Period changes invalidate history, but the latest service catalog still identifies an open detail page.
+  const preserveServicesDuringPeriodRefresh = mismatchedPeriod && !mismatchedCutoff;
   const observation = snapshot.source === "database" ? undefined : observations.find(entry => entry.observedAt === observedAt);
   const observationMissing = Boolean(observedAt && (snapshot.source === "database" ? !Number.isFinite(Date.parse(observedAt)) : !observation));
-  const environmentServices = mismatchedQuery || invalidDate ? [] : observation?.services ?? (observationMissing ? [] : snapshot.services);
+  const environmentServices = invalidDate || (mismatchedQuery && !preserveServicesDuringPeriodRefresh)
+    ? []
+    : observation?.services ?? (observationMissing ? [] : snapshot.services);
   const sourceHistory = mismatchedQuery || invalidDate ? [] : observation ? observationHistory(observations, observedAt) : observationMissing ? [] : snapshot.history;
   const regionCode = params.get("regiao") ?? "";
   const selectedRegion = snapshot.regions.find(

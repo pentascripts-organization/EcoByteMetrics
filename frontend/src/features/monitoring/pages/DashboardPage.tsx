@@ -76,7 +76,7 @@ export function DashboardPage() {
   const analysis = useAnalysis();
   const { session } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico" && params.get("aba") !== "evolucao");
+  const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico");
   const [applicationPage, setApplicationPage] = useState(0);
   const [mapAnchor, setMapAnchor] = useState<HTMLDivElement | null>(null);
   const [detailEntryId, setDetailEntryId] = useState("");
@@ -109,8 +109,7 @@ export function DashboardPage() {
   const tab = params.get("aba") === "administracao" ? "administracao" : params.get("aba") === "comparar" ? "comparar" : params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
   const administration = !selectedId && tab === "administracao";
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
-  const historicalView = selectedId ? detailTab === "evolucao" : tab === "evolucao" || tab === "comparar";
-  const showFilters = filtersOpen && !administration && (!historicalView || (!selectedId && tab === "evolucao"));
+  const showFilters = filtersOpen && !administration;
   useEffect(() => { setHistoryOpen?.(showFilters && Boolean(session)); return () => setHistoryOpen?.(false); }, [showFilters, setHistoryOpen, session]);
   const evolutionMode = params.get("serie") === "intervalos" ? "intervals" : "cumulative";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || params.has("periodo"));
@@ -125,6 +124,8 @@ export function DashboardPage() {
   const services = analysis.services;
   const mapServices = useMemo(() => selected ? serviceLocationPeers(analysis.environmentServices, selected) : services, [selected, services, analysis.environmentServices]);
   const history = analysis.history;
+  const historyLoading = loading || (!error && snapshot.historyIncluded === false) ||
+    (!error && snapshot.source === "database" && snapshot.historyPeriod !== period);
   const showHistoricalRanking = !selectedId && tab === "evolucao" && params.get("painel") === "aplicacoes";
   const impacts = useMemo(() => showHistoricalRanking ? applicationImpacts(services, history, metric) : [], [services, history, metric, showHistoricalRanking]);
   const latestHistory = useMemo(() => latestCollections(services), [services]);
@@ -221,6 +222,7 @@ export function DashboardPage() {
   const detailHeading = (<div className="monitoring-heading detail-heading">
       <div className="monitoring-detail-toolbar">
         <button className="monitoring-back" onClick={back}><ArrowLeft size={18} />Voltar à lista</button>
+        {filterButton}
 
       </div>
       <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
@@ -237,7 +239,7 @@ export function DashboardPage() {
       onHighlightServices={setMapHighlightedIds} rotationPaused={Boolean(selected)} />
     {selectedId ? (!selected ? detailHeading : null) : <div className="monitoring-heading">
       <div><h1>Monitoramento</h1></div>
-      {!administration && !historicalView && <div className="monitoring-tools">
+      {!administration && <div className="monitoring-tools">
         <label className="monitoring-search"><Search size={21} aria-hidden="true" /><input type="search" aria-label="Buscar aplicação" placeholder="Buscar aplicação..." value={search} onChange={event => update({ busca: event.target.value }, true)} /></label>
         {filterButton}
       </div>}
@@ -288,7 +290,7 @@ export function DashboardPage() {
                 mode={evolutionMode}
                 onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })}
                 compact
-                loading={loading || (!error && snapshot.historyIncluded === false)}
+                loading={historyLoading}
                 observedAt={analysis.observedAt}
                 onOpenService={openService}
               /> : undefined}
@@ -454,7 +456,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel filterControl={filterButton} collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={loading || (!error && snapshot.historyIncluded === false)} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
       {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>
