@@ -1,6 +1,8 @@
-# Geographic data
+# Legacy geographic imports
 
-`world.json` contains a compact extract of Natural Earth v5.0.1, in the public domain:
+`geography.ts` is a compatibility facade for old code and tests. The active dataset and geographic implementation live in `../shared/geography/`; keep the data in one place and import from that shared module for new code.
+
+The source data is Natural Earth v5.0.1 and is in the public domain:
 
 - [Countries, 1:110m](https://github.com/nvkelso/natural-earth-vector/blob/v5.0.1/geojson/ne_110m_admin_0_countries.geojson): 177 geographic features, Portuguese and English names, country codes, approximate camera positions and boundaries rounded to three decimal places.
 - [Populated places, 1:110m](https://github.com/nvkelso/natural-earth-vector/blob/v5.0.1/geojson/ne_110m_populated_places.geojson): 243 major cities, Portuguese/English names, country codes and coordinates, used to localize API city names.

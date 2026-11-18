@@ -1,6 +1,7 @@
 
 import { type Request, type Response } from "express";
 import { StatisticService } from "./statistics.service.js";
+import { EnergyPeriod } from "./statistics.repository.js";
 
 export class StatisticController {
     private statisticService: StatisticService = new StatisticService();
@@ -112,4 +113,52 @@ export class StatisticController {
       });
     }
   };
+
+  compare = async(req: Request, res: Response) => {
+        try {
+            const idsParam = req.query.ids;
+            const period = String(req.query.period) as EnergyPeriod;
+
+            if (typeof idsParam !== "string") {
+                return res.status(400).json({
+                success: false,
+                message: "Informe os IDs dos serviços."
+                });
+            }
+
+            const ids = idsParam.split(",").map(Number);
+
+            if (
+                ids.length < 2 ||
+                ids.some(id => !Number.isInteger(id) || id <= 0) ||
+                new Set(ids).size !== ids.length
+            ) {
+                return res.status(400).json({
+                success: false,
+                message: "Informe pelo menos dois IDs válidos e distintos."
+                });
+            }
+
+            const data = await this.statisticService.compare(
+                ids,
+                period,
+            );
+
+            return res.status(200).json({
+                success: true,
+                period,
+                data,
+            });
+        } catch (error) {
+            const message =
+                error instanceof Error
+                ? error.message
+                : "Erro ao comparar serviços.";
+
+            return res.status(500).json({
+                success: false,
+                message,
+            });
+    }
+  }
 }

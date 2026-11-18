@@ -386,7 +386,13 @@ function WorldGlobe({
       event.preventDefault();
       setLost(true);
     };
+    const contextRestored = () => {
+      setPainted(false);
+      setLost(false);
+      globe.current?.resumeAnimation();
+    };
     canvas.addEventListener("webglcontextlost", contextLost);
+    canvas.addEventListener("webglcontextrestored", contextRestored);
     const updateAnimation = () => {
       if (viewport.visible && !document.hidden) globe.current?.resumeAnimation();
       else globe.current?.pauseAnimation();
@@ -395,6 +401,7 @@ function WorldGlobe({
     document.addEventListener("visibilitychange", updateAnimation);
     return () => {
       canvas.removeEventListener("webglcontextlost", contextLost);
+      canvas.removeEventListener("webglcontextrestored", contextRestored);
       document.removeEventListener("visibilitychange", updateAnimation);
     };
   }, [ready, viewport.visible]);
@@ -450,10 +457,10 @@ function WorldGlobe({
   }
 
   useEffect(() => {
-    if (!inline || painted || lost) return;
+    if (painted || lost) return;
     const timer = window.setTimeout(() => setLost(true), 12000);
     return () => window.clearTimeout(timer);
-  }, [inline, painted, lost]);
+  }, [painted, lost]);
 
   return (
     <div ref={host} className="globe-stage" data-scene="persistent" data-ready={ready && !lost} data-painted={painted && !lost}>

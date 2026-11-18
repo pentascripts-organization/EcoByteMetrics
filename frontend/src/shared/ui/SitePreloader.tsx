@@ -23,6 +23,8 @@ export function SitePreloader({
   onFinish?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dismissing = useRef(false);
+  const dismissTimer = useRef<number | null>(null);
   const [visible, setVisible] = useState(() => {
     if (typeof window === "undefined") return false;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
@@ -38,8 +40,10 @@ export function SitePreloader({
   });
 
   const dismiss = useCallback(() => {
+    if (dismissing.current) return;
+    dismissing.current = true;
     setExiting(true);
-    setTimeout(() => {
+    dismissTimer.current = window.setTimeout(() => {
       setVisible(false);
       onFinish?.();
     }, 600);
@@ -48,10 +52,11 @@ export function SitePreloader({
   useEffect(() => {
     if (!visible) return;
 
+    const fallback = window.setTimeout(dismiss, DURATION_MS);
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return () => window.clearTimeout(fallback);
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) return () => window.clearTimeout(fallback);
 
     const dpr = window.devicePixelRatio || 1;
     const width = Math.min(window.innerWidth - 32, 1100);
@@ -68,7 +73,7 @@ export function SitePreloader({
     offscreen.width = width;
     offscreen.height = height;
     const offCtx = offscreen.getContext("2d");
-    if (!offCtx) return;
+    if (!offCtx) return () => window.clearTimeout(fallback);
 
     const fontSize = Math.min(width / 6.4, 96);
     offCtx.font = `800 ${fontSize}px "Manrope", "DM Sans", -apple-system, sans-serif`;
@@ -163,6 +168,8 @@ export function SitePreloader({
 
     return () => {
       cancelAnimationFrame(frameId);
+      window.clearTimeout(fallback);
+      if (dismissTimer.current !== null) window.clearTimeout(dismissTimer.current);
     };
   }, [visible, dismiss]);
 
@@ -198,7 +205,6 @@ export function SitePreloader({
       className={`site-preloader ${exiting ? "site-preloader--exiting" : ""}`}
       role="status"
       aria-label="Carregando plataforma"
-      onClick={dismiss}
     >
       <canvas
         ref={canvasRef}
@@ -208,7 +214,7 @@ export function SitePreloader({
         onMouseLeave={handlePointerLeave}
         onTouchEnd={handlePointerLeave}
       />
-      <div className="site-preloader__footer" onClick={(e) => e.stopPropagation()}>
+      <div className="site-preloader__footer">
         <div className="site-preloader__progress-bar">
           <div
             className="site-preloader__progress-fill"
@@ -218,6 +224,9 @@ export function SitePreloader({
         <div className="site-preloader__meta">
           <span>{progress}%</span>
         </div>
+        <button className="site-preloader__skip" type="button" onClick={dismiss}>
+          Pular animação
+        </button>
       </div>
     </div>
   );

@@ -2,95 +2,18 @@ import { useMemo, useState } from "react";
 import { CollectionTable } from "./CollectionTable";
 import { aggregateCollections } from "../utils/history";
 import {
-  ArrowUpRight,
   CalendarDays,
   CircleDashed,
   RefreshCw,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useMonitoring } from "../hooks/useMonitoring";
 import type { CollectionPoint } from "../types/monitoring";
 import { useAnalysis } from "../hooks/useAnalysis";
-import { analysisLink, isPeriod } from "../utils/analysis";
-
-export function IconTile({
-  icon: Icon,
-  tone = "green",
-}: {
-  icon: LucideIcon;
-  tone?: "green" | "blue" | "amber";
-}) {
-  return (
-    <span className={`icon-tile icon-tile-${tone}`}>
-      <Icon size={21} strokeWidth={1.65} />
-    </span>
-  );
-}
-
-export function EmptyState({
-  icon: Icon = CircleDashed,
-  title,
-  description,
-  compact = false,
-  action,
-}: {
-  icon?: LucideIcon;
-  title: string;
-  description: string;
-  compact?: boolean;
-  action?: ReactNode;
-}) {
-  return (
-    <div className={`empty-state${compact ? " empty-state-compact" : ""}`}>
-      <span className="empty-state-icon">
-        <Icon size={28} strokeWidth={1.3} />
-      </span>
-      <h3>{title}</h3>
-      <p>{description}</p>
-      {action}
-    </div>
-  );
-}
-
-export function Panel({
-  title,
-  eyebrow,
-  icon: Icon,
-  link,
-  children,
-  className = "",
-}: {
-  title: string;
-  eyebrow?: string;
-  icon?: LucideIcon;
-  link?: { to: string; label: string };
-  children: ReactNode;
-  className?: string;
-}) {
-  const { search } = useLocation();
-  return (
-    <section className={`panel ${className}`}>
-      <div className="panel-heading">
-        <div className="panel-title-group">
-          {Icon && <IconTile icon={Icon} />}
-          <div>
-            {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-            <h2>{title}</h2>
-          </div>
-        </div>
-        {link && (
-          <Link className="text-link" to={analysisLink(link.to, search)}>
-            {link.label}
-            <ArrowUpRight size={16} />
-          </Link>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
+export { EmptyState, IconTile, Panel } from "../shared/ui/Presentation";
+import { EmptyState, IconTile } from "../shared/ui/Presentation";
+import { isPeriod } from "../utils/analysis";
 
 export function PeriodSelect() {
   const { period, setPeriod, refresh } = useMonitoring();

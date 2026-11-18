@@ -52,7 +52,7 @@ export default function Observatory({history,services,metric,onMetric,period,onP
   if(!playing)return;
   let current=playIndex;
   const timer=setInterval(()=>{current=Math.min(current+1,model.timestamps.length-1);setPlayIndex(current);if(current>=model.timestamps.length-1){setPlaying(false);setParams(previous=>{const next=new URLSearchParams(previous);next.set("cursor",String(model.timestamps[current]));return next;},{replace:true});}},20000/Math.max(1,model.timestamps.length));
-  const hide=()=>{if(document.hidden)setPlaying(false);};document.addEventListener("visibilitychange",hide);
+  const hide=()=>{if(!document.hidden)return;setPlaying(false);const timestamp=model.timestamps[current];if(timestamp!==undefined)setParams(previous=>{const next=new URLSearchParams(previous);next.set("cursor",String(timestamp));return next;},{replace:true});};document.addEventListener("visibilitychange",hide);
   return()=>{clearInterval(timer);document.removeEventListener("visibilitychange",hide);};
  // The starting index is captured only when playback is started.
  // eslint-disable-next-line react-hooks/exhaustive-deps

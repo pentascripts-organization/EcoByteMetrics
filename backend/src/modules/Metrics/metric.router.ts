@@ -1,6 +1,6 @@
 import {Router} from "express";
 import {MetricController} from "./metric.controller";
-import { methodNotAllowed } from "../../middlewares/methodNotAllowed.js";
+import { methodNotAllowed } from "../../middlewares/methodNotAllowed";
 import { authMiddleware } from "../Auth/auth.middleware";
 import { adminMiddleware } from "../Auth/admin.middleware";
 
@@ -10,6 +10,7 @@ let metricController = new MetricController();
 router.get("/list/:id_service",  metricController.listMetricsByServiceIdController);
 router.post("/", authMiddleware, adminMiddleware, metricController.createMetricController);
 router.get("/:id_metric", metricController.getMetricByIdController);
+
 
 router.all("/:id_metric",  methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
 router.all("/", methodNotAllowed(["POST", "OPTIONS"]));

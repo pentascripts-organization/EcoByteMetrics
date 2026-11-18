@@ -63,6 +63,21 @@
   font-variant-numeric: tabular-nums;
 }
 
+.site-preloader__skip {
+  border: 1px solid rgba(167, 243, 208, 0.42);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: transparent;
+  color: #a7f3d0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.site-preloader__skip:focus-visible {
+  outline: 2px solid #34d399;
+  outline-offset: 3px;
+}
+
 .site-page-fallback {
   position: fixed;
   inset: 0;

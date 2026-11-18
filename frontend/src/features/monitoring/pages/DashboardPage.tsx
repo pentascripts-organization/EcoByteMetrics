@@ -357,16 +357,8 @@ export function DashboardPage() {
                         <td className="monitoring-card-row-td" colSpan={3}>
                           <div
                             className="monitoring-card-header"
-                            role="button"
-                            tabIndex={0}
                             title={`Ver detalhes de ${service.name}`}
                             onClick={() => openService(service.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                openService(service.id);
-                              }
-                            }}
                           >
                             <div className="monitoring-card-toggle-col">
                               <button

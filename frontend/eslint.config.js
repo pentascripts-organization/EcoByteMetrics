@@ -22,8 +22,39 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          group: ['@/app/**', '@/features/**'],
+          group: [
+            '@/app/**',
+            '@/features/**',
+            '@/components/**',
+            '@/contexts/**',
+            '@/hooks/**',
+            '@/providers/**',
+            '@/services/**',
+            '@/utils/**',
+            '@/home/**',
+            '@/data/**',
+          ],
           message: 'shared deve permanecer independente de app e features.',
+        }],
+      }],
+    },
+  },
+  {
+    files: ['src/app/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: [
+            '@/components/**',
+            '@/contexts/**',
+            '@/hooks/**',
+            '@/providers/**',
+            '@/services/**',
+            '@/utils/**',
+            '@/home/**',
+            '@/data/**',
+          ],
+          message: 'app deve compor features e shared, sem importar as pastas legadas da raiz.',
         }],
       }],
     },
@@ -33,8 +64,18 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
-          group: ['@/app/**'],
-          message: 'A composicao da aplicacao pertence a app; features nao importam app.',
+          group: [
+            '@/app/**',
+            '@/components/**',
+            '@/contexts/**',
+            '@/hooks/**',
+            '@/providers/**',
+            '@/services/**',
+            '@/utils/**',
+            '@/home/**',
+            '@/data/**',
+          ],
+          message: 'Features nao importam app nem as pastas legadas da raiz; use shared ou dependencias explicitas da feature.',
         }],
       }],
     },

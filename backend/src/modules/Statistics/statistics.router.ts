@@ -1,4 +1,4 @@
-import { methodNotAllowed } from "../../middlewares/methodNotAllowed.js";
+import { methodNotAllowed } from "../../middlewares/methodNotAllowed";
 import {StatisticController} from "./statistics.controller";
 import {Router} from "express";
 
@@ -21,10 +21,13 @@ router.get("/energy", statistics.calculationEnergy);
 // http://localhost:3000/api/statistics/energy/billing-api
 router.get("/energy/:nome_service", statistics.calculationEnergyByUnit);
 
+//http://localhost:3000/api/statistics/compare?serviceA=1&serviceB=2&start=2026-11-01T&end=2026-11-14
+router.get("/metrics/compare", statistics.compare)
+
 
 router.all("/summary", methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
 router.all("/ranking", methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
 router.all("/energy", methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
 router.all("/energy/:nome_service", methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
-
+router.all("/metrics/compare",  methodNotAllowed(["GET", "HEAD", "OPTIONS"]));
 export default router;
