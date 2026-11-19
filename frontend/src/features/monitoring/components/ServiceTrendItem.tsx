@@ -19,7 +19,7 @@ export function ServiceTrendItem({
   preloadedHistory?: CollectionPoint[];
   isExpanded?: boolean;
 }) {
-  const { trend, loading } = useServiceTrend({
+  const { trend, loading, error } = useServiceTrend({
     service,
     metric,
     period,
@@ -43,6 +43,7 @@ export function ServiceTrendItem({
       className="monitoring-card-meta-item monitoring-card-trend-item"
       data-direction={trend.direction}
       data-loading={loading ? "true" : undefined}
+      data-error={error ? "true" : undefined}
     >
       <Icon size={17} className="monitoring-card-meta-icon" aria-hidden="true" />
       <div className="monitoring-trend-info">
@@ -51,11 +52,12 @@ export function ServiceTrendItem({
         </span>
         <span
           className={`monitoring-trend-badge monitoring-trend-badge--${trend.direction}`}
-          style={{ color: trend.color }}
+          style={error ? undefined : { color: trend.color }}
+          aria-live={error ? "polite" : undefined}
           title={`Tendência de ${metric === "energy" ? "consumo" : "emissão"} ${trend.periodLabel}`}
         >
-          {trend.hasEnoughData ? <><span className="trend-arrow">{trend.arrow}</span>{" "}{trend.formattedPercentage}</> : loading ? "Buscando tendência..." : "Aguardando mais coletas"}{" "}
-          <small>{trend.periodLabel}</small>
+          {trend.hasEnoughData ? <><span className="trend-arrow">{trend.arrow}</span>{" "}{trend.formattedPercentage}</> : loading ? "Buscando tendência..." : error ? "Tendência indisponível" : "Aguardando mais coletas"}{" "}
+          <small className={error ? "monitoring-trend-error" : undefined}>{trend.periodLabel}{error && trend.hasEnoughData ? " · dados anteriores" : ""}</small>
         </span>
       </div>
       {trend.hasEnoughData && <svg

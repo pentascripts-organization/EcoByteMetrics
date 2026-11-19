@@ -230,6 +230,7 @@
 .globe-marker:hover .globe-marker-label, .globe-marker:focus-visible .globe-marker-label, .globe-marker.is-selected .globe-marker-label { display: block; }
 .globe-background .globe-hover { position: absolute; z-index: 3; left: 24px; bottom: 24px; background: #f5faf7; color: #103a40; border: 1px solid #dfe8e5; padding: 5px 10px; border-radius: 4px; font-size: 13px; pointer-events: none; }
 .globe-fallback { position: relative; z-index: 3; min-height: 300px; display: flex; align-items: center; justify-content: center; padding: 30px; color: #657b88; text-align: center; }
+.globe-stage > .globe-fallback--state { position: absolute; inset: 0; min-height: 0; margin: 0; border-radius: inherit; background: rgb(255 255 255 / 76%); backdrop-filter: blur(3px); font-size: 13px; pointer-events: none; }
 .map-choices { border-top: 1px solid #dfe7eb; margin-top: 12px; padding: 10px 0; font-size: 14px; background: transparent; pointer-events: auto; }
 .map-choices > div, .map-choices > button { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; width: 100%; text-align: left; min-height: 44px; }
 .map-choices > div button { color: #087e59; text-decoration: underline; min-height: 44px; }

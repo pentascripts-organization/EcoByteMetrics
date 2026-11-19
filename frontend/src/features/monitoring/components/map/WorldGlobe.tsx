@@ -513,13 +513,7 @@ function WorldGlobe({
         resolution.current?.start(); resolution.current?.end(); cancelCameraMotion.current(); rotation.current?.pause();
       }}
     >
-      {lost ? (
-        <p className="globe-fallback" role="status">
-          {readOnly
-            ? "A visualização 3D foi interrompida."
-            : "Mapa indisponível. A localização textual e as métricas continuam disponíveis."}
-        </p>
-      ) : (
+      {!lost && (
         viewport.width > 0 && (
           <Globe
             ref={globe}
@@ -564,7 +558,13 @@ function WorldGlobe({
         </span>
       )}
     </div>, viewport.portalRoot)}
-    {inline && !painted && !lost && <p className="globe-fallback" role="status">Carregando mapa…</p>}
+    {(!painted || lost) && <p className="globe-fallback globe-fallback--state" role="status">
+      {lost
+        ? readOnly
+          ? "A visualização 3D foi interrompida."
+          : "Mapa indisponível. A localização textual e as métricas continuam disponíveis."
+        : "Carregando o globo 3D…"}
+    </p>}
     </div>
   );
 }

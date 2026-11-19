@@ -77,10 +77,15 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.deepEqual(latest.history, []);
       assert.equal(latest.services[0].emissionsG, 0.085);
       child.mock.method(globalThis, "fetch", async (url: string) => {
-        assert.equal(new URL(url, "https://local.invalid").searchParams.has("view"), false);
+        assert.equal(new URL(url, "https://local.invalid").searchParams.get("view"), "analysis");
         return Response.json(persisted({historyIncluded: true}));
       });
       assert.equal((await getMonitoringSnapshot(undefined, {includeHistory: true})).history.length, 1);
+      child.mock.method(globalThis, "fetch", async (url: string) => {
+        assert.equal(new URL(url, "https://local.invalid").searchParams.get("view"), "history");
+        return Response.json(persisted({historyIncluded: true}));
+      });
+      assert.equal((await getMonitoringSnapshot(undefined, {includeHistory: true, protectedHistory: true})).history.length, 1);
     });
 
     await t.test("recursos históricos aceitam zero e ausência, mas rejeitam valores inválidos", async child => {

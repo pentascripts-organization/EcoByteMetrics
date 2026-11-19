@@ -1341,6 +1341,34 @@
 .monitoring-notice--toast[open] > summary svg:last-child { transform: rotate(180deg); }
 .monitoring-notice-toast-content { padding: 0 16px 14px 43px; }
 .monitoring-notice-toast-content p { max-width: 100%; margin: 0; color: #665b3d; font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.monitoring-error-toast {
+  position: fixed;
+  z-index: 1600;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(70dvh, 520px);
+  overflow: auto;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #f1d69a;
+  border-radius: 14px;
+  background: #fffaf0;
+  color: #765714;
+  box-shadow: 0 12px 36px rgb(62 45 6 / 18%);
+}
+.monitoring-error-toast-main { display: flex; align-items: center; gap: 10px; }
+.monitoring-error-toast-main > svg { flex: 0 0 auto; color: #c18414; }
+.monitoring-error-toast-main > p { flex: 1; max-width: 100%; margin: 0; font-size: 13px; line-height: 1.45; }
+.monitoring-error-toast-main > button { flex: 0 0 auto; min-height: 36px; padding: 6px 10px; border: 1px solid #d8c185; border-radius: 9px; color: #765714; font-size: 12px; font-weight: 650; text-decoration: none; }
+.monitoring-error-toast > details { padding-left: 28px; font-size: 12px; }
+.monitoring-error-toast > details p { margin: 6px 0 0; overflow-wrap: anywhere; }
+.observation-timeline-error { margin: 0 0 10px; color: #9a5b20; font-size: 12px; line-height: 1.45; }
+.monitoring-trend-error { color: #9a5b20; font-weight: 650; }
+.monitoring-card-trend-item[data-error="true"] .monitoring-trend-badge { color: #9a5b20; }
 .monitoring-card-status-note {
   display: flex;
   align-items: flex-start;

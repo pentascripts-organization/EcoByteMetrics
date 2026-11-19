@@ -90,11 +90,11 @@ export async function getMonitoringSnapshot(
   }
 
   // Define explicitamente o tipo de consulta.
-  if (options.includeHistory === false) {
-    params.set("view", "latest");
-  } else if (options.protectedHistory === true) {
+  if (options.protectedHistory === true) {
     params.set("view", "history");
-  } else if (options.includeHistory === undefined) {
+  } else if (options.includeHistory === false) {
+    params.set("view", "latest");
+  } else {
     params.set("view", "analysis");
   }
 
