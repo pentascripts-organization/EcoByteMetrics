@@ -15,7 +15,6 @@ import fourthPoster from "@/shared/assets/videos/landscape-12097119.jpg";
 import { HeroVideo } from "./HeroVideo";
 import { useCarousel } from "@/features/home/hooks/useCarousel";
 import { BlurText } from "@/shared/ui/BlurText";
-import { MaskedHeading } from "@/shared/ui/MaskedHeading";
 
 interface HeroProps {
   copy: {
@@ -46,7 +45,7 @@ export function Hero({ copy }: HeroProps) {
       <div className="hero__light" aria-hidden="true" />
       <div className="hero__content">
         <div className="hero-copy">
-          <MaskedHeading lines={[copy.line1, copy.line2, copy.line3]} />
+          <h1 className="masked-heading hero-title">{copy.line1}<br />{copy.line2}<br />{copy.line3}</h1>
           <p className="hero-description"><BlurText text={copy.description} delay={35} /></p>
           <div className="hero-copy__actions">
             <DashboardLink className="hero-border-button">
