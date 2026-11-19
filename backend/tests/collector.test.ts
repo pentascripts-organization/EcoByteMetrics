@@ -29,7 +29,12 @@ test("uma consulta de métricas alimenta SQL e cache com o mesmo instante, somen
   assert.deepEqual(stored.values?.slice(1, 5), [10, 1, 2, 3]);
   assert.equal(stored.values?.[5], cycle.at);
   assert.equal(stored.values?.[7], null);
-  assert.deepEqual(getCollectedMetricsByServiceId(service.id), { serviceId: service.id, metrics: sample, updatedAt: cycle.at });
+  assert.deepEqual(getCollectedMetricsByServiceId(service.id), {
+    serviceId: service.id,
+    metrics: sample,
+    updatedAt: cycle.at,
+    carbonIntensity: null,
+});
   assert(statements.some(query => query.sql === "COMMIT"));
 });
 
