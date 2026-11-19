@@ -33,12 +33,12 @@ export function applicationImpacts(services: MonitoredService[], history: Collec
   );
 }
 
-export function groupServiceLocations(services: MonitoredService[]) {
+export function groupServiceLocations(services: MonitoredService[], includeRemoved = false) {
   const groups = new Map<string, { id: string; name: string; latitude: number; longitude: number; countryCode: string; services: MonitoredService[]; color: string; count: number }>();
   const priority = ["available", "no-metrics", "stale", "unavailable"];
   for (const service of services) {
     const { latitude, longitude } = service;
-    if (service.status === "removed" || latitude === undefined || longitude === undefined ||
+    if ((!includeRemoved && service.status === "removed") || latitude === undefined || longitude === undefined ||
       !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) continue;
     const id = latitude.toFixed(4) + "," + longitude.toFixed(4);
     let group = groups.get(id);

@@ -1,9 +1,9 @@
 import { Clock3, Radio } from "lucide-react";
 import type { MonitoringObservation } from "../types";
 
-export function ObservationTimeline({ observations, selected, onSelect, onLive, loading = false }: {
+export function ObservationTimeline({ observations, selected, onSelect, onLive, loading = false, error = false }: {
   observations: MonitoringObservation[]; selected: string; onSelect: (value: string) => void; onLive: () => void;
-  loading?: boolean;
+  loading?: boolean; error?: boolean;
 }) {
   const index = selected ? observations.reduce((closest, observation, i) => Date.parse(observation.observedAt) <= Date.parse(selected) ? i : closest, -1) : -1;
   const latest = observations.at(-1);
@@ -26,11 +26,12 @@ export function ObservationTimeline({ observations, selected, onSelect, onLive, 
       <button className="monitoring-text-button" disabled={!selected} onClick={onLive}><Radio size={16} />Voltar para agora</button>
     </div>
     {current ? <>
+      {error && <p className="observation-timeline-error" role="status">A consulta falhou; os horários exibidos podem estar desatualizados.</p>}
       <input id="observation-range" type="range" min="0" max={Math.max(0, observations.length - 1)} step="1" value={index < 0 ? observations.length - 1 : index} disabled={observations.length < 2}
         aria-valuetext={format(current.observedAt)} onChange={event => { const observation = observations[Number(event.target.value)]; if (observation) onSelect(observation.observedAt); }} />
       <div className="timeline-range"><span>{format(observations[0]!.observedAt)}</span><span>{format(latest!.observedAt)}</span></div>
       <p>Arraste a barra para escolher um horário. Isso muda a consulta, sem interromper a coleta.</p>
       <details><summary>Como funciona o histórico</summary><p>{collectionCount} {collectionCount === 1 ? "rodada de coleta gravada" : "rodadas de coleta gravadas"} neste período.{collectionCount > observations.length && ` A barra reúne essas rodadas em ${observations.length} pontos de revisão.`} <span>Uma rodada consulta várias aplicações. Os horários seguem o fuso deste dispositivo. Com o servidor ativo, a coleta continua mesmo com o navegador fechado.</span></p></details>
-    </> : <p role="status">{loading ? "Consultando o histórico de coletas…" : selected ? "Não há coleta gravada neste instante." : "A linha do tempo aparecerá após a primeira coleta gravada."}</p>}
+    </> : <p role="status">{error ? "Não foi possível carregar o histórico de coletas." : loading ? "Consultando o histórico de coletas…" : selected ? "Não há coleta gravada neste instante." : "A linha do tempo aparecerá após a primeira coleta gravada."}</p>}
   </section>;
 }

@@ -1,5 +1,5 @@
 export function bindHeroPlayback(video: HTMLVideoElement, page: Document, Observer = IntersectionObserver) {
-  let visible = true;
+  let visible = false;
   let disposed = false;
   // Set the DOM property before play(), including when playback starts without a gesture.
   video.muted = true;

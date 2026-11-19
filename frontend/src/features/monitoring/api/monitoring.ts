@@ -71,6 +71,7 @@ export async function getMonitoringSnapshot(
     until?: string;
     includeHistory?: boolean;
     protectedHistory?: boolean;
+    serviceIds?: string[];
   } = {}
 ): Promise<MonitoringSnapshot> {
 
@@ -82,11 +83,17 @@ export async function getMonitoringSnapshot(
     params.set("until", options.until);
   }
 
+  if (options.serviceIds?.length) {
+    for (const id of options.serviceIds) {
+      params.append("service", id);
+    }
+  }
+
   // Define explicitamente o tipo de consulta.
-  if (options.includeHistory === false) {
-    params.set("view", "latest");
-  } else if (options.protectedHistory === true) {
+  if (options.protectedHistory === true) {
     params.set("view", "history");
+  } else if (options.includeHistory === false) {
+    params.set("view", "latest");
   } else {
     params.set("view", "analysis");
   }

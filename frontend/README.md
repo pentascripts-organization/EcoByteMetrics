@@ -15,10 +15,10 @@ Se precisar configurar a conexão, crie `.env.local` a partir de `.env.example`,
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
-| `VITE_BACKEND_URL` | `/backend` | Endereço público da API no navegador |
+| `VITE_BACKEND_URL` | `/backend` | Base same-origin da API; use um proxy reverso para `/backend` |
 | `BACKEND_PROXY_TARGET` | `http://127.0.0.1:3000` | Destino do proxy do Vite |
 
-O proxy remove `/backend` antes de encaminhar a consulta. Reinicie o Vite após mudar o ambiente. Variáveis `VITE_` são públicas e incorporadas no build; não use senhas ou tokens nelas.
+O proxy remove `/backend` antes de encaminhar a consulta. Mantenha a API na mesma origem do frontend: a autenticação depende de um cookie de sessão e o backend atual não habilita CORS com credenciais para outra origem. Para usar um host de API separado, o backend precisa configurar CORS e cookies compatíveis. Reinicie o Vite após mudar o ambiente. Variáveis `VITE_` são públicas e incorporadas no build; não use senhas ou tokens nelas.
 
 A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Monitoramento e comparação precisam de respostas da API para mostrar aplicações reais; não existe modo de demonstração automático.
 
