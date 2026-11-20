@@ -2,6 +2,7 @@ import "../styles/map.css";
 import "../styles/dashboard.css";
 import "../styles/dashboard-clarity.css";
 import "../styles/service-detail.css";
+import "../styles/dashboard-mobile.css";
 import { ServiceDetailOverview, ServiceReadingMeta } from "../components/ServiceDetailOverview";
 import "@/shared/ui/AnimatedList.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -235,6 +236,12 @@ export function DashboardPage() {
       {selected && <ServiceReadingMeta service={selected} observedAt={analysis.observedAt} />}
 
     </div>);
+  const applicationSearch = <label className="monitoring-search"><Search size={21} aria-hidden="true" /><input type="search" aria-label="Buscar aplicação" placeholder="Buscar aplicação..." value={search} onChange={event => update({ busca: event.target.value }, true)} /></label>;
+  const dashboardTools = <div className={"monitoring-tools" + (tab === "evolucao" ? " monitoring-tools--evolution" : "")}>
+        {applicationSearch}
+        {filterButton}
+      </div>;
+  const dashboardTabs = <MonitoringTabs className="monitoring-tabs monitoring-primary-tabs" slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />;
   return <>
     <TopographicSides key="topography" />
     <RegionMap key="persistent-globe" anchorElement={mapAnchor} detailView={Boolean(selected)}
@@ -244,12 +251,10 @@ export function DashboardPage() {
       onHighlightServices={setMapHighlightedIds} rotationPaused={Boolean(selected)} />
     {selectedId ? (!selected ? detailHeading : null) : <div className="monitoring-heading">
       <div><h1>Monitoramento</h1></div>
-      {!administration && <div className="monitoring-tools">
-        <label className="monitoring-search"><Search size={21} aria-hidden="true" /><input type="search" aria-label="Buscar aplicação" placeholder="Buscar aplicação..." value={search} onChange={event => update({ busca: event.target.value }, true)} /></label>
-        {filterButton}
-      </div>}
+      {!administration && !mobile && dashboardTools}
     </div>}
     {showFilters && <FiltersDialog onClear={clearFilters} onClose={() => setFiltersOpen(false)}><div className="monitoring-filters">
+      {!selectedId && tab === "evolucao" && <div className="evolution-filter-search">{applicationSearch}</div>}
       <section className="filter-group filter-group-location"><div className="filter-section-title"><Globe2 size={17} /><div><h3>Localização</h3><p>Encontre aplicações por país e região.</p></div></div>
       <div className="filter-select-field"><span>País</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="País" value={params.get("pais") ?? ""} options={[{value:"",label:"Todos os países"},...countries.map(country => ({value:country,label:country}))]} onChange={value => update({pais:value,cidade:"",regiao:""})} /></div>
       <div className="filter-select-field"><span>Região</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="Região" value={params.get("regiao") ?? ""} options={[{value:"",label:"Todas as regiões"},...regionOptions.map(service => ({value:service.regionCode!,label:[service.city,service.region].filter(Boolean).join(" · ") || service.regionCode!}))]} onChange={value => update({regiao:value,cidade:""})} /></div>
@@ -260,6 +265,7 @@ export function DashboardPage() {
       </section>
       <div className="monitoring-filter-history"><h3>Escolher um horário anterior</h3>{session ? <ObservationTimeline loading={loading || (!error && snapshot.historyIncluded === false)} error={Boolean(error)} observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} /> : <div className="filter-history-access"><LockKeyhole size={20} aria-hidden="true" /><div><strong>Seu histórico em um só lugar</strong><p>Entre para explorar a linha do tempo das coletas.</p><Link to={loginLocation("/dashboard?" + new URLSearchParams({...Object.fromEntries(params), painel: "historico"}).toString())}>Entrar para ver histórico</Link></div></div>}</div>
     </div><p className="monitoring-filter-note">Limpar filtros mantém o período escolhido.</p></FiltersDialog>}
+    {mobile && !selectedId && dashboardTabs}
     {!administration && <>
     {analysis.invalidDate && <p className="monitoring-notice" role="alert">Escolha uma data válida até o momento atual. <button onClick={goLive}>Voltar para agora</button></p>}
     {analysis.observationMissing && <p className="monitoring-notice" role="alert">Este instante não está disponível no histórico consultado. <button onClick={goLive}>Voltar para agora</button></p>}
@@ -269,7 +275,8 @@ export function DashboardPage() {
       <div className="monitoring-notice-toast-content"><p>{snapshot.warning}</p></div>
     </details>}
     </>}
-    {!selectedId && <MonitoringTabs slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />}
+    {!mobile && !selectedId && dashboardTabs}
+    {mobile && !selectedId && !administration && dashboardTools}
     {!selectedId && !administration && tab === "comparar" && <MonitoringSummary context={dataContext} latest={comparisonLatest} services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={tab === "comparar"} loading={loading} onRefresh={() => void refresh()} />}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : administration ? "Administração do ambiente" : tab === "comparar" ? "Comparação de aplicações" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
       <div className={"monitoring-overview" + (selected ? " service-overview service-detail-layout" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
@@ -462,7 +469,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} observedAt={analysis.observedAt} impacts={impacts} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} observedAt={analysis.observedAt} impacts={impacts} filterControl={<div className="evolution-mobile-filter">{filterButton}</div>} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
       {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>

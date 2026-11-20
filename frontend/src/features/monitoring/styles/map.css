@@ -246,6 +246,7 @@
 @media (max-width: 900px) {
   /* OrbitControls sets touch-action inline; vertical swipes must still scroll the page. */
   .globe-background canvas { touch-action: pan-y !important; }
+  .globe-background[data-mobile-gestures] canvas { touch-action: none !important; }
   .globe-background[data-mask="legacy"] canvas { mask-image: none; }
   .globe-background .globe-fade { display: none; }
   .map-choices > button { flex-wrap: wrap; }

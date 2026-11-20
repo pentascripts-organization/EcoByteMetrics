@@ -77,9 +77,11 @@ export async function mockAnonymousSession(page: Page) {
 export async function mockMonitoring(page: Page, data = snapshot()) {
   await mockAnonymousSession(page);
   await page.route(monitoringEndpoint, route => {
-    const latest = new URL(route.request().url()).searchParams.get("view") === "latest";
+    const params = new URL(route.request().url()).searchParams;
+    const latest = params.get("view") === "latest";
+    const historyPeriod = params.get("period") === "24h" ? "24h" : data.historyPeriod;
     return route.fulfill({
-      json: latest ? { ...data, history: [], observations: [], historyIncluded: false } : data,
+      json: latest ? { ...data, history: [], observations: [], historyIncluded: false } : { ...data, historyPeriod },
     });
   });
 }
