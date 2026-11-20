@@ -308,7 +308,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.ok(!overview.includes("<label>Período<select"));
       for (const path of ["/dashboard?aba=evolucao&painel=historico", "/dashboard?aba=comparar&painel=historico"]) {
         const open = render(path);
-        assert.match(open, /class="monitoring-tools"/);
+        assert.match(open, /class="monitoring-tools(?: monitoring-tools--evolution)?"/);
         assert.match(open, /monitoring-filter-button/);
         assert.match(open, /<dialog[^>]*aria-labelledby="filter-dialog-title"/);
       }
@@ -597,7 +597,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.ok(markup.includes('Explorar detalhes'));
       assert.ok(!markup.includes('<dialog'));
       assert.equal((markup.match(/type="range"/g)??[]).length,1);
-      assert.ok(markup.includes('aria-label="Treemap de impacto por aplicação"'));
+      assert.ok(markup.includes('aria-label="Impacto por aplicação"'));
       assert.ok(markup.includes('Impacto por aplicação'));
       assert.ok(markup.includes('aria-label="Sobre estimativas ambientais"'));
       assert.ok(markup.includes('aria-label="Explorar intervalos do histórico"'));

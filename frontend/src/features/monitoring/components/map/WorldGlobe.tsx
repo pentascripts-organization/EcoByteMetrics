@@ -80,12 +80,14 @@ function WorldGlobe({
   const cancelCameraMotion = useRef<() => void>(() => {});
   const viewportMotion = useRef<(() => void) | null>(null);
   const markerElements = useRef(new Map<string, HTMLButtonElement>());
-  const touch = useRef<{ id: number; x: number; y: number } | null>(null);
+  const touch = useRef<{ id: number; x: number; y: number; at: number } | null>(null);
   const [viewport, setViewport] = useState({
     width: 0, height: 0, offset: [0, 0] as [number, number], fieldOfView: 50, visible: false, compact: false,
+    touchClip: undefined as string | undefined,
     portalRoot: null as Element | null,
     anchor: undefined as HTMLElement | null | undefined,
   });
+  const touchLayout = viewport.width > 0 && viewport.width <= 680;
   const [ready, setReady] = useState(false);
   const [painted, setPainted] = useState(false);
   const [hover, setHover] = useState("");
@@ -251,9 +253,12 @@ function WorldGlobe({
         if (!visible) return previous.visible ? { ...previous, visible: false } : previous;
         const size = { width: document.documentElement.clientWidth, height: window.innerHeight };
         const next = inline ? { width: anchor.width, height: anchor.height, offset: [0, 0] as [number, number], fieldOfView: 50, compact: true } : { ...getGlobeViewport(size, anchor), compact: size.width <= 900 };
-        return previous.visible && previous.width === next.width && previous.height === next.height &&
+        const touchClip = size.width <= 680 && !inline && !expanded && !readOnly
+          ? `inset(${Math.max(0, anchor.top)}px ${Math.max(0, size.width - anchor.left - anchor.width)}px ${Math.max(0, size.height - anchor.top - anchor.height)}px ${Math.max(0, anchor.left)}px)`
+          : undefined;
+        return previous.visible && previous.touchClip === touchClip && previous.width === next.width && previous.height === next.height &&
           previous.offset[0] === next.offset[0] && previous.offset[1] === next.offset[1] &&
-          previous.fieldOfView === next.fieldOfView && previous.compact === next.compact && previous.anchor === anchorElement ? previous : { ...next, visible, portalRoot, anchor: anchorElement };
+          previous.fieldOfView === next.fieldOfView && previous.compact === next.compact && previous.anchor === anchorElement ? previous : { ...next, visible, touchClip, portalRoot, anchor: anchorElement };
       });
     };
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
@@ -269,7 +274,7 @@ function WorldGlobe({
       window.removeEventListener("scroll", schedule, true);
       cancelAnimationFrame(frame);
     };
-  }, [inline, expanded, anchorElement, selectedServiceId]);
+  }, [inline, expanded, anchorElement, selectedServiceId, readOnly]);
 
   useEffect(() => {
     if (!ready || !globe.current) return;
@@ -314,7 +319,7 @@ function WorldGlobe({
     const shared = viewport.anchor !== undefined;
     const navigating = shared && viewport.anchor !== projectionAnchor.current;
     // A navigation can change scrollbar width without being a window resize.
-    const duration = projectionInitialized.current && (!resized || navigating) && viewport.visible && motionAllowed && (shared || settings.parallaxEnabled) ? (shared ? 1100 : 650) : 0;
+    const duration = !touchLayout && projectionInitialized.current && (!resized || navigating) && viewport.visible && motionAllowed && (shared || settings.parallaxEnabled) ? (shared ? 1100 : 650) : 0;
     projectionAnchor.current = viewport.anchor;
     projectionInitialized.current = true;
     const cancel = animateGlobeViewport(camera, viewport, duration, requestAnimationFrame, cancelAnimationFrame);
@@ -332,7 +337,7 @@ function WorldGlobe({
       if (viewportMotion.current === cancel) viewportMotion.current = null;
       restore();
     };
-  }, [ready, viewport, motionAllowed, settings.parallaxEnabled, expanded]);
+  }, [ready, viewport, motionAllowed, settings.parallaxEnabled, expanded, touchLayout]);
 
   useEffect(() => {
     if (!ready || !globe.current) return;
@@ -342,11 +347,12 @@ function WorldGlobe({
     controls.maxDistance = 450;
     controls.zoomSpeed = 0.75;
     controls.rotateSpeed = 0.8;
-    controls.enableDamping = true;
+    controls.enableDamping = !touchLayout;
     controls.dampingFactor = 0.08;
     const layoutChanged = cameraCompact.current !== viewport.compact;
     cameraCompact.current = viewport.compact;
     const duration =
+      !touchLayout &&
       cameraInitialized.current &&
       !layoutChanged &&
       (anchorElement !== undefined || settings.parallaxEnabled) &&
@@ -377,7 +383,7 @@ function WorldGlobe({
     cancelCameraMotion.current = cancel;
     cameraInitialized.current = true;
     return cancel;
-  }, [ready, country, cityId, cityLat, cityLng, selectedServiceId, focusLat, focusLng, settings.parallaxEnabled, motionAllowed, viewport.compact, inline, detailView, anchorElement]);
+  }, [ready, country, cityId, cityLat, cityLng, selectedServiceId, focusLat, focusLng, settings.parallaxEnabled, motionAllowed, viewport.compact, inline, detailView, anchorElement, touchLayout]);
 
   useEffect(() => {
     const canvas = globe.current?.renderer().domElement;
@@ -416,7 +422,8 @@ function WorldGlobe({
   function selectTouch(event: PointerEvent<HTMLDivElement>) {
     const start = touch.current;
     touch.current = null;
-    if (readOnly || !start || start.id !== event.pointerId || !globe.current) return;
+    if (readOnly || !start || start.id !== event.pointerId || !globe.current ||
+      event.timeStamp - start.at > 350 || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) return;
     const bounds = globe.current.renderer().domElement.getBoundingClientRect();
     const x = event.clientX - bounds.left,
       y = event.clientY - bounds.top;
@@ -457,11 +464,18 @@ function WorldGlobe({
   }
 
   useEffect(() => {
-    if (painted || lost) return;
+    if (!viewport.visible || painted || lost) return;
     const timer = window.setTimeout(() => setLost(true), 12000);
     return () => window.clearTimeout(timer);
-  }, [painted, lost]);
+  }, [viewport.visible, painted, lost]);
 
+  const notice = <p className="globe-fallback globe-fallback--state" role="status">
+      {lost
+        ? readOnly
+          ? "A visualização 3D foi interrompida."
+          : "Mapa indisponível. A localização textual e as métricas continuam disponíveis."
+        : "Carregando o globo 3D…"}
+    </p>;
   return (
     <div ref={host} className="globe-stage" data-scene="persistent" data-ready={ready && !lost} data-painted={painted && !lost}>
       {viewport.width > 0 && viewport.portalRoot && createPortal(<div
@@ -469,7 +483,8 @@ function WorldGlobe({
       className={"globe-background" + (inline ? " globe-background--inline" : "")}
       data-intro={painted && motionAllowed && settings.parallaxEnabled}
       data-mask={experiments.mask}
-      style={{ visibility: viewport.visible && (painted || lost) ? "visible" : "hidden" }}
+      data-mobile-gestures={touchLayout && !readOnly || undefined}
+      style={{ visibility: viewport.visible && (painted || lost) ? "visible" : "hidden", clipPath: viewport.touchClip }}
       aria-label={readOnly ? "Globo 3D para visualização" : "Globo 3D interativo"}
       onPointerDownCapture={(event) => {
         if (event.target instanceof HTMLCanvasElement && !interactionPointAllowed(event.clientX, event.clientY)) {
@@ -484,7 +499,7 @@ function WorldGlobe({
         if (!readOnly && event.pointerType === "touch")
           touch.current =
             event.isPrimary && event.target instanceof HTMLCanvasElement
-              ? { id: event.pointerId, x: event.clientX, y: event.clientY }
+              ? { id: event.pointerId, x: event.clientX, y: event.clientY, at: event.timeStamp }
               : null;
       }}
       onPointerMoveCapture={(event) => {
@@ -558,13 +573,7 @@ function WorldGlobe({
         </span>
       )}
     </div>, viewport.portalRoot)}
-    {(!painted || lost) && <p className="globe-fallback globe-fallback--state" role="status">
-      {lost
-        ? readOnly
-          ? "A visualização 3D foi interrompida."
-          : "Mapa indisponível. A localização textual e as métricas continuam disponíveis."
-        : "Carregando o globo 3D…"}
-    </p>}
+    {(!painted || lost) && (anchorElement ? createPortal(notice, anchorElement) : anchorElement === undefined && notice)}
     </div>
   );
 }

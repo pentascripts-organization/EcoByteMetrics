@@ -1,0 +1,165 @@
+.comparison-mobile-table { display: none; }
+
+.globe-anchor > .globe-fallback {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 20px;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .monitoring-overview:not(.service-overview) > .monitoring-location { align-self: stretch; }
+}
+
+@media (max-width: 680px) {
+  .monitoring-shell {
+    overflow-x: clip;
+    --mobile-gutter: clamp(12px, 4vw, 18px);
+    --mobile-surface: #f4f8f6;
+  }
+
+  .monitoring-shell .monitoring-main,
+  .monitoring-shell .monitoring-header,
+  .monitoring-shell:has(.service-detail-overview) :is(.monitoring-main, .monitoring-header) {
+    width: calc(100% - 2 * var(--mobile-gutter));
+    min-width: 0;
+  }
+
+  .monitoring-shell:has(.monitoring-view) .monitoring-main { padding-top: 8px; }
+  .monitoring-shell .monitoring-header { padding-top: 8px; padding-bottom: 4px; }
+  .monitoring-heading h1 { font-size: clamp(27px, 7.5vw, 36px); overflow-wrap: anywhere; }
+  .monitoring-primary-tabs {
+    flex-wrap: nowrap;
+    gap: 4px;
+    min-height: 44px;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    margin: 8px 0 14px;
+  }
+  .monitoring-primary-tabs > button { flex: 0 0 auto; padding: 8px; font-size: 14px; white-space: nowrap; }
+  .monitoring-primary-tabs[data-sliding-indicator] > button[data-highlighted="true"] {
+    color: #087e59;
+    text-shadow: none;
+  }
+
+  .monitoring-main > .monitoring-tools {
+    pointer-events: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+  .monitoring-main > .monitoring-tools .monitoring-search { width: 100%; min-height: 44px; }
+  .monitoring-shell .monitoring-filter-button { min-height: 44px; }
+  .monitoring-shell .specular-button { overflow: clip; }
+  .monitoring-shell .specular-button__light { display: none; }
+
+  .monitoring-overview:not(.service-overview) { align-items: stretch; gap: 14px; }
+  .monitoring-overview:not(.service-overview) > .monitoring-summary { margin: 0; padding: 0; }
+  .monitoring-summary .monitoring-visible-totals {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .monitoring-visible-totals > .monitoring-operational-counts { grid-column: 1 / -1; }
+  .monitoring-visible-totals > div {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid #dfeae4;
+    border-radius: 12px;
+    background: var(--mobile-surface);
+  }
+  .monitoring-visible-totals > div > span { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+  .monitoring-visible-totals > div > strong { font-size: clamp(17px, 5vw, 22px); overflow-wrap: anywhere; }
+  .monitoring-visible-totals > div > strong small { font-size: 11px; }
+
+  .monitoring-applications .monitoring-section-heading { display: grid; gap: 6px; margin: 0 0 8px; }
+  .monitoring-heading-controls { flex-wrap: nowrap; gap: 4px; }
+  .monitoring-heading-controls .monitoring-update { flex: 1; justify-content: space-between; min-width: 0; gap: 4px; }
+  .monitoring-heading-controls .monitoring-refresh,
+  .monitoring-sort-trigger { min-width: 44px; min-height: 44px; }
+  .monitoring-applications .monitoring-table-scroll { overflow: visible; }
+  .monitoring-app-table { width: 100%; min-width: 0; }
+  .monitoring-applications .monitoring-app-table .monitoring-card-row-td { padding: 4px 0; }
+  .monitoring-applications .monitoring-card-header {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    grid-template-areas: "toggle name name" ". status metric";
+    padding: 4px 8px 10px 0;
+    gap: 0 6px;
+  }
+  .monitoring-card-toggle-col { grid-area: toggle; }
+  .monitoring-card-name-col { grid-area: name; min-width: 0; }
+  .monitoring-applications .monitoring-card-status-col { grid-area: status; min-width: 0; }
+  .monitoring-applications .monitoring-card-metric-col { grid-area: metric; justify-content: end; }
+  .monitoring-applications :is(.monitoring-card-name-btn, .monitoring-card-toggle-btn) { min-height: 44px; }
+  .monitoring-applications .monitoring-card-toggle-btn { width: 44px; }
+  .monitoring-applications .monitoring-app-name-text { overflow-wrap: anywhere; }
+  .monitoring-applications .monitoring-status { font-size: 13px; gap: 7px; }
+  .monitoring-applications .monitoring-status i { width: 8px; height: 8px; flex-basis: 8px; box-shadow: none; }
+  .monitoring-card-metric-col .monitoring-card-divider { display: none; }
+  .monitoring-applications .monitoring-sample-value { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .monitoring-list-pagination { flex-wrap: wrap; gap: 0 6px; }
+  .monitoring-list-pagination button { min-width: 44px; min-height: 44px; }
+
+  .is-globe-expanded .monitoring-main > .monitoring-tools { opacity: 0; pointer-events: none; }
+  .monitoring-location .globe-expand-button { top: 8px; right: 8px; width: 44px; height: 44px; }
+  .is-globe-expanded .globe-exploration-controls { top: max(12px, env(safe-area-inset-top)); inset-inline: 12px; }
+  .monitoring-location .map-popup-card { max-width: calc(100vw - 2 * var(--mobile-gutter)); }
+  .monitoring-shell .monitoring-error-toast,
+  .monitoring-shell .monitoring-notice--toast { position: static; inset: auto; transform: none; width: 100%; margin: 0 0 12px; }
+  .monitoring-error-toast-main { flex-wrap: wrap; }
+
+  html .monitoring-filter-dialog[open] {
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border-radius: 0;
+  }
+  .monitoring-filter-dialog .filter-dialog-body { min-height: 0; overflow-y: auto; }
+  .monitoring-filter-dialog > footer { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+  .monitoring-filter-dialog :is(button, input, select) { min-height: 44px; }
+
+  .monitoring-shell .observatory-heading { gap: 8px; }
+  .monitoring-shell .observatory-tools { gap: 6px; flex-wrap: wrap; }
+  .monitoring-shell .observatory-workspace { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+  .monitoring-shell .observatory-footer { padding-block: 8px; }
+  .monitoring-shell .observatory-timeline button { min-width: 44px; height: 44px; }
+  .observatory-timeline input { min-width: 0; }
+  .observatory-dialog { max-width: calc(100vw - 2 * var(--mobile-gutter)); }
+
+  .comparison-desktop-table { display: none; }
+  .comparison-mobile-table { display: block; max-width: 100%; overflow-x: auto; }
+  .comparison-mobile-table .comparison-metrics-table { width: max-content; min-width: 100%; border-spacing: 0; }
+  .comparison-mobile-table caption { text-align: left; padding: 8px 0; }
+  .comparison-mobile-table :is(th, td) { padding: 8px; border-bottom: 1px solid #dfeae4; min-width: 94px; max-width: 136px; overflow-wrap: anywhere; }
+  .comparison-mobile-table tr > :first-child { position: sticky; left: 0; z-index: 1; background: #f4f8f6; }
+  .comparison-mobile-table th button { min-height: 44px; padding: 4px; text-align: left; }
+  .comparison-content :is(button, select) { min-height: 44px; }
+
+  .monitoring-shell .service-detail-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "identity" "impact" "resources" "globe";
+    gap: 12px;
+    padding-top: 0;
+  }
+  .service-detail-overview .monitoring-detail-card { padding: 14px; border-radius: 14px; }
+  .service-detail-overview .service-impact { padding: 14px; border-radius: 14px; }
+  .service-detail-overview :is(.service-impact-column, .service-detail-columns, .service-history-card) { min-width: 0; }
+  .service-detail-overview .service-detail-tabs { margin: 0 0 8px; }
+  .service-detail-overview .service-detail-tabs button { min-height: 44px; }
+  .administration-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+  .administration-panel :is(button, a) { min-height: 44px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .monitoring-shell .monitoring-primary-tabs { scroll-behavior: auto; }
+  }
+}

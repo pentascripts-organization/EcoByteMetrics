@@ -263,7 +263,7 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
 
           {/* Tabela Lado a Lado dos Indicadores (Issue #121) */}
           <div
-            className="monitoring-table-scroll"
+            className="monitoring-table-scroll comparison-desktop-table"
             role="region"
             aria-label="Comparação das aplicações"
             tabIndex={0}
@@ -310,6 +310,21 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
                   </tr>
                 ))}
               </tbody>
+            </table>
+          </div>
+          <div className="monitoring-table-scroll comparison-mobile-table" role="region" aria-label="Indicadores lado a lado" tabIndex={0}>
+            <table className="comparison-metrics-table">
+              <caption>{latest ? "?ltima leitura por aplica??o" : "Leituras dispon?veis ? " + analysis.periodLabel}</caption>
+              <thead><tr><th scope="col">Indicador</th>{rows.map(({ service }) => <th scope="col" key={service.id}><button type="button" onClick={() => onOpenService(service.id)}>{service.name}</button></th>)}</tr></thead>
+              <tbody>{([
+                ["Situa??o", rows.map(row => serviceStatusLabels[row.service.status])],
+                ["Energia (kWh)", rows.map(row => formatNumber(row.energyKwh))],
+                ["Emiss?es (kg CO?e)", rows.map(row => formatNumber(row.emissionsG === null ? null : row.emissionsG / 1000))],
+                [latest ? "CPU (%)" : "CPU m?dia (%)", rows.map(row => formatNumber(row.resources.cpuPercent))],
+                [latest ? "Mem?ria (GB)" : "Mem?ria m?dia (GB)", rows.map(row => formatNumber(row.resources.memoryGb))],
+                [latest ? "Rede (GB)" : "Rede m?dia (GB)", rows.map(row => formatNumber(row.resources.networkGb))],
+                ...(latest ? [["Coletada em", rows.map(row => formatDate(row.last))] as const] : []),
+              ] as const).map(([label, values]) => <tr key={label}><th scope="row">{label}</th>{values.map((value, index) => <td key={rows[index]!.service.id}>{value}</td>)}</tr>)}</tbody>
             </table>
           </div>
         </>

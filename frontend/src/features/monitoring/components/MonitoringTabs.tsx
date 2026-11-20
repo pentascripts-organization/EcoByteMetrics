@@ -25,6 +25,12 @@ export function MonitoringTabs({ label, tabs, value, onChange, panelId = "monito
       line.style.transform = `translate(${selected.offsetLeft}px, ${selected.offsetTop + selected.offsetHeight - 2}px)`;
       line.style.width = `${selected.offsetWidth}px`;
       line.style.visibility = "visible";
+      if (list.classList.contains("monitoring-primary-tabs") && list.scrollWidth > list.clientWidth) {
+        const left = selected.offsetLeft;
+        const right = left + selected.offsetWidth;
+        if (left < list.scrollLeft) list.scrollLeft = left;
+        else if (right > list.scrollLeft + list.clientWidth) list.scrollLeft = right - list.clientWidth;
+      }
       // Place the first underline immediately; later targets use the same CSS transition.
       if (!line.dataset.ready) frame = requestAnimationFrame(() => { line.dataset.ready = "true"; });
     };
