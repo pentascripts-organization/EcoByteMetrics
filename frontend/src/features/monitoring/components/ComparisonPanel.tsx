@@ -280,6 +280,9 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
                   <th scope="col">Situação</th>
                   <th scope="col">Energia (kWh)</th>
                   <th scope="col">Emissões (kg CO₂e)</th>
+                  <th scope="col">{latest ? "CPU (%)" : "CPU m\u00e9dia (%)"}</th>
+                  <th scope="col">{latest ? "Mem\u00f3ria (GB)" : "Mem\u00f3ria m\u00e9dia (GB)"}</th>
+                  <th scope="col">{latest ? "Rede (GB)" : "Rede m\u00e9dia (GB)"}</th>
                   {latest && <th scope="col">Coletada em</th>}
                 </tr>
               </thead>
@@ -294,23 +297,15 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
                       <button type="button" onClick={() => onOpenService(row.service.id)}>
                         {row.service.name}
                       </button>
-                      <div className="comparison-infra-pills">
-                        {row.service.cpuPercent != null && (
-                          <span>CPU: {formatNumber(row.service.cpuPercent)}%</span>
-                        )}
-                        {row.service.memoryGb != null && (
-                          <span>Mem: {formatNumber(row.service.memoryGb)} GB</span>
-                        )}
-                        {row.service.networkGb != null && (
-                          <span>Rede: {formatNumber(row.service.networkGb)} GB</span>
-                        )}
-                      </div>
                     </th>
                     <td>{serviceStatusLabels[row.service.status]}</td>
                     <td>{formatNumber(row.energyKwh)}</td>
                     <td>
                       {formatNumber(row.emissionsG === null ? null : row.emissionsG / 1000)}
                     </td>
+                    <td>{formatNumber(row.resources.cpuPercent)}</td>
+                    <td>{formatNumber(row.resources.memoryGb)}</td>
+                    <td>{formatNumber(row.resources.networkGb)}</td>
                     {latest && <td>{formatDate(row.last)}</td>}
                   </tr>
                 ))}
