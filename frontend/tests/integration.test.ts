@@ -179,6 +179,10 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       const services = [{...service, energyKwh: .004, emissionsG: 2, lastCollectionAt: at}, {...service,id:"b",name:"Audit",energyKwh:.006,emissionsG:3,lastCollectionAt:at}];
       const data = {...snapshot,services,history:[{serviceId:"a",collectedAt:at,energyKwh:1,emissionsG:100},{serviceId:"b",collectedAt:at,energyKwh:2,emissionsG:200}]};
       const latest = render("/dashboard?aba=comparar&comparacao=ultima&app=a&app=b", DashboardPage, {snapshot:data}).replace(/<!--.*?-->/g, "");
+      const latestTable = latest.split('class="comparison-table"')[1]!.split('</table>')[0]!;
+      assert.equal((latestTable.match(/scope="col"/g)??[]).length,8);
+      assert.match(latestTable,/CPU.*\(%\)/);
+      assert.doesNotMatch(latestTable,/CPU m/);
       assert.match(latest,/CO₂e das últimas coletas/);
       assert.match(latest,/0,01 <small>kWh/);
       assert.match(latest,/5 <small>g CO₂e/);
@@ -203,7 +207,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(render("/dashboard?aba=evolucao&serie=intervalos"),/aria-pressed="true">Por intervalo<\/button>/);
       const markup=render("/dashboard?aba=comparar&app=a&app=b");
       const table=markup.split('class="comparison-table"')[1]!.split('</table>')[0]!;
-      assert.equal((table.match(/scope="col"/g)??[]).length,4);
+      assert.equal((table.match(/scope="col"/g)??[]).length,7);
       assert.ok(!table.includes("Tempo somado"));
       assert.doesNotMatch(markup,/comparison-reading-details/);
       assert.doesNotMatch(markup,/Tempo somado das leituras/);
@@ -570,6 +574,11 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(table, /Emissões \(kg CO₂e\)/);
       assert.match(table, /<td>0,01<\/td>/);
       assert.match(table, /<td>0,001<\/td>/);
+      assert.match(table, /CPU.*\(%\)/);
+      assert.match(table, /Mem.*\(GB\)/);
+      assert.match(table, /Rede.*\(GB\)/);
+      assert.match(table, /<td>0<\/td><td>2<\/td><td>4<\/td>/);
+      assert.doesNotMatch(markup,/comparison-infra-pills/);
       assert.doesNotMatch(markup, /comparison-resource-table|comparison-reading-details|Ver recursos médios|Ver leituras e qualidade|Um total menor não indica/);
     });
 

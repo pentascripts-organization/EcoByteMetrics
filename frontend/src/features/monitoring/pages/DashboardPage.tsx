@@ -42,6 +42,7 @@ import { useAnalysis } from "../hooks/useAnalysis";
 import { applicationImpacts, serviceLocationPeers, statusColors } from "../domain/dashboard";
 import type { DashboardMetric } from "../domain/dashboard";
 import { collectionRange, latestCollections } from "../domain/history";
+import { REFRESH_INTERVAL_MS } from "../domain/snapshot";
 import { serviceStatusLabels } from "../types";
 import type { MonitoredService } from "../types";
 import { formatDataPeriod, formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
@@ -54,6 +55,8 @@ import { Globe2, SlidersHorizontal, LockKeyhole } from "lucide-react";
 import { AdministrationAccess } from "@/features/auth/AdministrationAccess";
 
 const stamp = (value?: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "Ainda não realizada";
+const refreshSeconds = REFRESH_INTERVAL_MS / 1000;
+const refreshHelp = `A página consulta os dados salvos a cada ${refreshSeconds} segundos enquanto está visível. Esta seta antecipa a consulta; não inicia uma nova coleta no servidor.`;
 
 function ServiceStatus({ service }: { service: MonitoredService }) {
   return (
@@ -143,9 +146,7 @@ export function DashboardPage() {
   const summaryServices = tab === "comparar" ? services.filter(service => comparedIds.includes(service.id)) : services;
   const summaryHistory = tab === "comparar" ? (comparisonLatest ? latestHistory : history).filter(point => comparedIds.includes(point.serviceId)) : latestOverview ? latestHistory : history;
   const summaryRange = useMemo(() => collectionRange(summaryHistory), [summaryHistory]);
-  const lastCollectionDate = summaryRange.last;
-  const formatDate = (value: string | number) => new Date(value).toLocaleString("pt-BR");
-  const refreshHelp = "A página consulta os dados salvos a cada 30 segundos enquanto está visível. Esta seta antecipa a consulta; não inicia uma nova coleta no servidor.";
+  const lastCollectionDate = summaryRange.last === null ? null : new Date(summaryRange.last);
   const shownRange = selected ? selectedRange : tab === "comparar" || latestOverview ? summaryRange : { first: analysis.availableSince, last: analysis.availableUntil };
 
   useEffect(() => {
@@ -248,7 +249,7 @@ export function DashboardPage() {
         {filterButton}
       </div>}
     </div>}
-    {showFilters && <FiltersDialog onClear={clearFilters} onClose={() => setFiltersOpen(false)}>{errorNotice}<div className="monitoring-filters">
+    {showFilters && <FiltersDialog onClear={clearFilters} onClose={() => setFiltersOpen(false)}><div className="monitoring-filters">
       <section className="filter-group filter-group-location"><div className="filter-section-title"><Globe2 size={17} /><div><h3>Localização</h3><p>Encontre aplicações por país e região.</p></div></div>
       <div className="filter-select-field"><span>País</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="País" value={params.get("pais") ?? ""} options={[{value:"",label:"Todos os países"},...countries.map(country => ({value:country,label:country}))]} onChange={value => update({pais:value,cidade:"",regiao:""})} /></div>
       <div className="filter-select-field"><span>Região</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="Região" value={params.get("regiao") ?? ""} options={[{value:"",label:"Todas as regiões"},...regionOptions.map(service => ({value:service.regionCode!,label:[service.city,service.region].filter(Boolean).join(" · ") || service.regionCode!}))]} onChange={value => update({regiao:value,cidade:""})} /></div>
@@ -308,13 +309,14 @@ export function DashboardPage() {
               <div className="monitoring-heading-controls">
                 {tab !== "comparar" && (
                   <div className="monitoring-update">
-                    <span role="status">
-                      {lastCollectionDate !== null
-                        ? "Dados coletados até " + formatDate(lastCollectionDate)
-                        : loading
-                        ? "Consultando registros…"
-                        : "Ainda sem leituras nesta seleção"}
-                    </span>
+                    <div className="monitoring-update-copy">
+                      <span role="status">
+                        {lastCollectionDate
+                          ? <>Dados coletados até <time dateTime={lastCollectionDate.toISOString()}>{lastCollectionDate.toLocaleString("pt-BR")}</time></>
+                          : loading ? "Consultando registros…" : "Ainda sem leituras nesta seleção"}
+                      </span>
+                      <span className="monitoring-update-interval">Consulta automática a cada {refreshSeconds} s</span>
+                    </div>
                     <button
                       type="button"
                       className="monitoring-refresh"

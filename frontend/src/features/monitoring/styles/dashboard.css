@@ -32,7 +32,6 @@
 }
 .monitoring-summary { pointer-events: auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 12px; color: var(--monitoring-muted); font-size: 13px; }
 .monitoring-update { display: inline-flex; align-items: center; gap: 8px; }
-.monitoring-update > span { font-variant-numeric: tabular-nums; }
 .monitoring-summary > details { min-width: 0; width: 100%; }
 .monitoring-summary > details[open] { width: 100%; }
 .monitoring-summary > details > summary { width: fit-content; }
@@ -51,7 +50,8 @@
 .comparison-selection input { accent-color: var(--monitoring-green); width: 18px; height: 18px; flex-shrink: 0; }
 .comparison-selection small { display: block; margin-top: 2px; color: var(--monitoring-muted); }
 .comparison-range { font-size: 14px; color: var(--monitoring-muted); }
-.comparison-table { min-width: 960px; margin-block: 16px; font-variant-numeric: tabular-nums; }
+.comparison-table { min-width: 1120px; margin-block: 16px; font-variant-numeric: tabular-nums; }
+.comparison-table th:not(:first-child), .comparison-table td { white-space: nowrap; }
 .comparison-table button { text-decoration: underline; text-underline-offset: 4px; min-height: 44px; text-align: left; }
 .monitoring-table-scroll:focus-visible { outline-offset: -3px; }
 @media (max-width: 900px) {
@@ -231,7 +231,7 @@
 /* Accordion Drawer */
 .monitoring-card-accordion-body {
   display: grid;
-  grid-template-columns: 1fr 1.1fr 1.4fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.4fr);
   gap: 16px;
   align-items: center;
   margin-top: 14px;
@@ -1273,7 +1273,6 @@
   .monitoring-applications .monitoring-table-scroll { overflow-x: auto; }
   .monitoring-filters, .monitoring-notice, .observation-timeline { max-height: none; overflow: visible; }
   .monitoring-tools, .monitoring-search { min-width: 0; }
-  .monitoring-update > span { text-align: left; }
   .monitoring-facts dd { overflow-wrap: anywhere; }
 }
 @media (max-width: 680px) {

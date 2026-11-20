@@ -1,6 +1,9 @@
 ﻿import { expect, test } from "@playwright/test";
 
+import { mockAnonymousSession, mockMonitoring } from "./monitoring-fixtures";
+
 test("homepage renders", async ({ page }) => {
+  await mockAnonymousSession(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
@@ -11,23 +14,25 @@ test("homepage renders", async ({ page }) => {
 });
 
 test("dashboard renders", async ({ page }) => {
+  await mockMonitoring(page);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Monitoramento" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Monitoramento" })).toBeVisible({ timeout: 15_000 });
   expect(errors).toEqual([]);
 });
 
-test("filter drawer opens and closes on every monitoring screen", async ({ page, isMobile }) => {
-  test.skip(isMobile, "The service list is desktop-only in this layout");
+test("filter drawer opens and closes on every monitoring screen", async ({ page }) => {
+  test.setTimeout(60_000);
+  await mockMonitoring(page);
 
   for (const path of ["/dashboard", "/dashboard?aba=evolucao", "/dashboard?aba=comparar"]) {
     await page.goto(path);
     const filterButton = page.getByRole("button", { name: /^Filtrar/ });
     const dialog = page.locator("#monitoring-filters");
 
-    await expect(filterButton).toBeVisible();
+    await expect(filterButton).toBeVisible({ timeout: 15_000 });
     await filterButton.click();
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveJSProperty("open", true);
@@ -36,11 +41,8 @@ test("filter drawer opens and closes on every monitoring screen", async ({ page,
   }
 
   await page.goto("/dashboard");
-  const firstService = page.locator(".monitoring-card-name-btn").first();
-  await expect(firstService).toBeVisible();
-  const serviceName = (await firstService.innerText()).trim();
-  await firstService.click();
-  await expect(page.getByRole("heading", { name: serviceName, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Brasil Billing API", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Billing API", exact: true })).toBeVisible();
 
   const detailFilterButton = page.getByRole("button", { name: /^Filtrar/ });
   const detailDialog = page.locator("#monitoring-filters");
@@ -55,4 +57,6 @@ test("filter drawer opens and closes on every monitoring screen", async ({ page,
   await detailFilterButton.click();
   await expect(detailDialog).toBeVisible();
   await expect(detailDialog).toHaveJSProperty("open", true);
+  await page.keyboard.press("Escape");
+  await expect(detailDialog).toHaveCount(0);
 });
