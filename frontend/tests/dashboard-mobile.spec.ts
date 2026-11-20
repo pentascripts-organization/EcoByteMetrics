@@ -92,7 +92,9 @@ test("mobile dashboard keeps navigation, cards and comparison within the viewpor
   await page.getByRole("button", { name: /Aplic.*4/ }).click();
   const selection = page.getByRole("dialog");
   for (const name of [/Reports API/, /Zero API/, /Missing API/]) {
-    await selection.getByRole("checkbox", { name }).uncheck();
+    const checkbox = selection.getByRole("checkbox", { name });
+    await checkbox.tap();
+    await expect(checkbox).not.toBeChecked();
   }
   await selection.getByRole("button", { name: "Fechar detalhes" }).click();
   await expect(bars.getByRole("button")).toHaveCount(1);
