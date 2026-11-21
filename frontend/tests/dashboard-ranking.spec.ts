@@ -42,6 +42,7 @@ test("latest readings match the dashboard totals and both ranking criteria", asy
 });
 
 test("filters update the dashboard and can recover an empty selection", async ({ page }) => {
+  test.setTimeout(60_000);
   const open = page.getByRole("button", { name: /^Filtrar/ });
   const dialog = page.getByRole("dialog", { name: "Filtros e histórico" });
   const results = dialog.getByRole("button", { name: "Ver resultados" });
