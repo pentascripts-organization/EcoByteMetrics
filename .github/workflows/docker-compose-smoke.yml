@@ -37,6 +37,12 @@ jobs:
           POSTGRES_PASSWORD=ecobytemetrics_ci
           POSTGRES_DATABASE=ecobytemetrics_test
           POSTGRES_PORT_CONTEINER=5433
+          ADMIN_SEED_NAME=CI Admin
+          ADMIN_SEED_EMAIL=admin@example.test
+          ADMIN_SEED_PASSWORD=ci-only-admin-password
+          USER_SEED_NAME=CI User
+          USER_SEED_EMAIL=user@example.test
+          USER_SEED_PASSWORD=ci-only-user-password
           PORT=3000
           PORT_CONTEINER=3000
           API_METRIC=http://127.0.0.1:9
