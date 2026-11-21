@@ -35,6 +35,7 @@ interface WorldGlobeProps {
   onCitySelect?: (name: string) => void;
   onPointSelect?: (id: string, name: string) => void;
   onPointHover?: (id: string, active: boolean) => void;
+  onAvailabilityChange: (available: boolean) => void;
   highlightedCityId?: string;
   focusCity?: GlobeCity;
   rotationPaused?: boolean;
@@ -58,6 +59,7 @@ function WorldGlobe({
   onCitySelect,
   onPointSelect,
   onPointHover,
+  onAvailabilityChange,
   highlightedCityId,
   focusCity,
   rotationPaused = false,
@@ -468,6 +470,8 @@ function WorldGlobe({
     const timer = window.setTimeout(() => setLost(true), 12000);
     return () => window.clearTimeout(timer);
   }, [viewport.visible, painted, lost]);
+
+  useEffect(() => onAvailabilityChange(painted && !lost), [onAvailabilityChange, painted, lost]);
 
   const notice = <p className="globe-fallback globe-fallback--state" role="status">
       {lost

@@ -8,8 +8,8 @@ import { emissionScale, formatEmissions, formatNumber } from "@/shared/lib/forma
 
 const RechartsEvolutionChart = lazy(() => import("./RechartsEvolutionChart").then(module => ({ default: module.RechartsEvolutionChart })));
 
-export function HistoryChart({ points, chartData, metric, mode, intervalMs, loading = false, onEnergy }: {
-  points: EvolutionPoint[]; metric: DashboardMetric; mode: EvolutionMode; intervalMs: number; loading?: boolean; onEnergy: () => void;
+export function HistoryChart({ points, chartData, metric, mode, intervalMs, loading = false, error = false, onEnergy }: {
+  points: EvolutionPoint[]; metric: DashboardMetric; mode: EvolutionMode; intervalMs: number; loading?: boolean; error?: boolean; onEnergy: () => void;
   chartData?: EvolutionChartPoint[];
 }) {
   const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -23,8 +23,8 @@ export function HistoryChart({ points, chartData, metric, mode, intervalMs, load
   const color = metric === "energy" ? "#168998" : "#128361";
   if (!points.some(point => point.value !== null)) return <div className="evolution-chart-empty" role="status">
     <ChartNoAxesCombined size={34} strokeWidth={1.3} aria-hidden="true" />
-    <h3>{loading && !points.length ? "Aguardando as primeiras coletas" : points.length ? "Ainda faltam dados de emissões" : "Nenhum registro neste período"}</h3>
-    <p>{points.length ? "Não há leituras com informação suficiente para calcular carbono. Você pode consultar a energia estimada." : "Os registros aparecerão após uma coleta ou ao ajustar os filtros."}</p>
+    <h3>{error && !points.length ? "Não foi possível carregar as leituras" : loading && !points.length ? "Aguardando as primeiras coletas" : points.length ? "Ainda faltam dados de emissões" : "Nenhum registro neste período"}</h3>
+    <p>{error && !points.length ? "Tente atualizar a consulta para ver os registros deste período." : points.length ? "Não há leituras com informação suficiente para calcular carbono. Você pode consultar a energia estimada." : "Os registros aparecerão após uma coleta ou ao ajustar os filtros."}</p>
     {points.length > 0 && metric === "emissions" && <button className="monitoring-text-button" onClick={onEnergy}>Visualizar energia</button>}
   </div>;
   const latest = points.at(-1)!;

@@ -20,16 +20,11 @@ const DURATION_MS = 2400;
 export function SitePreloader({
   onFinish,
 }: {
-  onFinish?: () => void;
+  onFinish: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dismissing = useRef(false);
   const dismissTimer = useRef<number | null>(null);
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
-    return true;
-  });
   const [exiting, setExiting] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -44,14 +39,11 @@ export function SitePreloader({
     dismissing.current = true;
     setExiting(true);
     dismissTimer.current = window.setTimeout(() => {
-      setVisible(false);
-      onFinish?.();
+      onFinish();
     }, 600);
   }, [onFinish]);
 
   useEffect(() => {
-    if (!visible) return;
-
     const fallback = window.setTimeout(dismiss, DURATION_MS);
     const canvas = canvasRef.current;
     if (!canvas) return () => window.clearTimeout(fallback);
@@ -171,9 +163,7 @@ export function SitePreloader({
       window.clearTimeout(fallback);
       if (dismissTimer.current !== null) window.clearTimeout(dismissTimer.current);
     };
-  }, [visible, dismiss]);
-
-  if (!visible) return null;
+  }, [dismiss]);
 
   const handlePointerMove = (clientX: number, clientY: number) => {
     if (!canvasRef.current) return;

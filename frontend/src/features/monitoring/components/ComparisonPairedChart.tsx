@@ -16,6 +16,8 @@ export interface ComparisonRowData {
   service: MonitoredService;
   energyKwh: number | null;
   emissionsG: number | null;
+  emissionCount: number;
+  count: number;
 }
 
 export interface ComparisonPairedChartProps {
@@ -43,14 +45,17 @@ export const ComparisonPairedChart = memo(function ComparisonPairedChart({
   const data = rows.map((r, index) => ({
     id: r.service.id,
     name: r.service.name,
-    energyKwh: r.energyKwh ?? 0,
-    emissionsKg: r.emissionsG !== null ? +(r.emissionsG / 1000).toFixed(4) : 0,
-    emissionsG: r.emissionsG ?? 0,
+    energyKwh: r.energyKwh,
+    emissionsKg: r.emissionsG === null ? null : r.emissionsG / 1000,
     color: serviceColors[index % serviceColors.length],
   }));
 
-  const maxEnergy = Math.max(...data.map((d) => d.energyKwh), 0.001);
-  const maxEmissions = Math.max(...data.map((d) => d.emissionsKg), 0.001);
+  const maxEnergy = Math.max(0, ...data.map(row => row.energyKwh ?? 0));
+  const maxEmissions = Math.max(0, ...data.map(row => row.emissionsKg ?? 0));
+  const missingEnergy = data.filter(row => row.energyKwh === null).map(row => row.name);
+  const missingEmissions = data.filter(row => row.emissionsKg === null).map(row => row.name);
+
+  const partialEmissions = latest ? [] : rows.filter(row => row.emissionsG !== null && row.emissionCount < row.count);
 
   return (
     <div className="comparison-paired-charts" aria-label="Gráficos pareados de consumo e carbono">
@@ -72,7 +77,7 @@ export const ComparisonPairedChart = memo(function ComparisonPairedChart({
                 tickMargin={10}
               />
               <YAxis
-                domain={[0, Math.ceil(maxEnergy * 1.15 * 100) / 100]}
+                domain={[0, maxEnergy > 0 ? maxEnergy * 1.15 : 0.001]}
                 tickFormatter={(val) => formatNumber(val)}
                 axisLine={false}
                 tickLine={false}
@@ -103,6 +108,7 @@ export const ComparisonPairedChart = memo(function ComparisonPairedChart({
             </BarChart>
           </ResponsiveContainer>
         </div>
+        {missingEnergy.length > 0 && <p className="monitoring-explanation">Sem estimativa de energia: {missingEnergy.join(", ")}.</p>}
       </div>
 
       <div className="comparison-chart-card">
@@ -123,7 +129,7 @@ export const ComparisonPairedChart = memo(function ComparisonPairedChart({
                 tickMargin={10}
               />
               <YAxis
-                domain={[0, Math.ceil(maxEmissions * 1.15 * 1000) / 1000]}
+                domain={[0, maxEmissions > 0 ? maxEmissions * 1.15 : 0.001]}
                 tickFormatter={(val) => formatNumber(val)}
                 axisLine={false}
                 tickLine={false}
@@ -154,6 +160,8 @@ export const ComparisonPairedChart = memo(function ComparisonPairedChart({
             </BarChart>
           </ResponsiveContainer>
         </div>
+        {partialEmissions.length > 0 && <p className="monitoring-explanation">Emissões parciais: {partialEmissions.map(row => `${row.service.name} (${row.emissionCount} de ${row.count} amostras)`).join(", ")}.</p>}
+        {missingEmissions.length > 0 && <p className="monitoring-explanation">Sem estimativa de emissões: {missingEmissions.join(", ")}.</p>}
       </div>
     </div>
   );

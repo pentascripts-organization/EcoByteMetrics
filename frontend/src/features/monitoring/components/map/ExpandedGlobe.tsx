@@ -10,7 +10,7 @@ export function ExpandedGlobe({ onClose }: { onClose: () => void }) {
     if (!shell) return;
     const previousFocus = document.activeElement;
     const overflow = document.body.style.overflow;
-    const panels = [...shell.querySelectorAll<HTMLElement>(".monitoring-header, .monitoring-heading, .monitoring-main > .monitoring-tabs, .monitoring-main > .monitoring-tools, .monitoring-summary, .monitoring-applications, .monitoring-notice, .monitoring-past-banner, .globe-expand-button")];
+    const panels = [...shell.querySelectorAll<HTMLElement>(".skip-link, .monitoring-header, .monitoring-heading, .monitoring-main > .monitoring-tabs, .monitoring-main > .monitoring-tools, .monitoring-summary, .monitoring-applications, .monitoring-notice, .monitoring-past-banner, .globe-expand-button")];
     const previousInert = panels.map(panel => panel.inert);
     for (const panel of panels) panel.inert = true;
     document.body.style.overflow = "hidden";

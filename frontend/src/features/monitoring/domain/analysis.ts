@@ -47,8 +47,7 @@ export function getAnalysis(
   const instant = params.get("instante") ?? "";
   const requestedUntil = date ? parseLocalDate(date) : Date.parse(instant);
   const invalidDate = Boolean((date || instant) && (!Number.isFinite(requestedUntil) || requestedUntil > now));
-  const dateCutoff = snapshot.source === "database" ? parseLocalDate(params.get("ate") ?? "") : NaN;
-  const observedAt = invalidDate ? "" : instant || (Number.isFinite(dateCutoff) ? new Date(dateCutoff).toISOString() : "");
+  const observedAt = invalidDate ? "" : date ? (snapshot.source === "database" ? new Date(requestedUntil).toISOString() : "") : instant;
   const observations = snapshot.observations ?? [];
   const mismatchedPeriod = snapshot.source === "database" && snapshot.historyPeriod !== period;
   const mismatchedCutoff = snapshot.source === "database" &&
@@ -141,6 +140,7 @@ export function getAnalysis(
     date,
     regional,
     invalidDate,
+    awaitingCatalog: mismatchedCutoff,
     periodLabel,
     windowStart: Number.isFinite(start) && !invalidDate ? start : null,
     windowEnd: Number.isFinite(end) && !invalidDate ? end : null,

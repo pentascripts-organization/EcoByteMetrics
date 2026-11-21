@@ -140,31 +140,26 @@ export function calculateTrend(
   const baseline = baselineSlice.reduce((sum, v) => sum + v, 0) / baselineSlice.length;
   const latest = latestSlice.reduce((sum, v) => sum + v, 0) / latestSlice.length;
 
-  let percentage: number;
-  if (baseline === 0) {
-    percentage = latest === 0 ? 0 : 100;
-  } else {
-    percentage = ((latest - baseline) / baseline) * 100;
-  }
+  const percentage = baseline === 0 ? (latest === 0 ? 0 : null) : ((latest - baseline) / baseline) * 100;
 
   let direction: TrendDirection = "neutral";
   let arrow = "→";
   let color = "var(--monitoring-muted, #526b78)";
   let strokeColor = "#8fa3b0";
 
-  if (percentage < -0.05) {
+  if (percentage !== null && percentage < -0.05) {
     direction = "down";
     arrow = "↓";
     color = "#009955";
     strokeColor = "#00b96b";
-  } else if (percentage > 0.05) {
+  } else if (percentage === null || percentage > 0.05) {
     direction = "up";
     arrow = "↑";
     color = "#d9383a";
     strokeColor = "#f43e48";
   }
 
-  const formattedPercentage = formatTrendPercent(percentage);
+  const formattedPercentage = percentage === null ? "Aumento a partir de zero" : formatTrendPercent(percentage);
   const { path, area } = generateSparklinePaths(values);
 
   return {

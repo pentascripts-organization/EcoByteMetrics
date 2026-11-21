@@ -47,7 +47,7 @@ export function evolutionData(history: CollectionPoint[], metric: DashboardMetri
     const included = mode === "cumulative" ? covered : bucket.covered;
     const available = mode === "cumulative" ? count : bucket.count;
     const value = included > 0 ? mode === "cumulative" ? total : bucket.total : null;
-    const gap = previous === null || bucket.first - previous > intervalMs * 1.5;
+    const gap = previous !== null && bucket.first - previous > intervalMs * 1.5;
     previous = bucket.last;
     const intervalFrom = intervalMs === 30_000 ? bucket.first : bucket.timestamp;
     return { timestamp: bucket.timestamp, value, gap, intervalFrom, intervalTo: intervalMs === 30_000 ? bucket.last + 1 : intervalFrom + intervalMs, from: mode === "cumulative" ? first ?? bucket.first : bucket.first, to: bucket.last, ...(included < available ? {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Navigate,
   Route,
@@ -9,6 +9,7 @@ import {
 } from "react-router-dom";
 import { PageBoundary } from "@/shared/ui/PageBoundary";
 import { SitePreloader } from "@/shared/ui/SitePreloader";
+import { SitePreloadingContext } from "@/shared/ui/sitePreloadingContext";
 import { deferredPages } from "@/app/routes/deferredPages";
 import { UnderConstructionPage } from "@/app/pages/UnderConstructionPage";
 import { dashboardLocation } from "@/app/routes/dashboardLocation";
@@ -52,10 +53,12 @@ export function App() {
   const { pathname, hash } = useLocation();
   const navigationType = useNavigationType();
   const focusedRoute = useRef("");
+  const [preloading, setPreloading] = useState(() => typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const finishPreloading = useCallback(() => setPreloading(false), []);
   useEffect(() => {
     document.title = `${titles[pathname] ?? (pathname.startsWith("/servicos/") ? "Detalhes do serviço" : "Página não encontrada")} · EcoByteMetrics`;
     const route = pathname + hash;
-    if (focusedRoute.current === route) return;
+    if (preloading || focusedRoute.current === route) return;
     const focusPage = () => {
       if (hash) {
         const target = document.getElementById(hash.slice(1));
@@ -82,10 +85,11 @@ export function App() {
       subtree: true,
     });
     return () => observer.disconnect();
-  }, [pathname, hash, navigationType]);
+  }, [pathname, hash, navigationType, preloading]);
   return (
-    <>
-      <SitePreloader />
+    <SitePreloadingContext.Provider value={preloading}>
+      {preloading && <SitePreloader onFinish={finishPreloading} />}
+      <div inert={preloading} style={{ display: "contents" }}>
       <PageBoundary key={pathname}>
         <Suspense
           fallback={
@@ -115,7 +119,8 @@ export function App() {
           </Routes>
         </Suspense>
       </PageBoundary>
-    </>
+      </div>
+    </SitePreloadingContext.Provider>
   );
 }
 

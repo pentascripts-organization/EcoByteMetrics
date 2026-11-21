@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useCallback, useMemo, useState } from "react";
+import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import type { CollectionPoint, MonitoredService } from "../../types";
@@ -20,9 +20,10 @@ function MapNotice({children, anchorElement}: {children: ReactNode; anchorElemen
   return anchorElement ? createPortal(message, anchorElement) : anchorElement === undefined ? message : null;
 }
 
-class GlobeBoundary extends Component<{ children: ReactNode; anchorElement?: HTMLElement | null }, { failed: boolean }> {
+class GlobeBoundary extends Component<{ children: ReactNode; anchorElement?: HTMLElement | null; onFailure: () => void }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() { this.props.onFailure(); }
   render() {
     return this.state.failed ? <MapNotice anchorElement={this.props.anchorElement}>Mapa indisponível. A localização textual e as métricas continuam disponíveis.</MapNotice> : this.props.children;
   }
@@ -45,6 +46,16 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
 }) {
   const [groupId, setGroupId] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [globeAvailable, setGlobeAvailable] = useState(false);
+  const popupClose = useRef<HTMLButtonElement>(null);
+  const updateGlobeAvailability = useCallback((available: boolean) => {
+    setGlobeAvailable(available);
+    if (!available) {
+      setExpanded(false);
+      setGroupId("");
+    }
+  }, []);
+  const onGlobeFailure = useCallback(() => updateGlobeAvailability(false), [updateGlobeAvailability]);
   const closeExpanded = useCallback(() => setExpanded(false), []);
   const groups = useMemo(() => impactLocations(services, history, lens), [services, history, lens]);
   const countryCodes = useMemo(() => [...new Set((allServices ?? services).map(service => findCountry(service.country ?? "")?.properties.code).filter(Boolean))].sort().join(","), [allServices, services]);
@@ -54,6 +65,16 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
   const selected = groups.find(group => group.services.some(service => service.id === selectedServiceId))
     ?? groupServiceLocations(selectedService ? [selectedService] : [], true)[0];
   const choosing = groups.find(group => group.id === groupId);
+  const openPopupId = choosing?.id;
+  useEffect(() => {
+    const close = popupClose.current;
+    if (!openPopupId || !close) return;
+    const previous = document.activeElement;
+    close.focus({ preventScroll: true });
+    return () => {
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [openPopupId]);
   const highlightedCityId = groups.find(group => group.services.some(service => highlightedServiceIds.includes(service.id)))?.id;
   const focusCity = groups.find(group => group.services.some(service => service.id === focusServiceId));
   const selectPoint = useCallback((id: string) => {
@@ -67,14 +88,14 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
     onHighlightServices?.(active && group ? group.services.map(service => service.id) : []);
   }, [groups, onHighlightServices]);
   const buttons = <>
-    {!inline && !detailView && <button type="button" className="globe-expand-button" aria-label="Expandir visão do globo" title="Expandir visão do globo" aria-expanded={expanded} onClick={() => setExpanded(true)}><Maximize2 size={18} aria-hidden="true" /></button>}
+    {!inline && !detailView && <button type="button" className="globe-expand-button" aria-label="Expandir visão do globo" title="Expandir visão do globo" aria-expanded={expanded} disabled={!globeAvailable} onClick={() => setExpanded(true)}><Maximize2 size={18} aria-hidden="true" /></button>}
     {expanded && <ExpandedGlobe onClose={closeExpanded} />}
 </>;
   const popup = choosing && (
       <div className="map-popup-card" role="dialog" aria-label={"Aplicações em " + choosing.name} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setGroupId(""); } }}>
         <div className="map-popup-header">
           <div className="map-popup-place"><span className="map-popup-place-icon"><MapPin size={19} aria-hidden="true" /></span><div><strong className="map-popup-title">{choosing.name}</strong><span className="map-popup-count">{choosing.count} {choosing.count === 1 ? "aplicação nesta localização" : "aplicações nesta localização"}</span></div></div>
-          <button type="button" className="map-popup-close" onClick={() => setGroupId("")} aria-label="Fechar popup de aplicações"><X size={18} aria-hidden="true" /></button>
+          <button ref={popupClose} type="button" className="map-popup-close" onClick={() => setGroupId("")} aria-label="Fechar popup de aplicações"><X size={18} aria-hidden="true" /></button>
         </div>
         <p className="map-popup-context">Estimativas da última coleta de cada aplicação</p>
         <div className="map-popup-content">
@@ -106,9 +127,9 @@ export function RegionMap({ services, allServices, selectedServiceId, onSelectSe
       </div>
     );
   return <div className={anchorElement === undefined ? "monitoring-map" : "monitoring-map-runtime"}>
-    <GlobeBoundary anchorElement={anchorElement}><Suspense fallback={<MapNotice anchorElement={anchorElement}>Carregando o globo 3D…</MapNotice>}>
+    <GlobeBoundary anchorElement={anchorElement} onFailure={onGlobeFailure}><Suspense fallback={<MapNotice anchorElement={anchorElement}>Carregando o globo 3D…</MapNotice>}>
       <WorldGlobe anchorElement={anchorElement} detailView={detailView} expanded={expanded} inline={inline} services={allServices ?? services} supportedCountries={supportedCountries} cities={groups} city={selected} selectedServiceId={selectedServiceId}
-        onPointSelect={selectPoint} onPointHover={highlightPoint} highlightedCityId={highlightedCityId} focusCity={focusCity} rotationPaused={rotationPaused || expanded} />
+        onAvailabilityChange={updateGlobeAvailability} onPointSelect={selectPoint} onPointHover={highlightPoint} highlightedCityId={highlightedCityId} focusCity={focusCity} rotationPaused={rotationPaused || expanded} />
     </Suspense></GlobeBoundary>
     {anchorElement ? createPortal(<>{buttons}{popup}</>, anchorElement) : anchorElement === undefined ? <>{buttons}{popup}</> : null}
   </div>;
