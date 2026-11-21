@@ -48,6 +48,8 @@ create table Metrics (
 	constraint fk_service
 		foreign key (id_service)
 		references services(id_service),
+	-- A restrição UNIQUE cria automaticamente um índice B-tree composto
+	-- na ordem (id_service, date_houry), atendendo às buscas por serviço e período.
 	CONSTRAINT uq_metrics_service_date
         UNIQUE (id_service, date_houry)
 );
