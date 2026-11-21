@@ -1,4 +1,4 @@
-﻿import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import { mockAnonymousSession, mockMonitoring, sample, service, snapshot } from "./monitoring-fixtures";
 
@@ -102,6 +102,8 @@ test("evolution restarts replay from the end and describes an empty set accurate
   const timeline = page.getByRole("slider", { name: /^Explorar intervalos/ });
   await expect(timeline).toBeEnabled();
   await timeline.press("Home");
+  await expect(page).toHaveURL(url => url.searchParams.has("cursor"));
+  await expect(timeline).toHaveValue("0");
   await timeline.press("End");
   await expect(timeline).toHaveValue("3");
   await page.getByRole("button", { name: "Reproduzir histórico" }).click();
