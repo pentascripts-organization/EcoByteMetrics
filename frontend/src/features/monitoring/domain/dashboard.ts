@@ -7,12 +7,15 @@ export const statusColors = {
   unavailable: "#f43e48", removed: "#77828b",
 };
 
+export function normalizeApplicationSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR");
+}
+
 export function filterApplications(services: MonitoredService[], search: string, status: string) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
-  const query = normalize(search.trim());
+  const query = normalizeApplicationSearch(search);
   return services.filter(service =>
     (!status || service.status === status) &&
-    (!query || normalize([service.name, service.id, service.country, service.region, service.city].filter(Boolean).join(" ")).includes(query)),
+    (!query || normalizeApplicationSearch([service.name, service.id, service.country, service.region, service.city].filter(Boolean).join(" ")).includes(query)),
   );
 }
 

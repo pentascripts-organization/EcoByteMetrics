@@ -26,6 +26,9 @@ export function createAuthStore(restoreOnStart = false) {
     clearTimeout(timer); timer = undefined;
     update({ ...initial, notice });
   };
+  const expireSession = (session: AuthSession) => {
+    if (state.session === session) clear("expired");
+  };
   const checkExpiration = () => {
     if (state.session && state.session.expiresAt <= Date.now()) clear("expired");
     return state.session;
@@ -39,6 +42,7 @@ export function createAuthStore(restoreOnStart = false) {
     getSnapshot: () => state,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     checkExpiration,
+    expireSession,
     async restore() {
       if (pending || state.session) return;
       const controller = new AbortController();
@@ -132,7 +136,7 @@ export function createAuthStore(restoreOnStart = false) {
         return result;
       }
       catch (error) {
-        if (error instanceof RequestError && error.status === 401 && state.session === session) clear("expired");
+        if (error instanceof RequestError && error.status === 401) expireSession(session);
         throw error;
       }
     },

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useMonitoring } from "../hooks/useMonitoring";
 import { useAnalysis } from "../hooks/useAnalysis";
 import { compareApplications } from "../domain/comparison";
+import { normalizeApplicationSearch } from "../domain/dashboard";
 import { CountryFlag } from "@/shared/ui/CountryFlag";
 import { formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
 import { collectionRange } from "../domain/history";
@@ -70,12 +71,10 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
 
   const filteredServices = useMemo(() => {
     if (!searchFilter.trim()) return analysis.services;
-    const q = searchFilter.toLowerCase();
+    const q = normalizeApplicationSearch(searchFilter);
     return analysis.services.filter(
       (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.country && s.country.toLowerCase().includes(q)) ||
-        (s.city && s.city.toLowerCase().includes(q)),
+        [s.name, s.country, s.city].some(value => value && normalizeApplicationSearch(value).includes(q)),
     );
   }, [analysis.services, searchFilter]);
 
@@ -86,6 +85,13 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
 
   const formatDate = (value: number | null) =>
     value === null ? "—" : new Date(value).toLocaleString("pt-BR");
+
+  const formatCarbon = (row: (typeof rows)[number]) => <>
+    {formatNumber(row.emissionsG === null ? null : row.emissionsG / 1000)}
+    {!latest && row.emissionsG !== null && row.emissionCount < row.count && (
+      <small> · Parcial ({row.emissionCount} de {row.count} amostras)</small>
+    )}
+  </>;
 
   return (
     <section className="comparison-content" aria-labelledby="comparison-selection">
@@ -156,7 +162,7 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
             />
             <div className="comparison-quick-actions">
               <span className="comparison-count-badge">
-                {ids.length} de {analysis.services.length} selecionada(s)
+                {selectedServices.length} de {analysis.services.length} selecionada(s)
               </span>
               {ids.length > 0 && (
                 <button type="button" className="comparison-action-btn" onClick={clearAll}>
@@ -301,7 +307,7 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
                     <td>{serviceStatusLabels[row.service.status]}</td>
                     <td>{formatNumber(row.energyKwh)}</td>
                     <td>
-                      {formatNumber(row.emissionsG === null ? null : row.emissionsG / 1000)}
+                      {formatCarbon(row)}
                     </td>
                     <td>{formatNumber(row.resources.cpuPercent)}</td>
                     <td>{formatNumber(row.resources.memoryGb)}</td>
@@ -314,15 +320,15 @@ export function ComparisonPanel({ onOpenService }: { onOpenService: (id: string)
           </div>
           <div className="monitoring-table-scroll comparison-mobile-table" role="region" aria-label="Indicadores lado a lado" tabIndex={0}>
             <table className="comparison-metrics-table">
-              <caption>{latest ? "?ltima leitura por aplica??o" : "Leituras dispon?veis ? " + analysis.periodLabel}</caption>
+              <caption>{latest ? "Última leitura por aplicação" : "Leituras disponíveis · " + analysis.periodLabel}</caption>
               <thead><tr><th scope="col">Indicador</th>{rows.map(({ service }) => <th scope="col" key={service.id}><button type="button" onClick={() => onOpenService(service.id)}>{service.name}</button></th>)}</tr></thead>
               <tbody>{([
-                ["Situa??o", rows.map(row => serviceStatusLabels[row.service.status])],
+                ["Situação", rows.map(row => serviceStatusLabels[row.service.status])],
                 ["Energia (kWh)", rows.map(row => formatNumber(row.energyKwh))],
-                ["Emiss?es (kg CO?e)", rows.map(row => formatNumber(row.emissionsG === null ? null : row.emissionsG / 1000))],
-                [latest ? "CPU (%)" : "CPU m?dia (%)", rows.map(row => formatNumber(row.resources.cpuPercent))],
-                [latest ? "Mem?ria (GB)" : "Mem?ria m?dia (GB)", rows.map(row => formatNumber(row.resources.memoryGb))],
-                [latest ? "Rede (GB)" : "Rede m?dia (GB)", rows.map(row => formatNumber(row.resources.networkGb))],
+                ["Emissões (kg CO₂e)", rows.map(formatCarbon)],
+                [latest ? "CPU (%)" : "CPU média (%)", rows.map(row => formatNumber(row.resources.cpuPercent))],
+                [latest ? "Memória (GB)" : "Memória média (GB)", rows.map(row => formatNumber(row.resources.memoryGb))],
+                [latest ? "Rede (GB)" : "Rede média (GB)", rows.map(row => formatNumber(row.resources.networkGb))],
                 ...(latest ? [["Coletada em", rows.map(row => formatDate(row.last))] as const] : []),
               ] as const).map(([label, values]) => <tr key={label}><th scope="row">{label}</th>{values.map((value, index) => <td key={rows[index]!.service.id}>{value}</td>)}</tr>)}</tbody>
             </table>

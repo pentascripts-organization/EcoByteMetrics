@@ -8,10 +8,6 @@ import { getMonitoringSnapshot } from "../api/monitoring";
 const trendHistoryCache = new Map<string, { points: CollectionPoint[]; timestamp: number }>();
 const CACHE_TTL_MS = 60_000; // 1 minuto de cache em memória
 
-export function clearServiceTrendCache() {
-  trendHistoryCache.clear();
-}
-
 export function useServiceTrend({
   service,
   metric,

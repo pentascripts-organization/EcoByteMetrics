@@ -9,6 +9,8 @@ import {
 import type { ReactNode } from "react";
 
 import { MonitoringContext } from "@/features/monitoring/contexts/MonitoringContext";
+import { useAuth } from "@/features/auth/useAuth";
+import { RequestError } from "@/shared/lib/http";
 import { useSettings } from "@/shared/preferences/useSettings";
 import { useLocation } from "react-router-dom";
 
@@ -16,7 +18,6 @@ import type { MonitoringSnapshot } from "@/features/monitoring/types";
 
 import { isPeriod } from "@/shared/lib/period";
 
-import { DiscoveryError } from "@/features/monitoring/api/discoveryError";
 
 import {
   mergeMonitoringSnapshot,
@@ -39,6 +40,7 @@ export function MonitoringProvider({
   children: ReactNode
 }) {
   const { settings } = useSettings();
+  const { session, expireSession } = useAuth();
 
   const [liveSnapshot, setLiveSnapshot] =
     useState<MonitoringSnapshot>({
@@ -69,12 +71,10 @@ export function MonitoringProvider({
 
   const monitoringActive =
     isMonitoringPath(pathname) &&
-    filterParams.get("aba") !== "administracao";
+    (filterParams.get("aba") !== "administracao" || Boolean(filterParams.get("servico")));
 
-  const includeHistory = needsMonitoringHistory(
-    filterParams,
-    historyOpen
-  );
+  const protectedSession = historyOpen ? session : null;
+  const includeHistory = needsMonitoringHistory(filterParams, Boolean(protectedSession));
 
   const dateFilter = filterParams.get("ate");
 
@@ -128,7 +128,7 @@ export function MonitoringProvider({
 
           // Somente o painel de histórico detalhado
           // utiliza a consulta protegida por JWT.
-          protectedHistory: historyOpen
+          protectedHistory: Boolean(protectedSession)
         }
       );
 
@@ -149,22 +149,14 @@ export function MonitoringProvider({
 
     } catch (cause) {
       if (!controller.signal.aborted) {
-        const discovery =
-          cause instanceof DiscoveryError
-            ? cause
-            : null;
-
+        if (protectedSession && cause instanceof RequestError && cause.status === 401) {
+          expireSession(protectedSession);
+          return null;
+        }
         const failedAt = new Date().toISOString();
 
         setLiveSnapshot(previous => ({
           ...previous,
-
-          regions: discovery?.regions ?? previous.regions,
-
-          warning: discovery
-            ? discovery.catalogWarning
-            : previous.warning,
-
           services: markStaleServices(previous.services),
 
           collectionEvents:
@@ -201,7 +193,8 @@ export function MonitoringProvider({
     until,
     invalidCutoff,
     includeHistory,
-    historyOpen
+    protectedSession,
+    expireSession
   ]);
 
   useEffect(() => {

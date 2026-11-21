@@ -7,6 +7,7 @@ export function applicationImpactTreemap(lanes: TemporalModel["lanes"], index: n
   let total = 0;
   let zeroCount = 0;
   let missingCount = 0;
+  let carriedCount = 0;
 
   const data = lanes.flatMap(lane => {
     const summary = lane.cells[index]?.summary;
@@ -24,6 +25,7 @@ export function applicationImpactTreemap(lanes: TemporalModel["lanes"], index: n
       return [];
     }
     if (value < 0) return [];
+    if (lane.cells[index]!.intervalValue === null) carriedCount++;
     total += value;
     return [{
       serviceId: lane.service.id,
@@ -34,5 +36,5 @@ export function applicationImpactTreemap(lanes: TemporalModel["lanes"], index: n
     }];
   }).sort((a, b) => b.value - a.value);
 
-  return { data, total, sampleCount, emissionCount, zeroCount, missingCount };
+  return { data, total, sampleCount, emissionCount, zeroCount, missingCount, carriedCount };
 }

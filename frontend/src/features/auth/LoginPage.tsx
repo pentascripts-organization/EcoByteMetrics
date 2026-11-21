@@ -95,7 +95,7 @@ export function LoginPage({ register = false }: { register?: boolean }) {
 
               {error && <p className="login-error" id="login-error" role="alert">{error}</p>}
               <button disabled={pending} className="login-submit" type="submit">
-                <span role="status">{register ? pending ? "Criando conta…" : "Criar conta" : pending ? "Entrando…" : "Entrar no ambiente"}</span><ArrowRight size={17} aria-hidden="true" />
+                <span>{register ? pending ? "Criando conta…" : "Criar conta" : pending ? "Entrando…" : "Entrar no ambiente"}</span><ArrowRight size={17} aria-hidden="true" />
               </button>
 
             </form>

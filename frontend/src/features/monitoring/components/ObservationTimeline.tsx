@@ -1,9 +1,9 @@
 import { Clock3, Radio } from "lucide-react";
 import type { MonitoringObservation } from "../types";
 
-export function ObservationTimeline({ observations, selected, onSelect, onLive, loading = false, error = false }: {
+export function ObservationTimeline({ observations, selected, onSelect, onLive, onRetry, loading = false, error = false }: {
   observations: MonitoringObservation[]; selected: string; onSelect: (value: string) => void; onLive: () => void;
-  loading?: boolean; error?: boolean;
+  loading?: boolean; error?: boolean; onRetry?: () => void;
 }) {
   const index = selected ? observations.reduce((closest, observation, i) => Date.parse(observation.observedAt) <= Date.parse(selected) ? i : closest, -1) : -1;
   const latest = observations.at(-1);
@@ -33,5 +33,6 @@ export function ObservationTimeline({ observations, selected, onSelect, onLive, 
       <p>Arraste a barra para escolher um horário. Isso muda a consulta, sem interromper a coleta.</p>
       <details><summary>Como funciona o histórico</summary><p>{collectionCount} {collectionCount === 1 ? "rodada de coleta gravada" : "rodadas de coleta gravadas"} neste período.{collectionCount > observations.length && ` A barra reúne essas rodadas em ${observations.length} pontos de revisão.`} <span>Uma rodada consulta várias aplicações. Os horários seguem o fuso deste dispositivo. Com o servidor ativo, a coleta continua mesmo com o navegador fechado.</span></p></details>
     </> : <p role="status">{error ? "Não foi possível carregar o histórico de coletas." : loading ? "Consultando o histórico de coletas…" : selected ? "Não há coleta gravada neste instante." : "A linha do tempo aparecerá após a primeira coleta gravada."}</p>}
+    {error && onRetry && <button type="button" className="monitoring-text-button" onClick={onRetry}>Tentar novamente</button>}
   </section>;
 }

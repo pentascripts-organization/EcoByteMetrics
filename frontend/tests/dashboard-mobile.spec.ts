@@ -43,10 +43,14 @@ test("mobile dashboard keeps navigation, cards and comparison within the viewpor
   await expect(page.locator(".monitoring-location .globe-anchor")).toBeVisible();
   await expect.poll(pageWidth).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "Expandir visão do globo" }).click();
+  await expect(page.locator(".skip-link")).toHaveJSProperty("inert", true);
   await page.getByRole("button", { name: /Voltar ao painel/ }).click();
   await expect(page.getByRole("button", { name: "Expandir visão do globo" })).toBeFocused();
 
-  await page.getByRole("tab", { name: "Evolução", exact: true }).click();
+  await page.getByRole("tab", { name: "Mapa", exact: true }).press("ArrowRight");
+  const evolutionTab = page.getByRole("tab", { name: "Evolução", exact: true });
+  await expect(evolutionTab).toHaveAttribute("aria-selected", "true");
+  await expect(evolutionTab).toBeFocused();
   await expect(page.locator(".observatory-heading")).toBeVisible();
   const bars = page.locator(".observatory-mobile-bars");
   const footer = page.locator(".observatory-footer");

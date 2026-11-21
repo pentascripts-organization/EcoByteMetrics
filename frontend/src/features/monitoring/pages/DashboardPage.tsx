@@ -80,7 +80,7 @@ export function DashboardPage() {
   const analysis = useAnalysis();
   const { session } = useAuth();
   const [params, setParams] = useSearchParams();
-  const [filtersOpen, setFiltersOpen] = useState(() => params.get("painel") === "historico");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [applicationPage, setApplicationPage] = useState(0);
   const [mapAnchor, setMapAnchor] = useState<HTMLDivElement | null>(null);
   const [detailEntryId, setDetailEntryId] = useState("");
@@ -113,7 +113,9 @@ export function DashboardPage() {
   const tab = params.get("aba") === "administracao" ? "administracao" : params.get("aba") === "comparar" ? "comparar" : params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
   const administration = !selectedId && tab === "administracao";
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
-  const showFilters = filtersOpen && !administration;
+  const legacyHistoryDrawer = params.get("painel") === "historico";
+  const historyDrawerRequested = params.get("filtros") === "historico" || legacyHistoryDrawer;
+  const showFilters = (filtersOpen || historyDrawerRequested) && !administration;
   useEffect(() => { setHistoryOpen?.(showFilters && Boolean(session)); return () => setHistoryOpen?.(false); }, [showFilters, setHistoryOpen, session]);
   const evolutionMode = params.get("serie") === "intervalos" ? "intervals" : "cumulative";
   const filtered = Boolean(search || status || analysis.regional || analysis.date || params.has("periodo"));
@@ -130,8 +132,6 @@ export function DashboardPage() {
   const history = analysis.history;
   const historyLoading = loading || (!error && snapshot.historyIncluded === false) ||
     (!error && snapshot.source === "database" && snapshot.historyPeriod !== period);
-  const showHistoricalRanking = !selectedId && tab === "evolucao" && params.get("painel") === "aplicacoes";
-  const impacts = useMemo(() => showHistoricalRanking ? applicationImpacts(services, history, metric) : [], [services, history, metric, showHistoricalRanking]);
   const latestHistory = useMemo(() => latestCollections(services), [services]);
   const latestImpacts = useMemo(() => applicationImpacts(services, latestHistory, metric, true), [services, latestHistory, metric]);
   const latestOverview = !selectedId && (tab === "geral" || tab === "mapa");
@@ -175,7 +175,9 @@ export function DashboardPage() {
       window.scrollTo({ top: 0, behavior: "instant" });
     } else if (previousSelection.current) {
       restoringListFocus.current = true;
-      document.getElementById("application-" + previousSelection.current)?.focus({ preventScroll: true });
+      const application = document.getElementById("application-" + previousSelection.current);
+      const focusTarget = application?.getClientRects().length ? application : heading.current;
+      focusTarget?.focus({ preventScroll: true });
       restoringListFocus.current = false;
     }
     previousSelection.current = selectedId;
@@ -201,11 +203,20 @@ export function DashboardPage() {
     setHoveredServiceId(""); setFocusedServiceId(""); setMapHighlightedIds([]);
     update({ servico: id, detalhe: "" });
   }, [update, selectedId]);
-  const back = () => { departingPanels.current(); update({ servico: "", detalhe: "" }); };
+  const back = () => { departingPanels.current(); update({ servico: "", detalhe: "", ...(tab === "administracao" ? { aba: "" } : {}) }); };
+  const closeFilters = () => {
+    setFiltersOpen(false);
+    if (historyDrawerRequested) update({ filtros: "", ...(legacyHistoryDrawer ? { painel: "" } : {}) }, true);
+  };
+  const historyReturn = new URLSearchParams(params);
+  if (legacyHistoryDrawer) historyReturn.delete("painel");
+  historyReturn.set("filtros", "historico");
   const clearFilters = () => { setApplicationPage(0); setParams(clearMonitoringFilters(params.toString())); };
   const goLive = () => update({ instante: "", ate: "" });
   const discovering = snapshot.source !== "database" && !snapshot.observations?.length && !snapshot.discoveryUpdatedAt && !error;
-  const filterButton = <SpecularButton size="lg" radius={26} tint="#ffffff" tintOpacity={0.04} textColor="#10b981" lineColor="#10b981" baseColor="#10b981" intensity={0.55} idleIntensity={0} shineSize={10} shineFade={90} thickness={1.2} glow={2} followMouse proximity={50} className="monitoring-filter-button" aria-expanded={filtersOpen} aria-controls="monitoring-filters" aria-haspopup="dialog" onClick={() => setFiltersOpen(!filtersOpen)}><ListFilter size={22} />Filtrar{(filtered || analysis.observedAt) && <span className="filter-indicator" aria-label="Filtros ativos" />}</SpecularButton>;
+  const checkingService = !analysis.invalidDate && (discovering || (!error && analysis.awaitingCatalog));
+  const serviceLookupFailed = error && (snapshot.source !== "database" || analysis.awaitingCatalog);
+  const filterButton = <SpecularButton size="lg" radius={26} tint="#ffffff" tintOpacity={0.04} textColor="#10b981" lineColor="#10b981" baseColor="#10b981" intensity={0.55} idleIntensity={0} shineSize={10} shineFade={90} thickness={1.2} glow={2} followMouse proximity={50} className="monitoring-filter-button" aria-expanded={showFilters} aria-controls="monitoring-filters" aria-haspopup="dialog" onClick={() => setFiltersOpen(true)}><ListFilter size={22} />Filtrar{(filtered || analysis.observedAt) && <span className="filter-indicator" aria-label="Filtros ativos" />}</SpecularButton>;
   const errorNotice = error ? <div className="monitoring-notice monitoring-error-toast" role="alert" aria-live="assertive">
     <div className="monitoring-error-toast-main"><CircleAlert size={18} aria-hidden="true" /><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button type="button" onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button></div>
     <details><summary>Detalhes da conexão</summary><p>{error}</p></details>
@@ -231,7 +242,7 @@ export function DashboardPage() {
         {filterButton}
 
       </div>
-      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? "Aplicação não encontrada"}</h1>
+      <h1 ref={heading} tabIndex={-1}>{selectedCandidate?.name ?? (checkingService ? "Consultando aplicação" : serviceLookupFailed ? "Consulta indisponível" : analysis.invalidDate ? "Aplicação" : "Aplicação não encontrada")}</h1>
       {selected && <p><CountryFlag country={selected.country} />{[selected.city, selected.region, selected.country].filter(Boolean).join(" · ") || "Localização não informada"} <span className="heading-separator">·</span> <ServiceStatus service={selected} /></p>}
       {selected && <ServiceReadingMeta service={selected} observedAt={analysis.observedAt} />}
 
@@ -250,10 +261,10 @@ export function DashboardPage() {
       highlightedServiceIds={highlightedIds} focusServiceId={selected ? undefined : focusServiceId}
       onHighlightServices={setMapHighlightedIds} rotationPaused={Boolean(selected)} />
     {selectedId ? (!selected ? detailHeading : null) : <div className="monitoring-heading">
-      <div><h1>Monitoramento</h1></div>
+      <div><h1 ref={heading} tabIndex={-1}>Monitoramento</h1></div>
       {!administration && !mobile && dashboardTools}
     </div>}
-    {showFilters && <FiltersDialog onClear={clearFilters} onClose={() => setFiltersOpen(false)}><div className="monitoring-filters">
+    {showFilters && <FiltersDialog onClear={clearFilters} onClose={closeFilters}><div className="monitoring-filters">
       {!selectedId && tab === "evolucao" && <div className="evolution-filter-search">{applicationSearch}</div>}
       <section className="filter-group filter-group-location"><div className="filter-section-title"><Globe2 size={17} /><div><h3>Localização</h3><p>Encontre aplicações por país e região.</p></div></div>
       <div className="filter-select-field"><span>País</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="País" value={params.get("pais") ?? ""} options={[{value:"",label:"Todos os países"},...countries.map(country => ({value:country,label:country}))]} onChange={value => update({pais:value,cidade:"",regiao:""})} /></div>
@@ -261,9 +272,9 @@ export function DashboardPage() {
       </section><section className="filter-group"><div className="filter-section-title"><SlidersHorizontal size={17} /><div><h3>Estado do ambiente</h3><p>Escolha quais aplicações acompanhar.</p></div></div>
       <div className="filter-select-field filter-full-width"><span>Situação da aplicação</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="Situação da aplicação" value={status} options={[{value:"",label:"Todas as situações"},...Object.entries(serviceStatusLabels).map(([value,label]) => ({value,label}))]} onChange={value => update({estado:value})} /></div>
       </section><section className="filter-group"><div className="filter-section-title"><Clock3 size={17} /><div><h3>Período e histórico</h3><p>Explore um momento anterior do ambiente.</p></div></div>
-      <label>Consultar o passado até<input aria-label="Consultar o passado até" type="datetime-local" max={localDateTimeMax()} value={analysis.invalidDate ? "" : analysis.date} onChange={event => update({ ate: event.target.value })} /></label>
+      <label>Consultar o passado até<input aria-label="Consultar o passado até" type="datetime-local" max={localDateTimeMax()} value={analysis.invalidDate ? "" : analysis.date} onChange={event => update({ ate: event.target.value, instante: "" })} /></label>
       </section>
-      <div className="monitoring-filter-history"><h3>Escolher um horário anterior</h3>{session ? <ObservationTimeline loading={loading || (!error && snapshot.historyIncluded === false)} error={Boolean(error)} observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} /> : <div className="filter-history-access"><LockKeyhole size={20} aria-hidden="true" /><div><strong>Seu histórico em um só lugar</strong><p>Entre para explorar a linha do tempo das coletas.</p><Link to={loginLocation("/dashboard?" + new URLSearchParams({...Object.fromEntries(params), painel: "historico"}).toString())}>Entrar para ver histórico</Link></div></div>}</div>
+      <div className="monitoring-filter-history"><h3>Escolher um horário anterior</h3>{session ? <ObservationTimeline loading={loading || (!error && snapshot.historyIncluded === false)} error={Boolean(error)} onRetry={() => void refresh()} observations={snapshot.observations ?? []} selected={analysis.observedAt} onSelect={value => update({ instante: value, ate: "" }, true)} onLive={goLive} /> : <div className="filter-history-access"><LockKeyhole size={20} aria-hidden="true" /><div><strong>Seu histórico em um só lugar</strong><p>Entre para explorar a linha do tempo das coletas.</p><Link to={loginLocation("/dashboard?" + historyReturn.toString())}>Entrar para ver histórico</Link></div></div>}</div>
     </div><p className="monitoring-filter-note">Limpar filtros mantém o período escolhido.</p></FiltersDialog>}
     {mobile && !selectedId && dashboardTabs}
     {!administration && <>
@@ -303,6 +314,7 @@ export function DashboardPage() {
                 onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })}
                 compact
                 loading={historyLoading}
+                error={Boolean(error)}
                 observedAt={analysis.observedAt}
                 onOpenService={openService}
               /> : undefined}
@@ -469,7 +481,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={value => update({ ordem: value })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} observedAt={analysis.observedAt} impacts={impacts} filterControl={<div className="evolution-mobile-filter">{filterButton}</div>} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : checkingService ? "Buscando dados da aplicação… " : serviceLookupFailed ? "Tente consultar novamente quando a conexão voltar. " : analysis.invalidDate ? null : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={(value, cursor = params.get("cursor") ?? "") => update({ ordem: value, cursor })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} error={Boolean(error)} observedAt={analysis.observedAt} filterControl={<div className="evolution-mobile-filter">{filterButton}</div>} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
       {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>

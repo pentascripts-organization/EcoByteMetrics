@@ -135,3 +135,11 @@ test("trend cannot infer a change when duration is missing or invalid", () => {
   const points = [sample("a",0,1),{...sample("a",1,2),intervalSeconds:undefined},{...sample("a",2,3),intervalSeconds:0}];
   assert.equal(calculateTrend(points,"energy").hasEnoughData,false);
 });
+
+test("trend reports a rise from zero without inventing a percentage", () => {
+  const trend = calculateTrend([sample("a", 0, 0), sample("a", 1, 5)], "emissions");
+  assert.equal(trend.percentage, null);
+  assert.equal(trend.direction, "up");
+  assert.equal(trend.hasEnoughData, true);
+  assert.equal(trend.formattedPercentage, "Aumento a partir de zero");
+});

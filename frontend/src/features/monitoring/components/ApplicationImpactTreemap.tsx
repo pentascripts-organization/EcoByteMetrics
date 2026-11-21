@@ -25,6 +25,7 @@ export function ApplicationImpactTreemap({ result, metric, unit, divisor, interv
   const partial = metric === "emissions" && result.emissionCount < result.sampleCount;
   const note = [
     partial ? `${result.emissionCount} de ${result.sampleCount} amostras com carbono` : null,
+    result.carriedCount ? `${result.carriedCount} sem nova estimativa no intervalo` : null,
     result.missingCount ? `${result.missingCount} sem estimativa` : null,
     result.zeroCount ? `${result.zeroCount} com impacto zero` : null,
   ].filter(Boolean).join(" · ");

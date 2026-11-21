@@ -26,3 +26,22 @@ test("treemap tracks missing and zero impact separately",()=>{
   assert.equal(result.sampleCount,2);
   assert.equal(result.emissionCount,1);
 });
+
+test("cumulative impact retains each prior contribution across gaps without adding readings",()=>{
+  const history=[point("a",0,0,4),point("b",2,1,2),point("unknown",1,1,null)];
+  const services=[service("a"),service("b"),service("unknown")];
+  const model=temporalModel(history,services,"emissions","cumulative");
+  const last=model.timestamps.length-1;
+  const firstLane=model.lanes.find(lane=>lane.service.id==="a")!;
+  const latest=applicationImpactTreemap(model.lanes,last,"cumulative");
+  assert.deepEqual(latest.data.map(row=>[row.serviceId,row.value]),[["a",4],["b",2]]);
+  assert.equal(latest.total,6);
+  assert.equal(latest.carriedCount,1);
+  assert.equal(firstLane.cells[last]!.summary.count,0);
+  assert.equal(model.totals[1]!.intervalValue,null);
+  assert.equal(model.totals[1]!.value,4);
+  assert.equal(model.lanes.find(lane=>lane.service.id==="b")!.cells[0]!.value,null);
+  const byInterval=temporalModel(history,services,"emissions","intervals");
+  assert.equal(applicationImpactTreemap(byInterval.lanes,last,"intervals").total,2);
+  assert.equal(temporalModel(history,services,"energy","cumulative").lanes.find(lane=>lane.service.id==="a")!.cells[last]!.value,0);
+});

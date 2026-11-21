@@ -17,25 +17,25 @@ export function temporalModel(history: CollectionPoint[], services: MonitoredSer
     const own=samples.filter(p=>p.serviceId===service.id);
     const buckets=new Map<number,CollectionPoint[]>();
     for(const p of own){const i=Math.floor((Date.parse(p.collectedAt)-start)/interval);const group=buckets.get(i)??[];group.push(p);buckets.set(i,group);}
-    let energy=0,carbon=0,recorded=0,calculated=0;
+    let accumulated: number | null = null, recorded=0, calculated=0;
     const cells=timestamps.map((timestamp,i)=>{
       const points=buckets.get(i)??[], summary=summarizeCollections(points);
-      energy+=summary.energyKwh??0;carbon+=summary.emissionsG??0;recorded+=summary.count;calculated+=summary.emissionCount;
+      recorded+=summary.count;calculated+=summary.emissionCount;
       const available=metric==="energy"?summary.energyKwh:summary.emissionsG;
-      const value=available===null?null:mode==="cumulative"?(metric==="energy"?energy:carbon):available;
-      return {timestamp,value,summary,points,partial:metric==="emissions"&&(mode==="cumulative"?calculated<recorded:summary.emissionCount<summary.count)};
+      if (available !== null) accumulated = (accumulated ?? 0) + available;
+      return {timestamp,value:mode==="cumulative"?accumulated:available,intervalValue:available,summary,points,partial:metric==="emissions"&&(mode==="cumulative"?calculated<recorded:summary.emissionCount<summary.count)};
     });
     const summary=summarizeCollections(own);
     return {service,cells,summary,total:metric==="energy"?summary.energyKwh:summary.emissionsG};
   }).sort((a,b)=>(b.total??-1)-(a.total??-1)||a.service.id.localeCompare(b.service.id));
-  let accumulated=0;
+  let accumulated: number | null = null;
   const totals=timestamps.map((timestamp,i)=>{
-    const values=lanes.map(l=>metric==="energy"?l.cells[i]!.summary.energyKwh:l.cells[i]!.summary.emissionsG).filter((v):v is number=>v!==null);
-    const sum=values.reduce((s,v)=>s+v,0);accumulated+=sum;
-    return {timestamp,intervalValue:values.length?sum:null,value:values.length?(mode==="cumulative"?accumulated:sum):null};
+    const values=lanes.map(l=>l.cells[i]!.intervalValue).filter((v):v is number=>v!==null);
+    const intervalValue = values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+    if (intervalValue !== null) accumulated = (accumulated ?? 0) + intervalValue;
+    return {timestamp,intervalValue,value:mode==="cumulative"?accumulated:intervalValue};
   });
   const peak=totals.reduce<{timestamp:number;value:number}|null>((best,p)=>p.intervalValue!==null&&(!best||p.intervalValue>best.value)?{timestamp:p.timestamp,value:p.intervalValue}:best,null);
   return {samples,lanes,timestamps,first,last,interval,totals,peak,summary:summarizeCollections(samples)};
 }
 export type TemporalModel=ReturnType<typeof temporalModel>;
-export type TemporalLane=TemporalModel["lanes"][number];
