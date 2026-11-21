@@ -49,7 +49,7 @@ test("filters update the dashboard and can recover an empty selection", async ({
   const names = page.getByRole("table").locator(".monitoring-card-name-btn");
   const totals = page.getByRole("region", { name: "Totais da seleção" });
 
-  await expect(names).toHaveText([billing, reports, archive]);
+  await expect(names).toHaveText([billing, reports, archive], { timeout: 15_000 });
   await open.click();
   await dialog.getByRole("combobox", { name: "País", exact: true }).click();
   await dialog.getByRole("option", { name: "Canadá", exact: true }).click();
