@@ -126,8 +126,30 @@ export function createAuthStore(restoreOnStart = false) {
         return false;
       } finally { if (pending === controller) pending = null; }
     },
+    async renewSession(credentials: Credentials, previous: AuthSession): Promise<boolean> {
+      if (checkExpiration() !== previous || pending) return false;
+      const controller = new AbortController();
+      pending = controller;
+      update({ ...state, pending: true });
+      try {
+        const renewed = await login(credentials, controller.signal);
+        if (pending !== controller || state.session !== previous) return false;
+        if (renewed.id !== previous.id || renewed.role !== previous.role) throw new Error("Sessão divergente.");
+        update({ ...initial, session: renewed });
+        scheduleExpiration();
+        return true;
+      } catch {
+        if (pending === controller && state.session === previous) {
+          try { await logoutSession(controller.signal); } catch { /* Solicita um novo login. */ }
+          expireSession(previous);
+        }
+        return false;
+      } finally {
+        if (pending === controller) pending = null;
+      }
+    },
     dispose: () => clear(),
-    async request(path: string, options?: { signal?: AbortSignal }) {
+    async request(path: string, options?: Parameters<typeof authenticatedRequest>[2]) {
       const session = checkExpiration();
       if (!session) throw new RequestError("http", "Entre para continuar.", 401);
       try {

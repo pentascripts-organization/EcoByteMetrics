@@ -1,14 +1,72 @@
-﻿/* Layout references: satnaing/shadcn-admin settings and shadcn/ui Field Responsive. */
-.administration-panel { padding: 8px 0 24px; min-width: 0; pointer-events: auto; }
-.administration-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 28px; }
-.administration-heading p { margin-top: 6px; color: var(--monitoring-muted); font-size: 14px; line-height: 1.6; }
-.administration-account { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 16px; min-width: 0; }
-.administration-account > span { max-width: 32ch; overflow: hidden; text-overflow: ellipsis; color: var(--monitoring-muted); font-size: 12px; }
-.monitoring-shell .administration-account > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 8px 12px; border: 1px solid #dce6df; border-radius: 8px; background: #fff; color: #24704f; font-size: 12px; }
-@media (max-width: 760px) {
-  .administration-heading { align-items: start; gap: 12px; margin-bottom: 20px; }
-  .administration-heading p { font-size: 12px; }
+﻿.administration-panel { display: grid; gap: 20px; padding: 8px 0 32px; min-width: 0; pointer-events: auto; }
+.administration-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+.administration-heading h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.25rem); }
+.administration-account, .administration-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.administration-account > span { overflow-wrap: anywhere; color: var(--monitoring-muted); font-size: var(--eb-text-base); }
+.administration-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.administration-grid--future { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px; }
+
+.administration-card { min-width: 0; background: var(--eb-surface); border: 1px solid var(--eb-border); border-radius: var(--eb-radius-lg); padding: clamp(16px, 1.7vw, 24px); box-shadow: var(--eb-shadow-sm); }
+.administration-card-heading { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+.administration-card-heading > svg { flex: none; color: var(--eb-green); margin-top: 2px; }
+.administration-card-heading > div { flex: 1 1 165px; }
+.administration-card h3, .administration-future h3, .administration-dialog h3 { margin: 0; font-family: var(--eb-font-heading); font-size: var(--eb-text-lg); }
+.administration-card p, .administration-future > p { margin: 4px 0 0; font-size: var(--eb-text-base); color: var(--monitoring-muted); }
+.administration-details { margin: 15px 0 0; }
+.administration-details > div { display: grid; grid-template-columns: minmax(110px, 42%) 1fr; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--eb-border); }
+.administration-details dt { color: var(--monitoring-muted); font-size: var(--eb-text-base); }
+.administration-details dd { margin: 0; font-size: var(--eb-text-base); font-weight: 650; overflow-wrap: anywhere; }
+.administration-card .administration-actions { margin-top: 14px; }
+.administration-tag { display: inline-flex; width: fit-content; padding: 3px 9px; border-radius: var(--eb-radius-pill); background: var(--eb-surface-disabled); color: var(--eb-ink-muted); font-size: var(--eb-text-xs); font-weight: 650; }
+.administration-tag--profile { background: var(--eb-surface-subtle); color: var(--eb-green); }
+
+.monitoring-shell .administration-panel button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 7px 13px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-radius-sm); color: var(--eb-green); background: var(--eb-surface); font: inherit; font-size: var(--eb-text-sm); font-weight: 650; }
+.monitoring-shell .administration-panel button:not(:disabled):hover { background: var(--eb-surface-hover); }
+.monitoring-shell .administration-panel button:disabled { cursor: not-allowed; opacity: .65; }
+.monitoring-shell .administration-panel button.administration-primary { background: var(--eb-green); border-color: var(--eb-green); color: var(--eb-on-dark); }
+.monitoring-shell .administration-panel button.administration-primary:not(:disabled):hover { background: var(--eb-green-hover); }
+.administration-panel :is(button, input, [tabindex]):focus-visible { outline: 2px solid var(--eb-focus); outline-offset: 2px; }
+.administration-feedback { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
+.administration-card [role="status"]:is(p) { margin-top: 12px; }
+.administration-card .administration-success { color: var(--eb-green); }
+
+.administration-service-list { display: none; }
+.administration-table { max-height: 25rem; overflow: auto; margin: 14px 0 0; border: 1px solid var(--eb-border); border-radius: var(--eb-radius-md); }
+.administration-table table { width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0; text-align: left; font-size: var(--eb-text-base); }
+.administration-table :is(th, td) { padding: 10px 12px; border-bottom: 1px solid var(--eb-border); }
+.administration-table thead th { position: sticky; top: 0; z-index: 1; background: var(--eb-surface-subtle); }
+.administration-table tbody tr:last-child :is(th, td) { border-bottom: 0; }
+.administration-table td:last-child { white-space: nowrap; }
+.administration-card--future { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; color: var(--eb-ink-muted); background: var(--eb-surface-subtle); }
+.administration-card--future > svg { flex: none; }
+.administration-card--future > div { flex: 1 1 135px; }
+.administration-card--future h4 { margin: 0; font-size: var(--eb-text-base); }
+.administration-card--future p { font-size: var(--eb-text-sm); }
+
+.administration-dialog { width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 32px); box-sizing: border-box; padding: 20px; border: 1px solid var(--eb-border); border-radius: var(--eb-radius-lg); color: var(--eb-ink); background: var(--eb-surface); box-shadow: var(--eb-shadow-overlay); }
+.administration-dialog::backdrop { background: #082f5360; }
+.administration-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.administration-dialog p { font-size: var(--eb-text-base); }
+.administration-dialog fieldset { display: grid; padding: 0; margin: 0 0 16px; border: none; gap: 12px; }
+.administration-dialog label { display: grid; gap: 5px; font-size: var(--eb-text-base); font-weight: 600; }
+.administration-dialog input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 10px; border: 1px solid var(--eb-border-strong); border-radius: var(--eb-radius-sm); color: inherit; background: var(--eb-surface); font: inherit; }
+.administration-dialog :is([role="alert"], label small) { color: var(--eb-danger); }
+.administration-dialog footer { justify-content: flex-end; }
+
+@media (max-width: 900px) {
+  .administration-grid--future { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 440px) {
-  .administration-heading { flex-wrap: wrap; }
+@media (max-width: 680px) {
+  .administration-grid, .administration-grid--future { grid-template-columns: minmax(0, 1fr); }
+  .administration-account { width: 100%; justify-content: space-between; }
+  .administration-table { display: none; }
+  .administration-service-list { display: grid; gap: 8px; padding: 0; margin: 14px 0 0; list-style: none; }
+  .administration-service-list details { border: 1px solid var(--eb-border); border-radius: var(--eb-radius-sm); }
+  .administration-service-list summary { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-height: 44px; padding: 8px 10px; cursor: pointer; list-style: none; }
+  .administration-service-list summary::-webkit-details-marker { display: none; }
+  .administration-service-list summary:focus-visible { outline: 2px solid var(--eb-focus); outline-offset: 2px; }
+  .administration-service-name { flex: 1 1 100px; min-width: 0; overflow-wrap: anywhere; font-size: var(--eb-text-base); font-weight: 700; }
+  .administration-service-list details[open] summary > svg { rotate: 180deg; }
+  .administration-service-list .administration-details { margin: 0; padding: 0 10px 8px; }
+  .administration-service-list .administration-details > div:last-child { border-bottom: 0; }
 }
