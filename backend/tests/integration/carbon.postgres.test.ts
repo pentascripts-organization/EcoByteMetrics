@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -7,12 +6,14 @@ import test from "node:test";
 import { Client, type PoolClient } from "pg";
 
 import pool from "../../src/db/connection";
-import { WorkerCarbons } from "../../src/modules/Worker/worker.carbon.service";
-import { WorkerService } from "../../src/modules/Worker/worker.metric.service";
-import { ServiceAPISevice } from "../../src/integrations/services-api";
+import { collectOnce } from "../../src/modules/Monitoring/collector";
 import type { CarbonRegion } from "../../src/integrations/api.types";
+import type {
+  AggregatorService,
+  ServiceMetrics,
+} from "../../src/integrations/metrics-api";
 
-test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real", async t => {
+test("coletor persiste métricas e fatores de carbono com SQL real", async t => {
   assert(
     ["127.0.0.1", "localhost", "::1"].includes(process.env.POSTGRES_HOST ?? ""),
     "Use um PostgreSQL local de teste"
@@ -27,7 +28,7 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
     connectionTimeoutMillis: 5000,
   });
 
-  const schema = "worker_test_" + randomUUID().replaceAll("-", "");
+  const schema = "collection_test_" + randomUUID().replaceAll("-", "");
   const originalQuery = pool.query;
   const errors: unknown[][] = [];
 
@@ -45,25 +46,21 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
       )
     );
 
-    // Direciona as consultas do pool para a transação real do teste.
+    // Direciona as consultas do pool para a conexão real do teste.
     pool.query = client.query.bind(client) as typeof pool.query;
 
-    // Também direciona pool.connect() para a mesma conexão.
-    // Evita que transações internas encerrem a transação principal do teste.
-    t.mock.method(pool, "connect", async () => {
-      return {
-        query: async (query: string, values?: unknown[]) => {
-          if (/^\s*(BEGIN|COMMIT|ROLLBACK)\b/i.test(query)) {
-            return client.query("SELECT 1");
-          }
+    // Mantém as transações internas na mesma conexão e schema de teste.
+    t.mock.method(pool, "connect", async () => ({
+      query: async (query: string, values?: unknown[]) => {
+        if (/^\s*(BEGIN|COMMIT|ROLLBACK)\b/i.test(query)) {
+          return client.query("SELECT 1");
+        }
 
-          return client.query(query, values as never);
-        },
-        release: () => {},
-      } as unknown as PoolClient;
-    });
+        return client.query(query, values as never);
+      },
+      release: () => {},
+    }) as unknown as PoolClient);
 
-    // Captura os erros para apresentar a causa real se o teste falhar.
     t.mock.method(console, "error", (...args: unknown[]) => {
       const message = args
         .map(arg =>
@@ -73,7 +70,6 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
         )
         .join(" ");
 
-      // Ignora avisos experimentais do Node.js.
       if (
         message.includes("ExperimentalWarning") ||
         message.includes("MockTimers API is an experimental feature")
@@ -122,17 +118,51 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
       },
     ];
 
-    const worker = new WorkerCarbons();
+    const service: AggregatorService = {
+      id: "test-service",
+      name: "Test Service",
+      metrics_path: "/metrics/test-service",
+      location: {
+        region_code: "test-A",
+        country: "Brasil",
+        region: "São Paulo",
+        city: "São Paulo",
+        latitude: -23.55,
+        longitude: -46.63,
+      },
+    };
+
+    const sample: ServiceMetrics = {
+      collection_interval_seconds: 30,
+      metrics: {
+        cpu_percent: 45,
+        memory_gb: 2.5,
+        disk_gb: 10,
+        network_gb: 0.4,
+      },
+    };
+
+    const collect = (carbonRegions: CarbonRegion[]) =>
+      collectOnce({
+        services: async () => [service],
+        metrics: async () => sample,
+        regions: async () => carbonRegions,
+      });
 
     await client.query("SET LOCAL DateStyle = 'ISO, MDY'");
-    await worker.listarCarbons(regions);
+
+    // Primeira coleta.
+    await collect(regions);
 
     const first = await client.query(`
       SELECT
+        l.name_location,
         c.id_location,
-        (c.date_houry AT TIME ZONE 'UTC')::text AS collected_at
+        (c.date_houry AT TIME ZONE 'UTC')::text AS collected_at,
+        c.intesity_co2e_kwh_carbon::float8 AS intensity
       FROM carbons c
-      ORDER BY c.id_location
+      JOIN locations l USING (id_location)
+      ORDER BY l.name_location
     `);
 
     assert.equal(
@@ -152,7 +182,13 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
       )
     );
 
-    await worker.listarCarbons([
+    assert.deepEqual(
+      first.rows.map(row => row.intensity),
+      [85, 85]
+    );
+
+    // Repetir a coleta no mesmo instante deve atualizar, não duplicar.
+    await collect([
       {
         ...regions[0],
         carbon_intensity_gco2e_per_kwh: 99,
@@ -162,9 +198,10 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
 
     const replay = await client.query(`
       SELECT
-        intesity_co2e_kwh_carbon::float8 AS intensity
-      FROM carbons
-      ORDER BY id_location
+        c.intesity_co2e_kwh_carbon::float8 AS intensity
+      FROM carbons c
+      JOIN locations l USING (id_location)
+      ORDER BY l.name_location
     `);
 
     assert.equal(
@@ -178,72 +215,79 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
       [99, 85]
     );
 
+    // Uma coleta posterior deve criar novos registros históricos.
     t.mock.timers.tick(60_000);
 
     await client.query("SET LOCAL DateStyle = 'ISO, DMY'");
-    await worker.listarCarbons(regions);
+    await collect(regions);
 
     const later = await client.query(`
       SELECT
-        id_location,
+        l.name_location,
         count(*)::int AS samples
-      FROM carbons
-      GROUP BY id_location
+      FROM carbons c
+      JOIN locations l USING (id_location)
+      GROUP BY l.name_location
+      ORDER BY l.name_location
     `);
 
     assert.equal(later.rowCount, 2);
 
     assert(
       later.rows.every(row => row.samples === 2),
-      "Valores iguais em outro instante continuam no histórico"
+      "Valores em outro instante continuam no histórico"
     );
 
-    const api = new ServiceAPISevice();
+    const metricHistory = await client.query(`
+      SELECT count(*)::int AS samples
+      FROM metrics
+    `);
 
-    t.mock.method(api, "getMetricRegionDetails", async () => ({
-      collection_interval_seconds: 30,
-      metrics: {
-        cpu_percent: 45,
-        memory_gb: 2.5,
-        disk_gb: 10,
-        network_gb: 0.4,
-      },
-    }));
-
-    await new WorkerService().listarServices(
-      [
-        {
-          id: "test-service",
-          name: "Test Service",
-          metrics_path: "/metrics/test-service",
-          location: {
-            ...regions[0],
-            region_code: "test-A",
-          },
-        },
-      ],
-      api
+    assert.equal(
+      metricHistory.rows[0].samples,
+      2,
+      "A métrica deve ser atualizada no mesmo instante e registrada no posterior"
     );
 
     const joined = await client.query(`
       SELECT
         m.cpu_metric::float8 AS cpu,
+        m.ram_metric::float8 AS ram,
+        m.hd_metric::float8 AS disk,
+        m.network_metric::float8 AS network,
         m.colletion_interval_metric::int AS seconds,
-        c.intesity_co2e_kwh_carbon::float8 AS intensity
+        m.carbon_intensity::float8 AS intensity,
+        c.intesity_co2e_kwh_carbon::float8 AS carbon_intensity
       FROM metrics m
       JOIN services s USING (id_service)
       JOIN carbons c
         ON c.id_location = s.id_location
         AND c.date_houry = m.date_houry
-    `);
+      WHERE m.date_houry = $1
+    `, ["2026-10-30T23:46:56.789Z"]);
 
     assert.deepEqual(joined.rows, [
       {
         cpu: 45,
+        ram: 2.5,
+        disk: 10,
+        network: 0.4,
         seconds: 30,
         intensity: 85,
+        carbon_intensity: 85,
       },
     ]);
+
+    const collections = await client.query(`
+      SELECT count(*)::int AS total
+      FROM monitoring_collections
+    `);
+
+    assert.equal(
+      collections.rows[0].total,
+      2,
+      "Cada instante de coleta deve ter um registro, sem duplicação no replay"
+    );
 
     const errorDetails = errors
       .map(args =>
@@ -270,7 +314,7 @@ test("worker grava datas ISO, regiões iguais e coletas posteriores com SQL real
     assert.equal(
       errors.length,
       0,
-      `Nenhuma falha de persistência pode ser ignorada pelo worker.\nErros capturados:\n${errorDetails}`
+      `Nenhuma falha de persistência pode ser ignorada pelo coletor.\nErros capturados:\n${errorDetails}`
     );
   } finally {
     pool.query = originalQuery;
