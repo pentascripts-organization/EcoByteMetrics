@@ -69,21 +69,21 @@ export function MonitoringProvider({
     ? queryPeriod
     : settings.defaultPeriod;
 
-  const monitoringActive =
-    isMonitoringPath(pathname) &&
-    (filterParams.get("aba") !== "administracao" || Boolean(filterParams.get("servico")));
+  const administration = filterParams.get("aba") === "administracao" && !filterParams.has("servico");
+  const monitoringActive = isMonitoringPath(pathname) && (!administration || Boolean(session));
 
   const protectedSession = historyOpen ? session : null;
   const includeHistory = needsMonitoringHistory(filterParams, Boolean(protectedSession));
 
-  const dateFilter = filterParams.get("ate");
+  const dateFilter = administration ? null : filterParams.get("ate");
+  const instant = administration ? null : filterParams.get("instante");
 
   const untilTimestamp = dateFilter
     ? parseLocalDate(dateFilter)
-    : Date.parse(filterParams.get("instante") ?? "");
+    : Date.parse(instant ?? "");
 
   const invalidCutoff = Boolean(
-    (dateFilter || filterParams.get("instante")) &&
+    (dateFilter || instant) &&
     !Number.isFinite(untilTimestamp)
   );
 

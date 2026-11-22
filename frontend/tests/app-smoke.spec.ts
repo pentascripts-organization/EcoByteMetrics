@@ -168,7 +168,7 @@ test("history login preserves all selected applications and closing the drawer s
   const billing = service();
   const reports = { ...billing, id: "reports-api", name: "Reports API" };
   await mockMonitoring(page, snapshot({ services: [billing, reports] }));
-  const payload = Buffer.from(JSON.stringify({ email: "ui@example.test", exp: Math.floor(Date.now() / 1000) + 300 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ email: "ui@example.test", sub: "1", role: "USER", exp: Math.floor(Date.now() / 1000) + 300 })).toString("base64url");
   const session = { tokenType: "Bearer", token: "header." + payload + ".signature" };
   let signedIn = false;
   await page.route("**/backend/auth/session", route => signedIn ? route.fulfill({ json: session }) : route.fulfill({ status: 401 }));
@@ -202,7 +202,7 @@ test("history login preserves all selected applications and closing the drawer s
 test("revoked history session offers sign-in while the public dashboard stays available", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockMonitoring(page);
-  const payload = Buffer.from(JSON.stringify({ email: "ui@example.test", exp: Math.floor(Date.now() / 1000) + 300 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ email: "ui@example.test", sub: "1", role: "USER", exp: Math.floor(Date.now() / 1000) + 300 })).toString("base64url");
   await page.route("**/backend/auth/session", route => route.fulfill({ json: { tokenType: "Bearer", token: "header." + payload + ".signature" } }));
   let protectedRequests = 0;
   await page.route("**/backend/api/monitoring?*", route => {
@@ -268,7 +268,7 @@ test("history return preserves Values and retries a failed history request insid
   expect(target.searchParams.get("painel")).toBe("coletas");
   expect(target.searchParams.get("filtros")).toBe("historico");
 
-  const payload = Buffer.from(JSON.stringify({ email: "ui@example.test", exp: Math.floor(Date.now() / 1000) + 300 })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({ email: "ui@example.test", sub: "1", role: "USER", exp: Math.floor(Date.now() / 1000) + 300 })).toString("base64url");
   await page.route("**/backend/auth/session", route => route.fulfill({ json: { tokenType: "Bearer", token: "header." + payload + ".signature" } }));
   await page.goto(target.href);
   const drawer = page.locator("#monitoring-filters");
