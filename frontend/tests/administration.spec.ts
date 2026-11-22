@@ -39,11 +39,13 @@ test("administration loads account, settings and live services with responsive c
   } else {
     await expect(page.getByRole("rowheader", { name: "Billing API" })).toBeVisible({ timeout: 15_000 });
   }
+  await expect(page.getByText("1 serviço", { exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Administra/ })).toHaveCSS("color", "rgb(8, 126, 89)");
   const future = page.getByRole("region", { name: "Recursos futuros" });
   await expect(future.getByText("Indisponível", { exact: true })).toHaveCount(3);
   await expect(future.getByRole("button")).toHaveCount(0);
   if (info.project.name === "desktop") {
-    for (const width of [1672, 1280, 768, 390]) {
+    for (const width of [1672, 1280, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 941 });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
       await attachEvidence(page, "administracao-" + width);
@@ -74,6 +76,7 @@ test("user edits only their own account and the session renews before logout", a
   await expect(password).toHaveValue("");
   await dialog.getByRole("button", { name: "Salvar alterações" }).click();
   await expect(password).toHaveAttribute("aria-invalid", "true");
+  await expect(password).toBeFocused();
   await dialog.locator('input[name="email"]').fill("updated@example.test");
   await password.fill("example-password");
   await dialog.getByRole("button", { name: "Salvar alterações" }).click();

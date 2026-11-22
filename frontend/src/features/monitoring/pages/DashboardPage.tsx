@@ -252,7 +252,7 @@ export function DashboardPage() {
         {applicationSearch}
         {filterButton}
       </div>;
-  const dashboardTabs = <MonitoringTabs className="monitoring-tabs monitoring-primary-tabs" slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />;
+  const dashboardTabs = <MonitoringTabs className="monitoring-tabs monitoring-primary-tabs" slidingIndicator label="Visualização do monitoramento" value={tab} tabs={[{ value: "geral", label: "Visão geral", mobileLabel: "Serviços" }, { value: "mapa", label: "Mapa", className: "mobile-map-tab" }, { value: "evolucao", label: "Evolução" }, { value: "comparar", label: "Comparar" }, { value: "administracao", label: "Administração", className: "monitoring-administration-tab", restricted: true }]} onChange={value => update({ aba: value === "geral" ? "" : value })} />;
   return <>
     <TopographicSides key="topography" />
     <RegionMap key="persistent-globe" anchorElement={mapAnchor} detailView={Boolean(selected)}
