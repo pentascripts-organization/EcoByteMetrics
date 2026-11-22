@@ -1,4 +1,5 @@
-﻿.administration-panel { display: grid; gap: 20px; padding: 8px 0 32px; min-width: 0; pointer-events: auto; }
+﻿.monitoring-tabs[data-sliding-indicator] > .monitoring-administration-tab[data-highlighted="true"] { color: #087e59; text-shadow: none; }
+.administration-panel { display: grid; gap: 20px; padding: 8px 0 32px; min-width: 0; pointer-events: auto; }
 .administration-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
 .administration-heading h2 { margin: 0; font-size: clamp(1.55rem, 3vw, 2.25rem); }
 .administration-account, .administration-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
@@ -26,12 +27,19 @@
 .monitoring-shell .administration-panel button.administration-primary { background: var(--eb-green); border-color: var(--eb-green); color: var(--eb-on-dark); }
 .monitoring-shell .administration-panel button.administration-primary:not(:disabled):hover { background: var(--eb-green-hover); }
 .administration-panel :is(button, input, [tabindex]):focus-visible { outline: 2px solid var(--eb-focus); outline-offset: 2px; }
-.administration-feedback { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
+.administration-feedback {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px;
+  padding: 10px 12px;
+  border-inline-start: 3px solid var(--eb-warning);
+  border-radius: var(--eb-radius-sm);
+  background: var(--eb-warning-bg);
+}
+.administration-feedback p { margin: 0; color: var(--eb-warning); }
 .administration-card [role="status"]:is(p) { margin-top: 12px; }
 .administration-card .administration-success { color: var(--eb-green); }
 
 .administration-service-list { display: none; }
-.administration-table { max-height: 25rem; overflow: auto; margin: 14px 0 0; border: 1px solid var(--eb-border); border-radius: var(--eb-radius-md); }
+.administration-table { max-height: 25rem; overflow: auto; scrollbar-gutter: stable; scrollbar-color: var(--eb-ink-muted) var(--eb-surface-subtle); margin: 14px 0 0; border: 1px solid var(--eb-border); border-radius: var(--eb-radius-md); }
 .administration-table table { width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0; text-align: left; font-size: var(--eb-text-base); }
 .administration-table :is(th, td) { padding: 10px 12px; border-bottom: 1px solid var(--eb-border); }
 .administration-table thead th { position: sticky; top: 0; z-index: 1; background: var(--eb-surface-subtle); }
@@ -59,14 +67,20 @@
 @media (max-width: 680px) {
   .administration-grid, .administration-grid--future { grid-template-columns: minmax(0, 1fr); }
   .administration-account { width: 100%; justify-content: space-between; }
+  .administration-details > .administration-account-email { grid-template-columns: minmax(0, 1fr); }
   .administration-table { display: none; }
   .administration-service-list { display: grid; gap: 8px; padding: 0; margin: 14px 0 0; list-style: none; }
   .administration-service-list details { border: 1px solid var(--eb-border); border-radius: var(--eb-radius-sm); }
-  .administration-service-list summary { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-height: 44px; padding: 8px 10px; cursor: pointer; list-style: none; }
+  .administration-service-list summary { display: grid; grid-template-columns: minmax(0, 1fr) auto 16px; align-items: center; gap: 7px; min-height: 44px; padding: 8px 10px; cursor: pointer; list-style: none; }
   .administration-service-list summary::-webkit-details-marker { display: none; }
   .administration-service-list summary:focus-visible { outline: 2px solid var(--eb-focus); outline-offset: 2px; }
-  .administration-service-name { flex: 1 1 100px; min-width: 0; overflow-wrap: anywhere; font-size: var(--eb-text-base); font-weight: 700; }
+  .administration-service-name { min-width: 0; overflow-wrap: anywhere; font-size: var(--eb-text-base); font-weight: 700; }
   .administration-service-list details[open] summary > svg { rotate: 180deg; }
   .administration-service-list .administration-details { margin: 0; padding: 0 10px 8px; }
   .administration-service-list .administration-details > div:last-child { border-bottom: 0; }
+}
+@media (max-width: 360px) {
+  .administration-service-list summary { grid-template-columns: minmax(0, 1fr) 16px; }
+  .administration-service-list summary .monitoring-badge { grid-column: 1; justify-self: start; }
+  .administration-service-list summary > svg { grid-area: 1 / 2 / span 2; }
 }

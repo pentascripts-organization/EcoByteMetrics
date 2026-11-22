@@ -17,7 +17,7 @@ export function AccountCard({ session, signOut, pending }: { session: AuthSessio
       <div><h3 id="account-title">Minha conta</h3><p>Dados da sua conta e permissões de acesso.</p></div>
     </header>
     <dl className="administration-details">
-      <div><dt>E-mail</dt><dd>{session.email}</dd></div>
+      <div className="administration-account-email"><dt>E-mail</dt><dd>{session.email}</dd></div>
       <div><dt>Perfil de acesso</dt><dd><span className="administration-tag administration-tag--profile">{session.role}</span></dd></div>
     </dl>
     <div className="administration-actions">
@@ -45,6 +45,10 @@ function EditAccountDialog({ session, onClose }: { session: AuthSession; onClose
   const [error, setError] = useState("");
   const [fields, setFields] = useState<RegistrationErrors>({});
   const resource = "/api/users/" + session.id;
+
+  useEffect(() => {
+    if (Object.keys(fields).length) dialog.current?.querySelector<HTMLInputElement>('input[aria-invalid="true"]')?.focus();
+  }, [fields]);
   useEffect(() => {
     const element = dialog.current;
     element?.showModal();

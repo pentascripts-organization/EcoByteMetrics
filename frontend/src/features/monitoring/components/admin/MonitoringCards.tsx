@@ -63,13 +63,14 @@ export function MonitoredServicesCard() {
     <header className="administration-card-heading">
       <Server size={22} aria-hidden="true" />
       <div><h3 id="monitored-services-title">Serviços monitorados</h3><p>Aplicações identificadas e acompanhadas pelo sistema.</p></div>
+      {rows.length > 0 && <span className="administration-tag" id="monitored-services-count">{rows.length} {rows.length === 1 ? "serviço" : "serviços"}</span>}
     </header>
     {(error || snapshot.warning) && <div className="administration-feedback">
       <p role="alert">{services.length ? "Alguns dados podem estar desatualizados." : "Não foi possível consultar os serviços."}</p>
       <button type="button" disabled={loading} onClick={() => void refresh()}>Tentar novamente</button>
     </div>}
     {services.length ? <>
-      <div className="administration-table" role="region" aria-labelledby="monitored-services-title" tabIndex={0}>
+      <div className="administration-table" role="region" aria-labelledby="monitored-services-title" aria-describedby="monitored-services-count" tabIndex={0}>
         <table>
           <thead><tr><th scope="col">Aplicação</th><th scope="col">Região</th><th scope="col">Estado</th><th scope="col">Última coleta</th></tr></thead>
           <tbody>{rows.map(({ service, region, collection }) => <tr key={service.id}>
