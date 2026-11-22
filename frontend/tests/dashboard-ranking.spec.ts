@@ -73,14 +73,14 @@ test("filters update the dashboard and can recover an empty selection", async ({
   await expect(names).toHaveText([billing, reports, archive]);
 });
 
-test("comparison counts only available selections and renders accented mobile labels", async ({ page }, info) => {
-  const selection = "/dashboard?aba=comparar&comparacao=ultima&app=billing-api&app=reports-api";
+test("comparison counts only available selections and renders accented mobile labels", async ({ page }) => {
+  const selection = "/dashboard?aba=comparar&comparacao=ultima&comparacaoVisao=numeros&app=billing-api&app=reports-api";
   await page.goto(selection);
-  const comparison = page.getByRole("region", { name: info.project.name === "mobile" ? "Indicadores lado a lado" : "Comparação das aplicações" });
+  const comparison = page.getByRole("region", { name: "Indicadores lado a lado" });
   await expect(comparison.locator("caption")).toContainText("Última leitura", { timeout: 15_000 });
   await expect(comparison.getByText("Emissões (kg CO₂e)", { exact: true })).toBeVisible();
   await page.goto(selection + "&pais=Canad%C3%A1");
-  await expect(page.locator(".comparison-count-badge")).toHaveText("1 de 1 selecionada(s)", { timeout: 15_000 });
+  await expect(page.locator(".comparison-count-badge")).toHaveText("Aplicações selecionadas · 1", { timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Remover seleções indisponíveis" })).toBeVisible();
 });
 
@@ -89,12 +89,10 @@ test("comparison keeps small readings, identifies missing ones and finds countri
   const beta = { ...service({ emissionsG: null }), id: "beta", name: "Beta API" };
   await mockMonitoring(page, snapshot({ services: [alpha, beta], history: [] }));
   await page.goto("/dashboard?aba=comparar&comparacao=ultima&app=billing-api&app=beta");
-  const carbon = page.locator(".comparison-chart-card").filter({ has: page.getByRole("heading", { name: /Emiss.* de Carbono/ }) });
-  await expect(carbon.getByText(/Sem estimativa de emiss.*Beta API/)).toBeVisible({ timeout: 15_000 });
-  const bars = carbon.locator(".recharts-bar-rectangle path");
-  await expect(bars).toHaveCount(1);
-  await expect.poll(() => bars.first().evaluate(path => (path as SVGGraphicsElement).getBBox().height)).toBeGreaterThan(0);
-
+  await page.getByRole("button", { name: "CO₂e", exact: true }).click();
+  await expect(page.getByRole("article", { name: "Billing API" })).toContainText("0,04 g CO₂e");
+  await expect(page.getByRole("article", { name: "Beta API" })).toContainText("Indisponível");
+  await page.getByRole("button", { name: "Alterar seleção" }).click();
   await page.getByRole("searchbox", { name: "Buscar aplicação para comparar" }).fill("Canada");
   await expect(page.getByRole("checkbox", { name: /Billing API/ })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: /Beta API/ })).toHaveCount(0);

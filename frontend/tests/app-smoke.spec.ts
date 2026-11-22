@@ -219,7 +219,7 @@ test("revoked history session offers sign-in while the public dashboard stays av
   await expect(page.locator(".monitoring-applications").getByText("Billing API", { exact: true })).toBeVisible();
 });
 
-test("comparison identifies partial emissions in the table and chart", async ({ page }, info) => {
+test("comparison identifies partial emissions in the table and chart", async ({ page }) => {
   const billing = service();
   const reports = { ...billing, id: "reports-api", name: "Reports API" };
   const reading = sample();
@@ -231,9 +231,11 @@ test("comparison identifies partial emissions in the table and chart", async ({ 
     ],
   }));
   await page.goto("/dashboard?aba=comparar&app=billing-api&app=reports-api");
-  const table = page.locator(info.project.name === "mobile" ? ".comparison-mobile-table" : ".comparison-desktop-table");
+  await page.getByRole("button", { name: "CO₂e", exact: true }).click();
+  await expect(page.getByRole("article", { name: "Billing API" }).getByText("Cálculo parcial no último intervalo")).toBeVisible();
+  await page.getByRole("button", { name: "Números", exact: true }).click();
+  const table = page.getByRole("region", { name: "Indicadores lado a lado" });
   await expect(table.getByText("· Parcial (1 de 2 amostras)", { exact: true })).toBeVisible();
-  await expect(page.getByText("Emissões parciais: Billing API (1 de 2 amostras).")).toBeVisible();
 });
 
 test("returning from an application restores keyboard focus even if its row is missing", async ({ page }) => {

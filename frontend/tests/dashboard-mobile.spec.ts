@@ -105,7 +105,7 @@ test("mobile dashboard keeps navigation, cards and comparison within the viewpor
   await expect(bars.getByRole("button", { name: /Billing API/ })).toContainText("kWh");
   await page.setViewportSize({ width: 430, height: 844 });
 
-  await page.goto("/dashboard?aba=comparar&comparacao=ultima&app=billing-api&app=reports-api");
+  await page.goto("/dashboard?aba=comparar&comparacao=ultima&comparacaoVisao=numeros&app=billing-api&app=reports-api");
   const comparison = page.getByRole("region", { name: "Indicadores lado a lado" });
   await expect(comparison.getByRole("columnheader", { name: "Reports API" })).toBeVisible({ timeout: 15_000 });
   await expect(comparison.getByRole("rowheader", { name: "CPU (%)" })).toHaveCSS("position", "sticky");

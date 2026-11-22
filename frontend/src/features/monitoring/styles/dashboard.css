@@ -49,10 +49,6 @@
 .comparison-selection label { display: flex; align-items: center; gap: 10px; padding: 12px 0; min-height: 52px; cursor: pointer; overflow-wrap: anywhere; }
 .comparison-selection input { accent-color: var(--monitoring-green); width: 18px; height: 18px; flex-shrink: 0; }
 .comparison-selection small { display: block; margin-top: 2px; color: var(--monitoring-muted); }
-.comparison-range { font-size: 14px; color: var(--monitoring-muted); }
-.comparison-table { min-width: 1120px; margin-block: 16px; font-variant-numeric: tabular-nums; }
-.comparison-table th:not(:first-child), .comparison-table td { white-space: nowrap; }
-.comparison-table button { text-decoration: underline; text-underline-offset: 4px; min-height: 44px; text-align: left; }
 .monitoring-table-scroll:focus-visible { outline-offset: -3px; }
 @media (max-width: 900px) {
   .comparison-selection { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1302,10 +1298,6 @@
   .monitoring-filters { grid-template-columns: minmax(0, 1fr); }
 }
 
-.comparison-toolbar { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; }
-.comparison-toolbar h2 { margin-right: auto; }
-.comparison-period { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--monitoring-muted); }
-.comparison-period select { min-height: 40px; border: 1px solid var(--monitoring-line); border-radius: 10px; padding: 6px 10px; background: white; color: var(--monitoring-ink); }
 .monitoring-notice--toast {
   position: fixed;
   z-index: 1400;

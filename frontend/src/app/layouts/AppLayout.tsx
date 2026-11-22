@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { dashboardTransition } from "@/features/home/domain/dashboardTransition";
 import { ArrowLeft } from "lucide-react";
 import { Brand } from "@/shared/ui/Brand";
+import { PageScrollbar } from "@/shared/ui/PageScrollbar";
 import { AnalysisProvider } from "@/features/monitoring/providers/AnalysisProvider";
 
 export function AppLayout() {
@@ -45,6 +46,7 @@ export function AppLayout() {
         <Link className="monitoring-home" to="/" aria-label="Voltar ao início"><ArrowLeft size={20} aria-hidden="true" /> <span>Voltar ao início</span></Link>
       </header>
       <main tabIndex={-1} id="main-content" className="monitoring-main"><Outlet /></main>
+      {pathname === "/dashboard" && <PageScrollbar />}
     </div>
   </AnalysisProvider>;
 }

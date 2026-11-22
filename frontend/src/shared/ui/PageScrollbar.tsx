@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import "../styles/scrollbar.css";
 
-export function HomeScrollbar() {
+export function PageScrollbar() {
   const [thumbHeight, setThumbHeight] = useState(0);
   const [thumbTop, setThumbTop] = useState(0);
   const [isNearEdge, setIsNearEdge] = useState(false);
@@ -37,6 +38,8 @@ export function HomeScrollbar() {
   useEffect(() => {
     document.documentElement.classList.add("has-custom-scrollbar");
     const rafId = requestAnimationFrame(updateScroll);
+    const observer = new ResizeObserver(updateScroll);
+    observer.observe(document.body);
 
     const handleScroll = () => {
       updateScroll();
@@ -58,6 +61,7 @@ export function HomeScrollbar() {
 
     return () => {
       cancelAnimationFrame(rafId);
+      observer.disconnect();
       document.documentElement.classList.remove("has-custom-scrollbar");
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", updateScroll);
@@ -116,7 +120,7 @@ export function HomeScrollbar() {
     const maxScroll = scrollHeight - clientHeight;
     window.scrollTo({
       top: targetProgress * maxScroll,
-      behavior: "smooth",
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
     });
   };
 
@@ -126,16 +130,16 @@ export function HomeScrollbar() {
 
   return (
     <div
-      className={`home-scrollbar-container ${isVisible ? "is-visible" : ""} ${
+      className={`page-scrollbar-container ${isVisible ? "is-visible" : ""} ${
         isDragging ? "is-dragging" : ""
       }`.trim()}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       aria-hidden="true"
     >
-      <div className="home-scrollbar-track" onClick={handleTrackClick}>
+      <div className="page-scrollbar-track" onClick={handleTrackClick}>
         <div
-          className="home-scrollbar-thumb"
+          className="page-scrollbar-thumb"
           style={{
             height: `${thumbHeight}px`,
             transform: `translate3d(0, ${thumbTop}px, 0)`,

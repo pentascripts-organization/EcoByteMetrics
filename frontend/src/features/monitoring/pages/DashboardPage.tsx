@@ -24,7 +24,6 @@ import { createRefreshAnimation } from "../domain/refreshAnimation";
 import { FiltersDialog } from "../components/FiltersDialog";
 import GlideSelect from "@/shared/ui/GlideSelect";
 import SpecularButton from "@/shared/ui/SpecularButton";
-import { InfoTooltip } from "@/shared/ui/InfoTooltip";
 import { localDateTimeMax } from "@/shared/lib/localDate";
 import { clearMonitoringFilters } from "../domain/analysis";
 import { SortSelect } from "../components/SortSelect";
@@ -46,7 +45,7 @@ import { collectionRange, latestCollections } from "../domain/history";
 import { REFRESH_INTERVAL_MS } from "../domain/snapshot";
 import { serviceStatusLabels } from "../types";
 import type { MonitoredService } from "../types";
-import { formatDataPeriod, formatNumber, formatRecordedPeriod } from "@/shared/lib/format";
+import { formatNumber } from "@/shared/lib/format";
 import { CountryFlag } from "@/shared/ui/CountryFlag";
 import { TopographicSides } from "../components/TopographicSides";
 import { useAuth } from "@/features/auth/useAuth";
@@ -141,14 +140,9 @@ export function DashboardPage() {
   const focusServiceId = focusedServiceId || hoveredServiceId;
   const highlightedIds = focusServiceId ? [focusServiceId] : mapHighlightedIds;
   const selectedHistory = useMemo(() => analysis.history.filter(point => point.serviceId === selectedId), [analysis.history, selectedId]);
-  const selectedRange = useMemo(() => collectionRange(selectedHistory), [selectedHistory]);
-  const comparisonLatest = tab === "comparar" && params.get("comparacao") === "ultima";
-  const comparedIds = params.getAll("app");
-  const summaryServices = tab === "comparar" ? services.filter(service => comparedIds.includes(service.id)) : services;
-  const summaryHistory = tab === "comparar" ? (comparisonLatest ? latestHistory : history).filter(point => comparedIds.includes(point.serviceId)) : latestOverview ? latestHistory : history;
+  const summaryHistory = latestOverview ? latestHistory : history;
   const summaryRange = useMemo(() => collectionRange(summaryHistory), [summaryHistory]);
   const lastCollectionDate = summaryRange.last === null ? null : new Date(summaryRange.last);
-  const shownRange = selected ? selectedRange : tab === "comparar" || latestOverview ? summaryRange : { first: analysis.availableSince, last: analysis.availableUntil };
 
   useEffect(() => {
     if (!refreshIcon.current) return;
@@ -221,10 +215,7 @@ export function DashboardPage() {
     <div className="monitoring-error-toast-main"><CircleAlert size={18} aria-hidden="true" /><p>{snapshot.services.length ? "A atualização falhou. Exibindo os últimos dados recebidos." : "Não foi possível consultar as aplicações."}</p><button type="button" onClick={() => void refresh()} disabled={loading}>{loading ? "Atualizando…" : "Tentar novamente"}</button></div>
     <details><summary>Detalhes da conexão</summary><p>{error}</p></details>
   </div> : null;
-  const dataContext = (<section className="monitoring-data-context" aria-label="Período dos dados">
-      <div><strong title={formatRecordedPeriod(shownRange.first, shownRange.last)}>{((loading || (!error && snapshot.historyIncluded === false && !comparisonLatest)) && !summaryHistory.length) || discovering ? "Consultando os registros da seleção…" : tab === "comparar" && !summaryServices.length ? "Selecione aplicações para comparar" : formatDataPeriod(shownRange.first, shownRange.last)}</strong><p>Estimativas de energia e carbono dos registros disponíveis.<InfoTooltip label="estimativas ambientais">Os valores são estimativas calculadas a partir do uso das aplicações, e não medições diretas de eletricidade ou CO₂ na atmosfera. CO₂e significa dióxido de carbono equivalente.</InfoTooltip></p></div>
-      <span>{comparisonLatest ? "Uma leitura por aplicação" : <>Filtro: {period === "7d" ? "até 7 dias" : "até 24 horas"}{analysis.observedAt && " anteriores ao horário escolhido"}</>}</span>
-    </section>);
+
   const detailNavigation = selected ? (
     <MonitoringTabs className="monitoring-tabs service-detail-tabs"
             label="Informações da aplicação"
@@ -288,11 +279,10 @@ export function DashboardPage() {
     </>}
     {!mobile && !selectedId && dashboardTabs}
     {mobile && !selectedId && !administration && dashboardTools}
-    {!selectedId && !administration && tab === "comparar" && <MonitoringSummary context={dataContext} latest={comparisonLatest} services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={tab === "comparar"} loading={loading} onRefresh={() => void refresh()} />}
     <section key="monitoring-content" className="monitoring-view" id="monitoring-content" role="tabpanel" aria-label={selectedId ? "Detalhes da aplicação" : administration ? "Administração do ambiente" : tab === "comparar" ? "Comparação de aplicações" : tab === "evolucao" ? "Evolução do ambiente" : "Visão geral do ambiente"}>
       <div className={"monitoring-overview" + (selected ? " service-overview service-detail-layout" : "")} data-view={tab} hidden={selectedId ? !selected : tab === "evolucao" || tab === "comparar" || administration}>
         {!selectedId && latestOverview && (
-          <MonitoringSummary hideStatusCounts latest services={summaryServices} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={false} />
+          <MonitoringSummary hideStatusCounts latest services={services} history={summaryHistory} totals={summaryHistory === history ? analysis.totals : undefined} comparison={false} />
         )}
         {!selected && (
         <section className="monitoring-location" aria-label="Localização dos serviços">

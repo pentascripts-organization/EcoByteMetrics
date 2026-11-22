@@ -1,12 +1,10 @@
-/* Barra de rolagem suave e interativa na página inicial */
+/* Shared scrollbar for document scrolling. */
 
-html:has(.ecobyte-home),
 html.has-custom-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE e Edge */
 }
 
-html:has(.ecobyte-home)::-webkit-scrollbar,
 html.has-custom-scrollbar::-webkit-scrollbar {
   display: none;
   width: 0;
@@ -14,7 +12,7 @@ html.has-custom-scrollbar::-webkit-scrollbar {
 }
 
 /* Área de gatilho e container da barra de rolagem flutuante */
-.home-scrollbar-container {
+.page-scrollbar-container {
   position: fixed;
   top: 0;
   right: 0;
@@ -24,13 +22,15 @@ html.has-custom-scrollbar::-webkit-scrollbar {
   display: flex;
   justify-content: flex-end;
   padding-right: 4px;
-  pointer-events: auto;
+  pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
+.page-scrollbar-container.is-visible .page-scrollbar-track { pointer-events: auto; }
+
 /* Trilho da barra */
-.home-scrollbar-track {
+.page-scrollbar-track {
   position: relative;
   width: 8px;
   height: 100%;
@@ -39,13 +39,13 @@ html.has-custom-scrollbar::-webkit-scrollbar {
   transition: background-color 0.25s ease;
 }
 
-.home-scrollbar-container:hover .home-scrollbar-track,
-.home-scrollbar-container.is-dragging .home-scrollbar-track {
+.page-scrollbar-container:hover .page-scrollbar-track,
+.page-scrollbar-container.is-dragging .page-scrollbar-track {
   background: rgba(8, 125, 98, 0.06);
 }
 
 /* Cursor / Polegar (Thumb) com animação suave de entrada e saída */
-.home-scrollbar-thumb {
+.page-scrollbar-thumb {
   position: absolute;
   top: 0;
   left: 0;
@@ -64,12 +64,12 @@ html.has-custom-scrollbar::-webkit-scrollbar {
   box-shadow: 0 1px 4px rgba(8, 47, 53, 0.2);
 }
 
-.home-scrollbar-thumb:hover {
+.page-scrollbar-thumb:hover {
   background: #066952;
 }
 
-.home-scrollbar-thumb:active,
-.home-scrollbar-container.is-dragging .home-scrollbar-thumb {
+.page-scrollbar-thumb:active,
+.page-scrollbar-container.is-dragging .page-scrollbar-thumb {
   cursor: grabbing;
   background: #055542;
   box-shadow: 0 2px 8px rgba(8, 47, 53, 0.35);
@@ -77,33 +77,31 @@ html.has-custom-scrollbar::-webkit-scrollbar {
 }
 
 /* Estado visível ao encostar o mouse no canto direito ou durante rolagem */
-.home-scrollbar-container.is-visible .home-scrollbar-thumb {
+.page-scrollbar-container.is-visible .page-scrollbar-thumb {
   opacity: 0.85;
   transform: translateX(0) scaleX(1);
 }
 
-.home-scrollbar-container.is-visible:hover .home-scrollbar-thumb,
-.home-scrollbar-container.is-dragging .home-scrollbar-thumb {
+.page-scrollbar-container.is-visible:hover .page-scrollbar-thumb,
+.page-scrollbar-container.is-dragging .page-scrollbar-thumb {
   opacity: 1;
 }
 
 /* Acessibilidade: Desabilita transições para preferências de movimento reduzido */
 @media (prefers-reduced-motion: reduce) {
-  .home-scrollbar-thumb {
+  .page-scrollbar-thumb {
     transition: none !important;
   }
 }
 
 /* Dispositivos móveis sem ponteiro fino (touch): restaura rolagem nativa */
-@media (hover: none) and (pointer: coarse) {
-  .home-scrollbar-container {
+@media (hover: none) and (pointer: coarse), (forced-colors: active) {
+  .page-scrollbar-container {
     display: none;
   }
-  html:has(.ecobyte-home),
   html.has-custom-scrollbar {
     scrollbar-width: auto;
   }
-  html:has(.ecobyte-home)::-webkit-scrollbar,
   html.has-custom-scrollbar::-webkit-scrollbar {
     display: block;
     width: 6px;

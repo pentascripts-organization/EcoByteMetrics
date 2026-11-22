@@ -1,168 +1,96 @@
-import { memo } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Cell,
-} from "recharts";
-import type { MonitoredService } from "../types";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Plus } from "lucide-react";
+import { useId, useMemo } from "react";
+import { CountryFlag } from "@/shared/ui/CountryFlag";
 import { formatNumber } from "@/shared/lib/format";
+import { serviceStatusLabels } from "../types";
+import type { compareApplications } from "../domain/comparison";
+import type { comparisonSeries } from "../domain/comparisonSeries";
 
-export interface ComparisonRowData {
-  service: MonitoredService;
-  energyKwh: number | null;
-  emissionsG: number | null;
-  emissionCount: number;
-  count: number;
+type Row = ReturnType<typeof compareApplications>[number];
+type Timeline = ReturnType<typeof comparisonSeries>;
+type Metric = "energyKwh" | "emissionsG";
+const colors = ["#00845f", "#376d89", "#8754a4", "#a15b28", "#336cbc", "#956019"];
+const date = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function chartColor(id: string) {
+  let hash = 0;
+  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return colors[hash % colors.length]!;
 }
 
-export interface ComparisonPairedChartProps {
-  rows: ComparisonRowData[];
-  latest?: boolean;
-}
+export function ComparisonPairedChart({ rows, timeline, metric, latest, onOpenService, onPick }: {
+  rows: Row[]; timeline: Timeline | null; metric: Metric; latest: boolean; onOpenService: (id: string) => void; onPick: () => void;
+}) {
+  const gradient = useId();
+  const unit = metric === "energyKwh" ? "kWh" : "g CO₂e";
+  const label = metric === "energyKwh" ? "Energia" : "Emissões de carbono";
+  const max = useMemo(() => {
+    let highest = 0;
+    for (const buckets of timeline?.series.values() ?? []) {
+      for (const bucket of buckets.values()) highest = Math.max(highest, bucket[metric] ?? 0);
+    }
+    return highest || 1;
+  }, [timeline, metric]);
 
-const serviceColors = [
-  "#087d62",
-  "#0284c7",
-  "#d97706",
-  "#7c3aed",
-  "#db2777",
-  "#059669",
-  "#4f46e5",
-  "#ea580c",
-];
-
-export const ComparisonPairedChart = memo(function ComparisonPairedChart({
-  rows,
-  latest = false,
-}: ComparisonPairedChartProps) {
-  if (rows.length < 2) return null;
-
-  const data = rows.map((r, index) => ({
-    id: r.service.id,
-    name: r.service.name,
-    energyKwh: r.energyKwh,
-    emissionsKg: r.emissionsG === null ? null : r.emissionsG / 1000,
-    color: serviceColors[index % serviceColors.length],
-  }));
-
-  const maxEnergy = Math.max(0, ...data.map(row => row.energyKwh ?? 0));
-  const maxEmissions = Math.max(0, ...data.map(row => row.emissionsKg ?? 0));
-  const missingEnergy = data.filter(row => row.energyKwh === null).map(row => row.name);
-  const missingEmissions = data.filter(row => row.emissionsKg === null).map(row => row.name);
-
-  const partialEmissions = latest ? [] : rows.filter(row => row.emissionsG !== null && row.emissionCount < row.count);
-
-  return (
-    <div className="comparison-paired-charts" aria-label="Gráficos pareados de consumo e carbono">
-      <div className="comparison-chart-card">
-        <div className="comparison-chart-header">
-          <h3>Consumo de Energia</h3>
-          <span className="comparison-chart-unit">kWh {latest ? "(última coleta)" : "(total)"}</span>
-        </div>
-        <div className="comparison-chart-body">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data} margin={{ top: 16, right: 16, left: 0, bottom: 24 }}>
-              <CartesianGrid vertical={false} stroke="#e9efeb" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#61776b", fontSize: 12 }}
-                interval={0}
-                tickMargin={10}
-              />
-              <YAxis
-                domain={[0, maxEnergy > 0 ? maxEnergy * 1.15 : 0.001]}
-                tickFormatter={(val) => formatNumber(val)}
-                axisLine={false}
-                tickLine={false}
-                tickMargin={8}
-                tick={{ fill: "#61776b", fontSize: 11 }}
-                width={50}
-              />
-              <Tooltip
-                isAnimationActive={false}
-                formatter={(val) => [
-                  `${formatNumber(typeof val === "number" ? val : null)} kWh`,
-                  "Energia",
-                ]}
-                labelStyle={{ fontWeight: 600, color: "#103a40" }}
-                contentStyle={{
-                  background: "#fff",
-                  borderRadius: 8,
-                  border: "1px solid #d0e1d9",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  fontSize: 13,
-                }}
-              />
-              <Bar dataKey="energyKwh" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                {data.map((entry) => (
-                  <Cell key={`energy-cell-${entry.id}`} fill={entry.color} fillOpacity={0.85} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        {missingEnergy.length > 0 && <p className="monitoring-explanation">Sem estimativa de energia: {missingEnergy.join(", ")}.</p>}
-      </div>
-
-      <div className="comparison-chart-card">
-        <div className="comparison-chart-header">
-          <h3>Emissões de Carbono</h3>
-          <span className="comparison-chart-unit">kg CO₂e {latest ? "(última coleta)" : "(total)"}</span>
-        </div>
-        <div className="comparison-chart-body">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data} margin={{ top: 16, right: 16, left: 0, bottom: 24 }}>
-              <CartesianGrid vertical={false} stroke="#e9efeb" strokeDasharray="3 3" />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#61776b", fontSize: 12 }}
-                interval={0}
-                tickMargin={10}
-              />
-              <YAxis
-                domain={[0, maxEmissions > 0 ? maxEmissions * 1.15 : 0.001]}
-                tickFormatter={(val) => formatNumber(val)}
-                axisLine={false}
-                tickLine={false}
-                tickMargin={8}
-                tick={{ fill: "#61776b", fontSize: 11 }}
-                width={50}
-              />
-              <Tooltip
-                isAnimationActive={false}
-                formatter={(val) => [
-                  `${formatNumber(typeof val === "number" ? val : null)} kg CO₂e`,
-                  "Carbono",
-                ]}
-                labelStyle={{ fontWeight: 600, color: "#103a40" }}
-                contentStyle={{
-                  background: "#fff",
-                  borderRadius: 8,
-                  border: "1px solid #d0e1d9",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  fontSize: 13,
-                }}
-              />
-              <Bar dataKey="emissionsKg" radius={[4, 4, 0, 0]} maxBarSize={48}>
-                {data.map((entry) => (
-                  <Cell key={`carbon-cell-${entry.id}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        {partialEmissions.length > 0 && <p className="monitoring-explanation">Emissões parciais: {partialEmissions.map(row => `${row.service.name} (${row.emissionCount} de ${row.count} amostras)`).join(", ")}.</p>}
-        {missingEmissions.length > 0 && <p className="monitoring-explanation">Sem estimativa de emissões: {missingEmissions.join(", ")}.</p>}
-      </div>
+  return <>
+    <header className="comparison-result-heading">
+      <div><h3>{latest ? "Última leitura por aplicação" : "Evolução por aplicação"}</h3>
+        <p>{latest ? "Horários e durações de coleta podem variar." : "Mesmas escalas entre a primeira e a última leitura da seleção. Lacunas indicam intervalos sem valor."}</p></div>
+    </header>
+    <div className="comparison-graph-grid" data-stacked={rows.length > 2}>
+      {rows.map((row, index) => {
+        const buckets = timeline?.series.get(row.service.id);
+        const data = (timeline?.times ?? []).map(time => {
+          const bucket = buckets?.get(time);
+          return { time, value: bucket?.[metric] ?? null, partial: metric === "emissionsG" && !!bucket && bucket.emissionCount < bucket.count };
+        });
+        const hasValues = data.some(point => point.value !== null);
+        const lastBucket = [...data].reverse().find(point => buckets?.has(point.time));
+        const value = latest ? row[metric] : lastBucket?.value ?? null;
+        const time = latest ? row.last : lastBucket?.time;
+        const color = chartColor(row.service.id);
+        const fill = gradient + index;
+        return <article className="comparison-chart-card" key={row.service.id} aria-label={row.service.name}>
+          <header><h4><CountryFlag country={row.service.country} /> {row.service.name}</h4><span className="comparison-service-status"><i className={"monitoring-status-dot monitoring-status-dot--" + row.service.status} aria-hidden="true" />{serviceStatusLabels[row.service.status]}</span></header>
+          <div className="comparison-reading">
+            <div><p>{label} {latest ? "na última coleta" : "no último intervalo com leitura"}</p>
+              <strong>{value === null ? "Indisponível" : <>{formatNumber(value)} <small>{unit}</small></>}</strong></div>
+            {time != null && <time dateTime={new Date(time).toISOString()}>{latest ? new Date(time).toLocaleString("pt-BR") : date.format(time)}</time>}
+          </div>
+          {lastBucket?.partial && <p className="comparison-coverage">{value === null ? "Amostras sem cálculo de emissões" : "Cálculo parcial no último intervalo"}</p>}
+          {timeline && (hasValues ? <div className="comparison-plot">
+            <ResponsiveContainer width="100%" height={176} minWidth={0}>
+              <AreaChart data={data} accessibilityLayer margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
+                <defs><linearGradient id={fill} x1="0" y1="0" x2="0" y2="1"><stop stopColor={color} stopOpacity={0.18} /><stop offset="100%" stopColor={color} stopOpacity={0.02} /></linearGradient></defs>
+                <CartesianGrid vertical={false} stroke="var(--monitoring-line)" />
+                <XAxis dataKey="time" type="number" domain={[timeline.times[0]!, timeline.times.at(-1)!]} tickFormatter={value => date.format(value)} minTickGap={28} tick={{ fontSize: 11 }} tickLine={false} />
+                <YAxis className="comparison-y-axis" width={55} domain={[0, max]} tickCount={4} tickFormatter={formatNumber} tick={{ fontSize: 11 }} tickLine={false} />
+                <Tooltip filterNull={false} content={({ active, payload }) => {
+                  const point = payload?.[0]?.payload as (typeof data)[number] | undefined;
+                  return active && point ? <div className="comparison-chart-tooltip">
+                    <strong>{date.format(point.time)}</strong>
+                    <div>{point.value === null ? buckets?.has(point.time) ? "Valor indisponível" : "Sem registros" : formatNumber(point.value) + " " + unit}</div>
+                    {point.partial && point.value !== null && <div>Cálculo parcial</div>}
+                  </div> : null;
+                }} />
+                <Area type="linear" dataKey="value" name={label} unit={" " + unit} stroke={color} strokeWidth={2}
+                  fill={"url(#" + fill + ")"} connectNulls={false} isAnimationActive={false}
+                  dot={({ cx, cy, index: pointIndex }) => {
+                    if (cx == null || cy == null || data[pointIndex]?.value == null ||
+                      (data[pointIndex - 1]?.value != null && data[pointIndex + 1]?.value != null && !data[pointIndex]?.partial)) return <g key={pointIndex} />;
+                    return <circle key={pointIndex} cx={cx} cy={cy} r={3} fill={data[pointIndex]?.partial ? "white" : color} stroke={color} />;
+                  }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div> : <p className="comparison-chart-empty">{buckets?.size ? "Nenhum valor calculado para este indicador." : "Sem coletas registradas no período."}</p>)}
+          <button className="comparison-link" type="button" onClick={() => onOpenService(row.service.id)}>Ver detalhes da aplicação</button>
+        </article>;
+      })}
+      {rows.length === 1 && <div className="comparison-empty comparison-add-card">
+        <p role="status">Selecione mais uma aplicação para comparar.</p>
+        <button className="comparison-button" type="button" onClick={onPick}><Plus size={16} aria-hidden="true" /> Adicionar aplicação</button>
+      </div>}
     </div>
-  );
-});
+  </>;
+}
