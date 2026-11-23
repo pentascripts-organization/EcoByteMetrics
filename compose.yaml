@@ -24,7 +24,7 @@ services:
       - "${POSTGRES_PORT_CONTEINER}:${POSTGRES_PORT}"
 
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
       - ./database:/docker-entrypoint-initdb.d
 
     healthcheck:
