@@ -1,5 +1,6 @@
 import type { CollectionPoint, MonitoredService } from "../types.ts";
 import { mergeCollectionHistory, summarizeCollections } from "./history.ts";
+import { getValidCoordinates } from "./coordinates.ts";
 
 export type DashboardMetric = "emissions" | "energy";
 export const statusColors = {
@@ -41,12 +42,12 @@ export function groupServiceLocations(services: MonitoredService[], includeRemov
   const priority = ["available", "no-metrics", "stale", "unavailable"];
   for (const service of services) {
     const { latitude, longitude } = service;
-    if ((!includeRemoved && service.status === "removed") || latitude === undefined || longitude === undefined ||
-      !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) continue;
-    const id = latitude.toFixed(4) + "," + longitude.toFixed(4);
+    const coordinates = getValidCoordinates(latitude, longitude);
+    if ((!includeRemoved && service.status === "removed") || !coordinates) continue;
+    const id = coordinates.latitude.toFixed(4) + "," + coordinates.longitude.toFixed(4);
     let group = groups.get(id);
     if (!group) {
-      group = { id, name: service.city || service.region || service.name, latitude, longitude, countryCode: "", services: [], color: statusColors[service.status], count: 0 };
+      group = { id, name: service.city || service.region || service.name, latitude: coordinates.latitude, longitude: coordinates.longitude, countryCode: "", services: [], color: statusColors[service.status], count: 0 };
       groups.set(id, group);
     }
     group.services.push(service);
