@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { attachEvidence, mockMonitoring, snapshot } from "./monitoring-fixtures";
+import { attachEvidence, mockMonitoring, service, snapshot } from "./monitoring-fixtures";
 
 const route = "/dashboard?aba=administracao";
 const email = "admin@example.test";
@@ -50,6 +50,31 @@ test("administration loads account, settings and live services with responsive c
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
       await attachEvidence(page, "administracao-" + width);
     }
+  }
+});
+
+test("administration renders the operational badge tones", async ({ page }, info) => {
+  const tones = [
+    ["available", "green", "rgb(232, 245, 240)"],
+    ["stale", "yellow", "rgb(254, 243, 199)"],
+    ["no-metrics", "yellow", "rgb(254, 243, 199)"],
+    ["unavailable", "red", "rgb(254, 226, 226)"],
+    ["removed", "muted", "rgb(243, 244, 246)"],
+  ] as const;
+  await mockMonitoring(page, snapshot({ services: tones.map(([status]) => ({
+    ...service(), status, id: status, name: status,
+  })) }));
+  await session(page, "ADMIN");
+  await page.route("**/backend/api/monitoring-settings", request => request.fulfill({
+    json: { collectionIntervalSeconds: 30, discovery: "automatic", editable: false },
+  }));
+  await page.goto(route);
+  const list = page.locator(info.project.name === "mobile" ? ".administration-service-list" : ".administration-table");
+  for (const [status, tone, color] of tones) {
+    const badge = list.locator(".monitoring-badge--" + status);
+    await expect(badge).toHaveAttribute("data-impact-tone", tone);
+    await expect(badge).toHaveAttribute("aria-label", /^Status: .+/);
+    await expect(badge).toHaveCSS("background-color", color);
   }
 });
 
