@@ -1,5 +1,6 @@
 import type { ServiceStatus } from "../types";
 import { serviceStatusLabels } from "../types";
+import { impactTone } from "../domain/impactStatus";
 
 export interface StatusBadgeProps {
   status: ServiceStatus;
@@ -20,6 +21,7 @@ export function StatusBadge({
     <span
       className={`monitoring-badge monitoring-badge--${status} ${className}`.trim()}
       role="status"
+      data-impact-tone={impactTone(status)}
       aria-label={`Status: ${label}`}
     >
       {showDot && (
