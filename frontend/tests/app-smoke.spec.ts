@@ -95,11 +95,18 @@ test("map expansion stays disabled when WebGL is unavailable", async ({ page }, 
 
 test("evolution restarts replay from the end and describes an empty set accurately", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  const reading = sample();
+  const collectedAt = "2026-11-20T12:00:00.000Z";
+  await page.clock.setFixedTime(new Date(collectedAt));
+  const reading = { ...sample(), collectedAt };
   const earlier = { ...reading, collectedAt: new Date(Date.parse(reading.collectedAt) - 90_000).toISOString() };
-  await mockMonitoring(page, snapshot({ history: [earlier, reading] }));
+  const catalog = { ...snapshot({ services: [service({ lastCollectionAt: collectedAt })] }),
+    historyUntil: collectedAt, discoveryUpdatedAt: collectedAt };
+  await mockMonitoring(page, { ...catalog, history: [earlier, reading] });
   await page.goto("/dashboard?aba=evolucao");
-  const timeline = page.getByRole("slider", { name: /^Explorar intervalos/ });
+  const observatory = page.getByRole("region", { name: "Observatório temporal" });
+  // The route can still be loading after navigation, even when the mock has responded.
+  await expect(observatory).toBeVisible({ timeout: 15_000 });
+  const timeline = observatory.getByRole("slider", { name: /^Explorar intervalos/ });
   await expect(timeline).toBeEnabled();
   await timeline.press("Home");
   await expect(page).toHaveURL(url => url.searchParams.has("cursor"));
@@ -109,8 +116,9 @@ test("evolution restarts replay from the end and describes an empty set accurate
   await page.getByRole("button", { name: "Reproduzir histórico" }).click();
   await expect(timeline).toHaveValue("0");
 
-  await mockMonitoring(page, snapshot({ history: [] }));
+  await mockMonitoring(page, { ...catalog, history: [] });
   await page.reload();
+  await expect(observatory).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Nenhum registro neste período" })).toBeVisible();
   await page.getByRole("button", { name: "Sobre estimativas ambientais" }).click();
   await expect(page.getByText("Nenhuma amostra registrada neste período.")).toBeVisible();
