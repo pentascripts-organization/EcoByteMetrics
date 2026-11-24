@@ -1,218 +1,85 @@
-# Arquitetura, diagramas C4 e fluxos de dados — EcoByteMetrics
+# Arquitetura e fluxos de dados — EcoByteMetrics
 
-> Estado atual: o frontend React/Vite consulta o backend Node.js/Express, que integra o agregador de métricas e o serviço de intensidade de carbono e persiste dados no PostgreSQL usando SQL parametrizado via `pg`. Os módulos atuais incluem Auth, Users, Services, Locations, Metrics, Carbons, Monitoring, Statistics e Worker.
-
-> **Objetivo:** documentar a arquitetura proposta do EcoByteMetrics com diagramas Mermaid, incluindo contexto C4, containers C4, arquitetura lógica e fluxo de dados.
->
-> Os diagramas abaixo representam a arquitetura implementada no snapshot atual. Contratos de API e schema devem ser conferidos em `backend/src/app.ts`, nos routers e em `database/DDL.sql`.
-
-## 1. Visão geral da arquitetura
-
-O EcoByteMetrics é uma aplicação web para monitorar serviços, consultar métricas, estimar consumo energético e emissões de CO₂e e apresentar indicadores em um dashboard.
-
-As principais partes são:
-
-- **Frontend:** React + TypeScript; apresenta dashboard, serviços, energia, emissões e comparação. A camada `frontend/src/services/monitoring.ts` atualmente retorna uma estrutura vazia e indica que a chamada HTTP ainda será implementada.
-- **Backend:** Node.js + TypeScript + Express; deve expor endpoints HTTP, coordenar as coletas, consultar APIs auxiliares, aplicar regras de cálculo e acessar o PostgreSQL. No código analisado, há rotas básicas de saúde e teste, mas o fluxo de coleta ainda não está implementado.
-- **Banco de dados:** PostgreSQL; persiste serviços, localizações, métricas e informações de intensidade de carbono conforme o SQL fornecido. O nome do script SQL varia entre os ZIPs recebidos (`database/DDL.sql` e `database/schema.sql`); confirmem qual versão será mantida no repositório principal.
-- **API auxiliar de métricas:** `https://metrics.unilaunch.org`; a proposta do projeto prevê descobrir serviços e consultar métricas, incluindo os caminhos conceituais `/services` e `/metrics/{id_servico}`. Confirmar o contrato exato na documentação da API antes de implementar.
-- **API auxiliar de intensidade de carbono:** `https://carbon.unilaunch.org`; deve fornecer o fator de intensidade de carbono usado na estimativa de CO₂e. O endpoint, parâmetros e formato exatos da resposta devem ser conferidos na documentação da API.
-
-## 2. Diagrama C4 — Contexto do sistema
-
-Este diagrama mostra o EcoByteMetrics e as pessoas/sistemas externos com os quais se relaciona.
+## Contexto C4
 
 ```mermaid
 flowchart LR
-    U(["Usuário<br/>Consulta o dashboard"])
-    E["<b>EcoByteMetrics</b><br/>Sistema web para monitorar serviços,<br/>estimar energia e emissões de CO₂e"]
-    M["API de Métricas<br/>Lista serviços e fornece métricas técnicas"]
-    C["API de Intensidade de Carbono<br/>Fornece fatores de emissão por região"]
-
-    U -->|Acessa pelo navegador| E
-    E -->|Consulta serviços e métricas<br/>fluxo planejado| M
-    E -->|Consulta fatores de carbono<br/>fluxo planejado| C
-
-    classDef person fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px;
-    classDef system fill:#bfdbfe,stroke:#1d4ed8,color:#172554,stroke-width:2px;
-    classDef external fill:#f3f4f6,stroke:#6b7280,color:#111827,stroke-width:1.5px;
-    class U person;
-    class E system;
-    class M,C external;
+    U["Pessoa usuária"] --> E["EcoByteMetrics"]
+    E --> M["Agregador de Métricas"]
+    E --> C["Serviço de Intensidade de Carbono"]
 ```
 
-## 3. Diagrama C4 — Containers
+O EcoByteMetrics estima energia e emissões a partir de métricas operacionais e fatores regionais. As APIs auxiliares são serviços externos. O backend preserva leituras gravadas quando uma coleta posterior falha.
 
-O diagrama detalha os principais containers previstos no `compose.yaml` e os sistemas externos. A disposição foi organizada para separar a comunicação do usuário, a comunicação entre frontend e backend, o acesso ao banco e as integrações externas. As integrações marcadas como pendentes ainda precisam ser implementadas e testadas.
+## Containers C4
 
 ```mermaid
-flowchart TB
-    U(["Usuário\nPessoa que acessa pelo navegador"])
-
-    subgraph SYSTEM["EcoByteMetrics — Docker Compose"]
-        direction TB
-        FE["Frontend Web\nReact + TypeScript + Vite/Nginx\nInterface e dashboard"]
-        BE["Backend API\nNode.js + TypeScript + Express\nEndpoints HTTP e regras de negócio"]
-        DB[("Banco de dados\nPostgreSQL\nServiços, localizações, métricas e histórico")]
-        FE -->|"Solicita dados do dashboard · HTTP/JSON"| BE
-        BE -->|"Consulta e grava dados · SQL parametrizado previsto"| DB
-    end
-
-    M["API de Métricas\nDescoberta de serviços e métricas técnicas"]
-    C["API de Intensidade de Carbono\nFatores de intensidade de carbono"]
-
-    U -->|"Acessa pelo navegador · HTTP/HTTPS"| FE
-    BE -->|"Consulta serviços e métricas · integração implementada"| M
-    BE -->|"Consulta fator de carbono · integração implementada"| C
-
-    classDef person fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px;
-    classDef app fill:#bfdbfe,stroke:#1d4ed8,color:#172554,stroke-width:1.5px;
-    classDef database fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px;
-    classDef external fill:#f3f4f6,stroke:#6b7280,color:#111827,stroke-width:1.5px;
-    class U person;
-    class FE,BE app;
-    class DB database;
-    class M,C external;
-    style SYSTEM fill:#ffffff,stroke:#6b7280,stroke-width:1.5px,stroke-dasharray: 5 5,color:#111827;
+flowchart LR
+    U["Navegador"] --> F["Frontend React e TypeScript<br/>Nginx"]
+    F -->|Proxy /backend| B["Backend Express e TypeScript"]
+    B -->|SQL parametrizado| P[("PostgreSQL")]
+    B --> M["API de métricas"]
+    B --> C["API de carbono"]
 ```
 
-## 4. Arquitetura lógica do backend
+O [Compose](../compose.yaml) executa frontend, backend e PostgreSQL. O navegador acessa a API por meio do proxy. A aplicação usa SQL parametrizado no PostgreSQL, sem ORM.
 
-O backend está organizado com pontos de entrada, integração com banco, integrações externas e módulo de coletas. As responsabilidades abaixo representam o papel esperado desses componentes; arquivos vazios ou incompletos não devem ser considerados funcionalidades prontas.
+## Arquitetura lógica do backend
 
 ```mermaid
-flowchart TB
-    FE["Frontend React<br/>+ TypeScript"]
-
-    subgraph BE["Backend — Node.js + TypeScript + Express"]
-        direction TB
-        APP["app.ts<br/>Configuração do Express, CORS e JSON"]
-        ROUTES["index.ts<br/>Rotas HTTP"]
-        CTRL["coletas.controller.ts<br/>Recebe requisições e responde"]
-        SERVICE["coletas.service.ts<br/>Coordena coletas e regras de negócio"]
-        subgraph INTEGRATIONS["Integrações externas"]
-            direction TB
-            METRICS["metrics-api.ts<br/>Cliente da API de métricas"]
-            CARBON["carbon-api.ts<br/>Cliente da API de carbono"]
-        end
-        subgraph PERSISTENCE["Persistência"]
-            direction TB
-            REPO["coletas.repository.ts<br/>Consultas SQL parametrizadas"]
-            DB["db/connection.ts<br/>Pool do PostgreSQL"]
-        end
-        APP --> ROUTES --> CTRL --> SERVICE
-        SERVICE --> METRICS
-        SERVICE --> CARBON
-        SERVICE --> REPO --> DB
-    end
-
-    PG[("PostgreSQL")]
-    MAPI["API de Métricas"]
-    CAPI["API de Intensidade de Carbono"]
-
-    FE -->|"HTTP/JSON"| APP
-    DB --> PG
-    METRICS -->|"HTTPS/JSON"| MAPI
-    CARBON -->|"HTTPS/JSON"| CAPI
-
-    classDef frontend fill:#dbeafe,stroke:#2563eb,color:#111827
-    classDef backend fill:#e0f2fe,stroke:#0284c7,color:#111827
-    classDef external fill:#f3f4f6,stroke:#6b7280,color:#111827
-    class FE frontend
-    class APP,ROUTES,CTRL,SERVICE,METRICS,CARBON,REPO,DB backend
-    class PG,MAPI,CAPI external
+flowchart LR
+    App["app.ts · Express"] --> Auth["Auth · JWT e controle de acesso"]
+    App --> R["Routers, controllers e serviços"]
+    R --> Q["Repositórios de consulta"]
+    W["worker.job.ts · agendamento"] --> Col["collector.ts · coleta"]
+    Col --> Ext["Integrações HTTP externas"]
+    Q --> Pool["db/connection.ts · pool"]
+    Col --> Pool
+    Pool --> Pg[("PostgreSQL")]
 ```
 
-## 5. Fluxo de dados — coleta e persistência
+[server.ts](../backend/src/server.ts) executa as migrations antes de iniciar o servidor e o agendamento. [worker.job.ts](../backend/src/modules/Worker/worker.job.ts) evita rodadas concorrentes, e [collector.ts](../backend/src/modules/Monitoring/collector.ts) integra as fontes externas e persiste a rodada. O catálogo em memória atende as rotas de últimas leituras. As consultas analíticas usam dados persistidos.
 
-Este é o fluxo previsto para a coleta periódica. A proposta exige descoberta de serviços, tratamento de indisponibilidade e ausência de métricas, cálculo por serviço e histórico de coletas. A implementação deve confirmar o intervalo de coleta e o tratamento de falhas.
-
-```mermaid
-flowchart TB
-    START(["Início da coleta agendada"]) --> DISCOVER["Backend solicita a lista de serviços"]
-    DISCOVER --> SERVICES["API de Métricas<br/>Lista de serviços — contrato a validar"]
-    SERVICES --> ANY{"Há serviços disponíveis?"}
-    ANY -- "Não" --> END(["Coleta finalizada"])
-    ANY -- "Sim" --> METRIC["Consultar métricas do serviço<br/>/metrics/{id_servico}"]
-    METRIC --> VALID{"Resposta contém métricas válidas?"}
-
-    VALID -- "Não respondeu" --> DOWN["Registrar serviço indisponível"]
-    VALID -- "Sem métricas" --> EMPTY["Registrar ausência de métricas"]
-    VALID -- "Sim" --> CARBON["Consultar API de intensidade de carbono"]
-    CARBON --> CALC["Calcular energia estimada e CO₂e<br/>conforme docs/calculos.md"]
-    CALC --> SAVE["Salvar serviço, horário, métricas<br/>e resultados no PostgreSQL"]
-
-    DOWN --> NEXT{"Há outro serviço para processar?"}
-    EMPTY --> NEXT
-    SAVE --> NEXT
-    NEXT -- "Sim" --> METRIC
-    NEXT -- "Não" --> END
-
-    classDef startEnd fill:#123c5a,stroke:#3aa6d6,color:#ffffff,stroke-width:2px
-    classDef process fill:#102536,stroke:#3aa6d6,color:#ffffff,stroke-width:1.5px
-    classDef decision fill:#1c2e40,stroke:#3aa6d6,color:#ffffff,stroke-width:1.5px
-    class START,END startEnd
-    class DISCOVER,SERVICES,METRIC,DOWN,EMPTY,CARBON,CALC,SAVE process
-    class ANY,VALID,NEXT decision
-```
-
-## 6. Fluxo de dados — consulta do dashboard
-
-O frontend solicita ao backend os dados do período selecionado. O backend combina dados persistidos e indicadores calculados e devolve uma resposta JSON pelo contrato de monitoramento.
+## Coleta e persistência
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor U as Usuário
-    participant FE as Frontend React
-    participant BE as Backend Express
-    participant DB as PostgreSQL
-
-    U->>FE: Abre o dashboard e seleciona um período
-    FE->>BE: Solicita snapshot do monitoramento (HTTP/JSON — a implementar)
-    BE->>DB: Consulta serviços, métricas e histórico
-    DB-->>BE: Retorna registros persistidos
-    BE->>BE: Consolida indicadores do período
-    BE-->>FE: Retorna dados do dashboard em JSON (contrato a definir)
-    FE-->>U: Exibe serviços, energia, CO₂e e histórico
+    participant W as Agendador
+    participant C as Coletor
+    participant A as APIs externas
+    participant P as PostgreSQL
+    W->>C: Dispara coleta periódica
+    C->>A: Consulta catálogo, métricas e fatores regionais
+    A-->>C: Leituras e fatores disponíveis
+    C->>P: Persiste serviços, localizações, fatores, métricas e rodada
+    P-->>C: Confirma a transação
+    C-->>W: Atualiza o estado publicado da rodada
 ```
 
-## 7. Mapeamento entre componentes e dados
+A rodada registra o catálogo e as falhas de coleta em `monitoring_collections`. A leitura guarda a intensidade disponível naquele momento. Leituras sem fator têm cobertura de emissões incompleta. O [DDL](../database/DDL.sql) estrutura a instalação nova, e as [migrations](../database/migrations/) adaptam bancos anteriores antes do uso.
 
-| Componente | Responsabilidade prevista | Dados que entram/saem |
-|---|---|---|
-| Frontend React | Filtros, páginas e apresentação dos indicadores | Recebe JSON do backend; não deve consultar diretamente o PostgreSQL |
-| Backend Express | API HTTP, coordenação das consultas e regras de negócio | Recebe requisições do frontend; consulta APIs auxiliares e banco |
-| API de Métricas | Descoberta de serviços e entrega de métricas técnicas | Lista de serviços e dados de métricas; contrato exato a validar |
-| API de Intensidade de Carbono | Fornecer o fator de carbono aplicável | Fator de intensidade e demais campos definidos pela documentação externa |
-| PostgreSQL | Armazenar histórico e dados usados nas análises | Serviços, localizações, métricas e registros relacionados a carbono |
-| Módulo `coletas` | Coordenar coletas e persistência | Deve conectar controller, service, integrações e repository; implementação incompleta no ZIP analisado |
+## Consulta do dashboard e sessão
 
-## 8. Situação verificada no código enviado
+```mermaid
+sequenceDiagram
+    participant U as Navegador
+    participant B as Backend
+    participant P as PostgreSQL
+    U->>B: POST /auth/login
+    B->>P: Consulta a conta
+    B-->>U: JWT e cookie HttpOnly
+    U->>B: GET /api/monitoring com view e período
+    opt Histórico detalhado
+        B->>B: Valida o JWT por Bearer ou cookie
+    end
+    B->>P: Consulta catálogo e histórico persistido
+    B-->>U: Snapshot com serviços, leituras e cobertura
+```
 
-| Item | Situação observada |
-|---|---|
-| Frontend React + TypeScript | Existe e contém páginas para dashboard, serviços, energia, emissões e comparação |
-| Adaptador do frontend para monitoramento | Consulta o contrato de monitoramento e normaliza o snapshot recebido |
-| Backend Express | Existe; inclui CORS, JSON, rota `/health` e rotas básicas |
-| Endpoint do backend para dashboard/coletas | Não foi identificado como implementado no snapshot analisado |
-| Integração com API de métricas | Arquivo `backend/src/integrations/metrics-api.ts` está vazio |
-| Integração com API de carbono | Arquivo `backend/src/integrations/carbon-api.ts` está vazio |
-| Módulo `coletas` | Arquivos de rota/controller/service/repository estão vazios no ZIP `develop` analisado |
-| PostgreSQL e Docker Compose | Configurados no `compose.yaml` |
-| SQL do banco | Há diferenças entre os ZIPs enviados; conferir o script que será a fonte oficial |
-| Autenticação JWT | Citada nas diretrizes do projeto, mas não comprovada como implementada no código analisado |
+A Visão geral usa `view=latest`. Evolução e Comparar usam `view=analysis`. O histórico detalhado exige autenticação. O adaptador [monitoring.ts](../frontend/src/features/monitoring/api/monitoring.ts) valida e normaliza o snapshot. A Administração consulta as configurações da coleta em modo somente leitura e usa as rotas de conta autenticadas. As permissões e os parâmetros estão na [documentação da API](api.md).
 
-## 9. Documentação de referência
+## Referências
 
 - [README principal](../README.md)
-- [Documentação da API de métricas](https://metrics.unilaunch.org/docs)
-- [Documentação da API de intensidade de carbono](https://carbon.unilaunch.org/docs#/Operacao/getCarbonIntensityHealth)
-
-### Pendências para validar com a equipe
-
-1. Confirmar qual ZIP/branch representa a versão oficial a ser entregue.
-2. Validar os endpoints, parâmetros e formatos reais das duas APIs auxiliares.
-3. Definir o contrato dos endpoints do backend consumidos pelo frontend.
-4. Implementar a coleta, persistência, tratamento de falhas e cálculos antes de marcar os fluxos planejados como concluídos.
-5. Conferir o nome e o conteúdo oficial do script SQL do banco.
+- [API de Métricas](https://metrics.unilaunch.org/docs)
+- [API de Intensidade de Carbono](https://carbon.unilaunch.org/docs)
