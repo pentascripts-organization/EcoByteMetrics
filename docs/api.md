@@ -14,7 +14,7 @@ Os caminhos abaixo são do Express. No Docker, a interface usa o proxy Nginx e a
 | `PUT /api/users/:id_user` | Mesmo acesso da consulta. Envie nome, e-mail e nova senha. | `200` com a conta atualizada. |
 | `DELETE /api/users/:id_user` | Mesmo acesso da consulta. | `200` após excluir a conta. |
 
-O cadastro cria uma conta `USER`. Cadastro e edição rejeitam campos de perfil. O nome deve ter até 50 caracteres, o e-mail até 254, e a senha entre oito caracteres e 72 bytes. O middleware retorna `401` para JWT ausente ou inválido e `403` quando o perfil ou a conta não permite a operação. As rotas de conta podem retornar `400` por entrada inválida, `404` quando não encontram a conta e `409` por e-mail em uso. O cookie é HttpOnly. `/auth/session` consulta o cookie mesmo quando o cliente envia um cabeçalho Bearer. Consulte os [controllers de Auth](../backend/src/modules/Auth/auth.controller.ts) e [Users](../backend/src/modules/Users/user.controller.ts).
+As respostas de conta incluem `id_user`, `name_user` e `email_user`. O cadastro cria uma conta `USER`. Cadastro e edição rejeitam campos de perfil. O nome deve ter até 50 caracteres, o e-mail até 254, e a senha entre oito caracteres e 72 bytes. O middleware retorna `401` para JWT ausente ou inválido e `403` quando o perfil ou a conta não permite a operação. As rotas de conta podem retornar `400` por entrada inválida, `404` quando não encontram a conta e `409` por e-mail em uso. O cookie é HttpOnly. `/auth/session` consulta o cookie mesmo quando o cliente envia um cabeçalho Bearer. Consulte os [controllers de Auth](../backend/src/modules/Auth/auth.controller.ts) e [Users](../backend/src/modules/Users/user.controller.ts).
 
 ## Monitoramento da interface
 
@@ -46,7 +46,7 @@ Trecho ilustrativo de uma resposta sem leituras — os demais metadados também 
 }
 ```
 
-Cada leitura histórica traz `serviceId`, `collectedAt`, `firstCollectedAt`, `energyKwh`, `emissionsG`, contagens de amostras e duração. A energia é expressa em kWh e as emissões em gramas de CO₂e. `null` indica indisponibilidade, e zero é um valor válido. Aplicações sem coordenadas permanecem nas listas, sem marcador no mapa. A resposta também pode trazer observações, eventos de coleta e avisos de cobertura. A API responde com `400` quando a consulta é inválida, `413` ao exceder o limite de histórico e `503` se a consulta ao banco falhar. [Router](../backend/src/modules/Monitoring/monitoring.router.ts) · [Repositório](../backend/src/modules/Monitoring/monitoring.repository.ts)
+O catálogo `services` traz o ID externo, nome, localização, estado e métricas da última leitura disponível. `regions` inclui os fatores regionais e o percentual renovável. Cada leitura histórica traz `serviceId`, `collectedAt`, `firstCollectedAt`, `energyKwh`, `emissionsG`, `sampleCount`, `emissionCount` e `intervalSeconds`. O campo `resources` contém médias de CPU (%), memória, disco e rede (GB), com duração em segundos, ou `null` quando indisponível. A energia é expressa em kWh e as emissões em gramas de CO₂e. `null` indica indisponibilidade, e zero é um valor válido. Aplicações sem coordenadas permanecem nas listas, sem marcador no mapa. A resposta também pode trazer observações, eventos de coleta e avisos de cobertura. A API responde com `400` quando a consulta é inválida, `413` ao exceder o limite de histórico e `503` se a consulta ao banco falhar. [Router](../backend/src/modules/Monitoring/monitoring.router.ts) · [Repositório](../backend/src/modules/Monitoring/monitoring.repository.ts)
 
 ### `GET /api/monitoring-settings`
 
@@ -88,8 +88,8 @@ Estas rotas são públicas. O dashboard atual usa o snapshot de `/api/monitoring
 
 | Método e rota | Consulta e resposta |
 |---|---|
-| `GET /api/dashboard/summary` | Resumo do catálogo e das últimas leituras. |
-| `GET /api/dashboard/ranking` | `periodo=1h\|24h\|7d`, padrão `24h`, e `ordenarPor=kwh\|co2e`, padrão `co2e`. Parâmetro inválido retorna `400`. |
+| `GET /api/dashboard/summary` | Resumo em memória com `totalServicos`, `servicosAtivos`, `servicosIndisponiveis`, `servicosSemMetricas`, `consumoTotalKwh`, `emissaoTotalCo2e` e `dataHoraUltimaAtualizacao`. |
+| `GET /api/dashboard/ranking` | `periodo=1h\|24h\|7d`, padrão `24h`, e `ordenarPor=kwh\|co2e`, padrão `co2e`. Retorna `{ periodo, ordenadoPor, ranking }`. Parâmetro inválido retorna `400`. |
 | `GET /api/statistics/summary` | Resumo de estatísticas persistidas. |
 | `GET /api/statistics/ranking` | `periodo=1h\|24h\|7d\|30d` e `ordenarPor=kwh\|co2e`, com padrões `24h` e `co2e`. Valores inválidos retornam `400`. |
 | `GET /api/statistics/energy` | Estatísticas de energia. Retorna `404` se não houver cálculos. |
