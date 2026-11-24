@@ -1,6 +1,7 @@
 import {
     CarbonRegionFactor,
     fetchCarbonRegions,
+    getCarbonIntensity,
     setCarbonRegionFactors,
 } from "../../integrations/carbon-api.js";
 import type { Metric as ApiMetric, ServiceMetrics as DiscoveredService } from "../../integrations/api.types.js";
@@ -133,6 +134,7 @@ export interface CollectedServiceMetrics {
     serviceId: string;
     metrics: ServiceMetrics;
     updatedAt: string;
+    carbonIntensity: number | null;
 }
 
 export interface CollectionFailure {
@@ -164,19 +166,34 @@ export function recordDiscoveredServices(services: DiscoveredService[], at = new
 }
 
 /** Publishes only samples that have already been persisted successfully. */
-export function recordCollectedServiceMetrics(serviceId: string, sample: ApiMetric, at = new Date().toISOString()): void {
-    const collected = {
+export function recordCollectedServiceMetrics(
+    serviceId: string,
+    sample: ApiMetric,
+    at = new Date().toISOString(),
+    carbonIntensity: number | null = null,
+): void {
+    const collected: CollectedServiceMetrics = {
         serviceId,
         metrics: {
             collection_interval_seconds: sample.collection_interval_seconds,
             metrics: { ...sample.metrics },
         },
         updatedAt: at,
+        carbonIntensity:
+            carbonIntensity !== null &&
+            Number.isFinite(carbonIntensity) &&
+            carbonIntensity >= 0
+                ? carbonIntensity
+                : null,
     };
+
     collectedMetrics.set(serviceId, collected);
     collectionFailures.delete(serviceId);
+
     const history = collectedMetricsHistory.get(serviceId) ?? [];
+
     history.push(collected);
+
     collectedMetricsHistory.set(serviceId, history);
 }
 
@@ -217,22 +234,58 @@ export function publishCollection(
     metrics: Map<string, ServiceMetrics>,
     at: string,
     errors: Record<string, string> = {},
-) {
+    carbonFactors: CarbonRegionFactor[] = [],
+): void {
     recordDiscoveredServices(catalog, at);
-    for (const [serviceId, sample] of metrics) recordCollectedServiceMetrics(serviceId, sample, at);
+
+    const servicesById = new Map(
+        catalog.map(service => [service.id, service]),
+    );
+
+    const factorsByRegion = new Map(
+        carbonFactors.map(factor => [
+            factor.code,
+            factor.carbonIntensity,
+        ]),
+    );
+
+    for (const [serviceId, sample] of metrics) {
+        const service = servicesById.get(serviceId);
+
+        const carbonIntensity = service
+            ? factorsByRegion.get(service.location.region_code) ?? null
+            : null;
+
+        recordCollectedServiceMetrics(
+            serviceId,
+            sample,
+            at,
+            carbonIntensity,
+        );
+    }
+
     const ids = new Set(catalog.map(service => service.id));
+
     for (const id of collectedMetrics.keys()) {
         if (!ids.has(id)) {
             collectedMetrics.delete(id);
             collectionFailures.delete(id);
         }
     }
+
     for (const id of collectionFailures.keys()) {
-        if (!ids.has(id)) collectionFailures.delete(id);
+        if (!ids.has(id)) {
+            collectionFailures.delete(id);
+        }
     }
+
     for (const [serviceId, code] of Object.entries(errors)) {
-        collectionFailures.set(serviceId, failureFromCode(code));
+        collectionFailures.set(
+            serviceId,
+            failureFromCode(code),
+        );
     }
+
     pruneMetricsHistory();
 }
 
@@ -290,7 +343,12 @@ export async function refreshServiceMetrics(): Promise<void> {
             continue;
         }
 
-        recordCollectedServiceMetrics(service.id, metrics);
+        recordCollectedServiceMetrics(
+            service.id,
+            metrics,
+            new Date().toISOString(),
+            getCarbonIntensity(service.location.region_code) ?? null,
+        );
     }
     pruneMetricsHistory();
 }

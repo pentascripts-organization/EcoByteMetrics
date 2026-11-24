@@ -1,348 +1,99 @@
-# Especificação da API REST — EcoByteMetrics (GreenER)
+# API REST do EcoByteMetrics
 
-Esta documentação especifica os contratos técnicos de todas as rotas HTTP expostas pelo backend Node.js com TypeScript `( RP02 )`, incluindo URLs, métodos HTTP, parâmetros de requisição, headers de autenticação JWT `( RP06 )`, códigos de retorno HTTP e estruturas completas de payloads JSON `( RNF05 )`.
+Os caminhos abaixo são do Express. No Docker, a interface usa o proxy Nginx e acrescenta o prefixo `/backend`. As rotas são definidas em [app.ts](../backend/src/app.ts) e nos [módulos](../backend/src/modules/).
 
----
+## Autenticação e contas
 
-## 📌 Informações Gerais
-* **URL Base da API:** `http://localhost:3000/api`
-* **Formato do Payload:** `application/json`
-* **Autenticação:** Bearer Token JWT para rotas administrativas/configuração `( RP06 )`.
+| Método e rota | Entrada e acesso | Resposta |
+|---|---|---|
+| `POST /auth/login` | JSON com `email` e `password`. | `200` com `token`, `tokenType` e cookie de sessão. `400` para entrada inválida, `401` para credenciais inválidas. |
+| `GET /auth/session` | Cookie `ecobyte_session`. | `200` com `token` e `tokenType`, `401` quando a sessão não é válida, `503` se a conta não pôde ser consultada. |
+| `POST /auth/logout` | Limpa o cookie da sessão. | `200` com `loggedOut: true`. |
+| `POST /api/users` | Público. JSON com `name_user`, `email_user` e `password_user`. | `201` com a conta criada. |
+| `GET /api/users/:id_user` | Bearer JWT. A própria conta ou perfil `ADMIN`. | `200` com os dados da conta. |
+| `PUT /api/users/:id_user` | Mesmo acesso da consulta. Envie nome, e-mail e nova senha. | `200` com a conta atualizada. |
+| `DELETE /api/users/:id_user` | Mesmo acesso da consulta. | `200` após excluir a conta. |
 
----
+As respostas de conta incluem `id_user`, `name_user` e `email_user`. O cadastro cria uma conta `USER`. Cadastro e edição rejeitam campos de perfil. O nome deve ter até 50 caracteres, o e-mail até 254, e a senha entre oito caracteres e 72 bytes. O middleware retorna `401` para JWT ausente ou inválido e `403` quando o perfil ou a conta não permite a operação. As rotas de conta podem retornar `400` por entrada inválida, `404` quando não encontram a conta e `409` por e-mail em uso. O cookie é HttpOnly. `/auth/session` consulta o cookie mesmo quando o cliente envia um cabeçalho Bearer. Consulte os [controllers de Auth](../backend/src/modules/Auth/auth.controller.ts) e [Users](../backend/src/modules/Users/user.controller.ts).
 
-## 🔑 1. Autenticação & Acesso `( RP06 )`
+## Monitoramento da interface
 
-### `POST /auth/login`
-Autentica um usuário `ADMIN` ou `USER` e gera um JWT com o perfil no claim `role`. O token é utilizado nas rotas protegidas; as rotas de escrita administrativa exigem perfil `ADMIN`.
+### `GET /api/monitoring`
 
-* **Método:** `POST`
-* **URL:** `/auth/login`
-* **Headers:**
-  ```http
-  Content-Type: application/json
-  ```
-* **Corpo da Requisição (Body):**
-  ```json
-  {
-    "email": "admin@exemplo.com",
-    "password": "<senha definida no provisionamento>"
-  }
-  ```
-* **Códigos de Resposta:**
-  * **`200 OK` — Autenticação realizada com sucesso:**
-    ```json
-    {
-      "token": "<JWT>",
-      "tokenType": "Bearer",
-      "expiresIn": "1h"
-    }
-    ```
-  * **`400 Bad Request` — Campos obrigatórios ausentes:**
-    ```json
-    {
-      "message": "Informe o e-mail e a senha."
-    }
-    ```
-  * **`401 Unauthorized` — Credenciais incorretas:**
-    ```json
-    {
-      "message": "E-mail ou senha inválidos."
-    }
-    ```
+| Parâmetro | Valores |
+|---|---|
+| `view` | `latest` para o catálogo e as leituras recentes, público. `analysis` para as consultas públicas de Evolução e Comparar. `history` ou ausência do parâmetro para histórico detalhado, com Bearer JWT ou cookie de sessão. |
+| `period` | `24h` ou `7d`. Padrão `7d`. |
+| `until` | Instante ISO 8601 com fuso e segundos, até o momento atual. Sem o parâmetro, consulta até agora. |
+| `service` | Identificador externo. Pode ser repetido até 100 vezes, com até 255 caracteres por identificador. Valores duplicados são reunidos. |
 
-O login também define o cookie de sessão `ecobyte_session` como `HttpOnly` e `SameSite=Strict`. O JWT contém `sub`, `email` e `role` (`ADMIN` ou `USER`). Para chamadas com Bearer, envie `Authorization: Bearer <token>`. O endpoint é montado em `/auth`, sem o prefixo `/api`.
+Exemplo público · `GET /api/monitoring?view=analysis&period=24h&service=checkout-worker`.
 
----
+Trecho ilustrativo de uma resposta sem leituras — os demais metadados também fazem parte da resposta.
 
-## 🔍 2. Descoberta & Serviços `( RF01, RF02, RF05, RF06, RF12, RF13 )`
-
-### `GET /services`
-Retorna a lista de todos os microsserviços descobertos via integração com o Agregador de Métricas, indicando status atual, localização geográfica e atualização dinâmicas `( RF01, RF02, RF05, RF06, RF12, RF13 )`.
-
-* **Método:** `GET`
-* **URL:** `/api/services`
-* **Parâmetros de Query (Opcionais):**
-  * `status` (string): Filtra por estado do serviço (`ACTIVE`, `UNAVAILABLE`, `NO_METRICS`).
-* **Códigos de Resposta:**
-  * **`200 OK` — Requisição bem-sucedida:**
-    ```json
-    {
-      "total": 3,
-      "servicos": [
-        {
-          "id": "payment-service",
-          "nome": "Serviço de Pagamentos",
-          "status": "ACTIVE",
-          "localizacao": {
-            "pais": "Brasil",
-            "regiao": "sp-saopaulo",
-            "cidade": "São Paulo",
-            "latitude": -23.550520,
-            "longitude": -46.633308
-          },
-          "ultimaAtualizacao": "2026-10-13T11:00:00Z"
-        },
-        {
-          "id": "auth-service",
-          "nome": "Serviço de Autenticação",
-          "status": "NO_METRICS",
-          "localizacao": {
-            "pais": "Estados Unidos",
-            "regiao": "us-east-1",
-            "cidade": "N. Virginia",
-            "latitude": 38.0339,
-            "longitude": -78.5079
-          },
-          "ultimaAtualizacao": "2026-10-13T10:58:00Z"
-        },
-        {
-          "id": "shipping-service",
-          "nome": "Serviço de Logística",
-          "status": "UNAVAILABLE",
-          "localizacao": {
-            "pais": "Alemanha",
-            "regiao": "eu-central-1",
-            "cidade": "Frankfurt",
-            "latitude": 50.1109,
-            "longitude": 8.6821
-          },
-          "ultimaAtualizacao": "2026-10-13T10:50:00Z"
-        }
-      ]
-    }
-    ```
-  * **`500 Internal Server Error` — Falha interna ao listar serviços:**
-    ```json
-    {
-      "error": "Erro ao recuperar a lista de serviços do banco de dados."
-    }
-    ```
-
----
-
-### `GET /services/:id`
-Obtém o detalhamento de um serviço específico, incluindo seus dados geográficos e leitura mais recente de métricas e indicadores ambientais `( RF07, RF12 )`.
-
-* **Método:** `GET`
-* **URL:** `/api/services/:id`
-* **Parâmetros de Path:**
-  * `id` (string): Identificador único do serviço (ex: `payment-service`).
-* **Códigos de Resposta:**
-  * **`200 OK` — Serviço localizado:**
-    ```json
-    {
-      "id": "payment-service",
-      "nome": "Serviço de Pagamentos",
-      "status": "ACTIVE",
-      "localizacao": {
-        "pais": "Brasil",
-        "regiao": "sp-saopaulo",
-        "cidade": "São Paulo",
-        "latitude": -23.550520,
-        "longitude": -46.633308
-      },
-      "metricasAtuais": {
-        "cpuUsage": 45.2,
-        "memoryUsage": 512.0,
-        "consumoKwh": 0.1240,
-        "emissaoCo2eG": 12850.0000
-      },
-      "ultimaLeitura": "2026-10-13T11:00:00Z"
-    }
-    ```
-  * **`404 Not Found` — Serviço não cadastrado ou não encontrado:**
-    ```json
-    {
-      "error": "O serviço informado não foi localizado."
-    }
-    ```
-
----
-
-## 📊 3. Métricas, Histórico & Indicadores `( RF03, RF07, RF08, RF09, RF10 )`
-
-### `GET /services/:id/metrics`
-Consulta a série temporal histórica das coletas de hardware e cálculos de consumo energético (kWh) e carbono (gCO₂e) de um determinado serviço `( RF03, RF07, RF10 )`.
-
-* **Método:** `GET`
-* **URL:** `/api/services/:id/metrics`
-* **Parâmetros de Path:**
-  * `id` (string): Identificador do serviço.
-* **Parâmetros de Query (Opcionais):**
-  * `inicio` (string ISO): Data/hora de início do filtro (ex: `2026-10-13T00:00:00Z`).
-  * `fim` (string ISO): Data/hora de fim do filtro.
-* **Códigos de Resposta:**
-  * **`200 OK` — Histórico recuperado com sucesso:**
-    ```json
-    {
-      "id_servico": "payment-service",
-      "totalRegistros": 2,
-      "historico": [
-        {
-          "dataHoraColeta": "2026-10-13T10:30:00Z",
-          "cpuUsage": 40.0,
-          "memoryUsage": 500.0,
-          "consumoKwh": 0.1100,
-          "emissaoCo2eG": 11400.0000
-        },
-        {
-          "dataHoraColeta": "2026-10-13T11:00:00Z",
-          "cpuUsage": 45.2,
-          "memoryUsage": 512.0,
-          "consumoKwh": 0.1240,
-          "emissaoCo2eG": 12850.0000
-        }
-      ]
-    }
-    ```
-
----
-
-### `GET /dashboard/summary`
-Retorna a consolidação agregada dos indicadores operacionais e ambientais do ambiente monitorado `( RF08, RF09 )`.
-
-> **Validação do dashboard (Issue #101):** o backend expõe `GET /api/dashboard/summary` e `GET /api/dashboard/ranking`; o frontend consome essas rotas para os indicadores globais e o ranking por período. Os contratos têm testes em `backend/tests/dashboard.contract.test.ts` e `backend/tests/dashboard.routes.test.ts`.
-> O ranking da API mantém até 7 dias de amostras coletadas desde a inicialização do processo. Serviços são considerados ativos quando possuem métrica válida coletada nos últimos 90 segundos; resultados sem atualização recente são indisponíveis. O resumo é global e não varia com os filtros regionais/de data do dashboard.
->
-> **Evidências:** os testes de contrato cobrem payloads, timestamps, estados, cálculos, ordenação, períodos, parâmetros inválidos (400), ausência de fatores regionais e ranking vazio (200). `backend/tests/resilience.test.ts` verifica timeout, HTTP 5xx, ausência de métricas (404), isolamento entre serviços e recuperação. Frontend validado com `npm run typecheck`, lint dos componentes alterados e `npm run build`.
->
-> **Resiliência (Issue #102):** timeout/HTTP 5xx da consulta de métricas retorna `503 metrics_unavailable`; HTTP 404 do agregador retorna `404 metrics_missing`. O último cache válido é preservado internamente, mas não mascara o estado de falha; após coleta bem-sucedida, o erro é removido e a rota volta a `200`. Falha de um serviço não interrompe a consulta aos seguintes. A falha ao atualizar fatores de carbono preserva os últimos fatores válidos e não derruba o backend. Na tabela do dashboard, indisponibilidade e ausência de métricas são rótulos separados com mensagens operacionais.
-
-* **Método:** `GET`
-* **URL:** `/api/dashboard/summary`
-* **Códigos de Resposta:**
-  * **`200 OK` — Indicadores calculados com sucesso:**
-    ```json
-    {
-      "totalServicos": 12,
-      "servicosAtivos": 10,
-      "servicosIndisponiveis": 1,
-      "servicosSemMetricas": 1,
-      "consumoTotalKwh": 145.2800,
-      "emissaoTotalCo2eG": 1420500.0000,
-      "dataHoraUltimaAtualizacao": "2026-10-13T11:00:00Z"
-    }
-    ```
-  * `emissaoTotalCo2e` é `null` quando não há fator regional para todos os serviços ativos; o backend não estima emissões com fator ausente. `consumoTotalKwh` soma as amostras válidas dos serviços ativos. `dataHoraUltimaAtualizacao` pode ser `null` antes da primeira coleta.
-
----
-
-## 🏆 4. Ranking & Comparador `( RF14, RF15 )`
-
-### `GET /dashboard/ranking`
-Obtém a lista ordenada de serviços por maior consumo energético ou emissão de CO₂e (g) no período especificado `( RF14 )`.
-
-* **Método:** `GET`
-* **URL:** `/api/dashboard/ranking`
-* **Parâmetros de Query:**
-  * `ordenarPor` (string): Atributo de ordenação (`kwh` ou `co2e`, padrão: `co2e`).
-  * `periodo` (string): Intervalo considerado (`1h`, `24h`, `7d`, padrão: `24h`).
-* **Códigos de Resposta:**
-  * **`200 OK` — Ranking gerado com sucesso:**
-    ```json
-    {
-      "periodo": "24h",
-      "ordenadoPor": "co2e",
-      "ranking": [
-        {
-          "posicao": 1,
-          "id_servico": "data-processing-service",
-          "nome": "Serviço de Processamento de Dados",
-          "consumoKwh": 45.1200,
-          "emissaoCo2eG": 480200.0000
-        },
-        {
-          "posicao": 2,
-          "id_servico": "payment-service",
-          "nome": "Serviço de Pagamentos",
-          "consumoKwh": 12.8000,
-          "emissaoCo2eG": 132500.0000
-        }
-      ]
-    }
-    ```
-    Uma lista sem amostras válidas para o período ou critério é retornada como `"ranking": []`.
-    No ranking por kWh, `emissaoCo2e` pode ser `null` se faltar fator regional; no ranking por CO₂e, serviços sem emissão completa são omitidos.
-  * **`400 Bad Request` — Parâmetro `ordenarPor` ou `periodo` inválido:**
-    ```json
-    {
-      "error": "O parâmetro periodo deve ser '1h', '24h' ou '7d'."
-    }
-    ```
-
----
-
-### `GET /dashboard/compare`
-Permite a comparação direta de métricas de uso e indicadores ambientais entre dois ou mais serviços no mesmo intervalo temporal `( RF15 )`.
-
-* **Método:** `GET`
-* **URL:** `/api/dashboard/compare`
-* **Parâmetros de Query (Obrigatórios):**
-  * `ids` (string): IDs dos serviços separados por vírgula (ex: `payment-service,auth-service`).
-  * `periodo` (string): Intervalo de comparação (`1h`, `24h`, `7d`).
-* **Códigos de Resposta:**
-  * **`200 OK` — Dados comparativos consolidados:**
-    ```json
-    {
-      "periodo": "24h",
-      "comparacao": [
-        {
-          "id_servico": "payment-service",
-          "consumoKwh": 12.8000,
-          "emissaoCo2eG": 132500.0000,
-          "mediaCpu": 48.5,
-          "status": "ACTIVE"
-        },
-        {
-          "id_servico": "auth-service",
-          "consumoKwh": 2.1000,
-          "emissaoCo2eG": 21800.0000,
-          "mediaCpu": 12.2,
-          "status": "NO_METRICS"
-        }
-      ]
-    }
-    ```
-  * **`400 Bad Request` — Parâmetro `ids` ausente ou inválido:**
-    ```json
-    {
-      "error": "É necessário informar ao menos dois IDs de serviços válidos para comparação."
-    }
-    ```
-
----
-
-## ⚙️ 5. Configuração Administrativa `( RP02, RP06 )`
-
-### `POST /admin/config/polling`
-Atualiza a frequência e os parâmetros do serviço background de polling de métricas `( RP02, RP06 )`.
-
-* **Método:** `POST`
-* **URL:** `/api/admin/config/polling`
-* **Headers:**
-  ```http
-  Authorization: Bearer <TOKEN_JWT>
-  Content-Type: application/json
-  ```
-* **Corpo da Requisição (Body):**
-  ```json
-  {
-    "intervaloSegundos": 30
-  }
-  ```
-* **Códigos de Resposta:**
-  * **`200 OK` — Configuração alterada:**
-    ```json
-    {
-      "message": "Intervalo de amostragem atualizado para 30 segundos.",
-      "novoIntervalo": 30
-    }
-    ```
-  * **`401 Unauthorized` — Token ausente, expirado ou inválido:**
-    ```json
-    {
-      "error": "Acesso não autorizado. Token JWT ausente ou expirado."
-    }
-    ```
+```json
+{
+  "source": "database",
+  "services": [],
+  "regions": [],
+  "history": [],
+  "historyIncluded": true,
+  "historyPeriod": "24h",
+  "historyUntil": "2026-11-20T15:00:00.000Z",
+  "selectedAt": null,
+  "totalEnergyKwh": null,
+  "totalEmissionsG": null
+}
 ```
+
+O catálogo `services` traz o ID externo, nome, localização, estado e métricas da última leitura disponível. `regions` inclui os fatores regionais e o percentual renovável. Cada leitura histórica traz `serviceId`, `collectedAt`, `firstCollectedAt`, `energyKwh`, `emissionsG`, `sampleCount`, `emissionCount` e `intervalSeconds`. O campo `resources` contém médias de CPU (%), memória, disco e rede (GB), com duração em segundos, ou `null` quando indisponível. A energia é expressa em kWh e as emissões em gramas de CO₂e. `null` indica indisponibilidade, e zero é um valor válido. Aplicações sem coordenadas permanecem nas listas, sem marcador no mapa. A resposta também pode trazer observações, eventos de coleta e avisos de cobertura. A API responde com `400` quando a consulta é inválida, `413` ao exceder o limite de histórico e `503` se a consulta ao banco falhar. [Router](../backend/src/modules/Monitoring/monitoring.router.ts) · [Repositório](../backend/src/modules/Monitoring/monitoring.repository.ts)
+
+### `GET /api/monitoring-settings`
+
+Exige Bearer JWT e retorna a configuração da coleta em modo somente leitura. O intervalo vem da configuração do coletor.
+
+```json
+{
+  "collectionIntervalSeconds": 30,
+  "discovery": "automatic",
+  "editable": false
+}
+```
+
+## Diagnóstico e últimas leituras em memória
+
+| Método e rota pública | Resposta |
+|---|---|
+| `GET /health` | `200` com `{"status":"ok"}`. |
+| `GET /services` | `{ services, lastUpdatedAt }` com o catálogo descoberto e as coordenadas, quando informadas. |
+| `GET /metrics` | `{ metrics }` com leituras recentes mantidas pelo coletor. |
+| `GET /metrics/:serviceId` | Leitura recente por identificador externo. `404` com `metrics_missing` ou `503` com `metrics_unavailable`. |
+
+## Recursos persistidos
+
+Os GETs abaixo são públicos. As consultas individuais usam o identificador numérico do banco. Os POSTs exigem Bearer JWT com perfil `ADMIN`, recebem JSON e retornam `201` quando criam o registro. Os controllers de recursos usam `erro` para erros de domínio.
+
+| Recurso | Consultas GET | Criação POST e entrada |
+|---|---|---|
+| Serviços | `/api/services/all`, `/api/services/loc/:id_location`, `/api/services/:id_service` | `/api/services` · `name_service`, `id_location`, `path_metric`, `active_service` e `metric` quando a criação inclui leitura. |
+| Métricas | `/api/metrics/list/:id_service`, `/api/metrics/:id_metric` | `/api/metrics` · `id_service`, `date_houry`, `cpu_metric` (%), `ram_metric`, `hd_metric`, `network_metric` (GB) e `colletion_interval_metric` (s). |
+| Intensidade de carbono | `/api/carbons/all`, `/api/carbons/loc/:id_location`, `/api/carbons/:id_carbon` | `/api/carbons` · `id_location`, `date_houry`, `intesity_co2e_kwh_carbon` (g CO₂e/kWh) e `renewable_percent_carbon` (%). |
+| Localizações | `/api/locations/all`, `/api/locations/:id_location` | `/api/locations` · `name_location`, `country_location`, `region_location`, `city_location`, `latitude_location` e `longitude_location`. O repositório também suporta criação relacionada via `service` e `carbon`. |
+
+Os nomes e tipos dos campos persistidos estão no [DDL](../database/DDL.sql). Os controllers devolvem registros ou listas conforme a operação. Consulte [Services](../backend/src/modules/Services/), [Metrics](../backend/src/modules/Metrics/), [Carbons](../backend/src/modules/Carbons/) e [Locations](../backend/src/modules/Locations/) para as validações de entrada.
+
+## Indicadores e comparação SQL
+
+Estas rotas são públicas. O dashboard atual usa o snapshot de `/api/monitoring` para suas abas e cálculos de apresentação.
+
+| Método e rota | Consulta e resposta |
+|---|---|
+| `GET /api/dashboard/summary` | Resumo em memória com `totalServicos`, `servicosAtivos`, `servicosIndisponiveis`, `servicosSemMetricas`, `consumoTotalKwh`, `emissaoTotalCo2e` e `dataHoraUltimaAtualizacao`. |
+| `GET /api/dashboard/ranking` | `periodo=1h\|24h\|7d`, padrão `24h`, e `ordenarPor=kwh\|co2e`, padrão `co2e`. Retorna `{ periodo, ordenadoPor, ranking }`. Parâmetro inválido retorna `400`. |
+| `GET /api/statistics/summary` | Resumo de estatísticas persistidas. |
+| `GET /api/statistics/ranking` | `periodo=1h\|24h\|7d\|30d` e `ordenarPor=kwh\|co2e`, com padrões `24h` e `co2e`. Valores inválidos retornam `400`. |
+| `GET /api/statistics/energy` | Estatísticas de energia. Retorna `404` se não houver cálculos. |
+| `GET /api/statistics/energy/:nome_service` | Energia por nome do serviço. Retorna `404` se o serviço não for encontrado. |
+| `GET /api/statistics/metrics/compare` | `ids` com dois ou mais IDs numéricos positivos distintos, separados por vírgula. `period=week\|month\|year`. Retorna `{ success, period, data }`. Entrada inválida retorna `400`. |
+
+Exemplo · `GET /api/statistics/metrics/compare?ids=1,2&period=week`. Consulte o [controller de estatísticas](../backend/src/modules/Statistics/statistics.controller.ts) para os formatos de saída de cada consulta.

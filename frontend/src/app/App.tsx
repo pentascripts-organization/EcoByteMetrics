@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Navigate,
   Route,
@@ -8,6 +8,8 @@ import {
   useParams,
 } from "react-router-dom";
 import { PageBoundary } from "@/shared/ui/PageBoundary";
+import { SitePreloader } from "@/shared/ui/SitePreloader";
+import { SitePreloadingContext } from "@/shared/ui/sitePreloadingContext";
 import { deferredPages } from "@/app/routes/deferredPages";
 import { UnderConstructionPage } from "@/app/pages/UnderConstructionPage";
 import { dashboardLocation } from "@/app/routes/dashboardLocation";
@@ -51,10 +53,12 @@ export function App() {
   const { pathname, hash } = useLocation();
   const navigationType = useNavigationType();
   const focusedRoute = useRef("");
+  const [preloading, setPreloading] = useState(() => typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const finishPreloading = useCallback(() => setPreloading(false), []);
   useEffect(() => {
     document.title = `${titles[pathname] ?? (pathname.startsWith("/servicos/") ? "Detalhes do serviço" : "Página não encontrada")} · EcoByteMetrics`;
     const route = pathname + hash;
-    if (focusedRoute.current === route) return;
+    if (preloading || focusedRoute.current === route) return;
     const focusPage = () => {
       if (hash) {
         const target = document.getElementById(hash.slice(1));
@@ -81,36 +85,42 @@ export function App() {
       subtree: true,
     });
     return () => observer.disconnect();
-  }, [pathname, hash, navigationType]);
+  }, [pathname, hash, navigationType, preloading]);
   return (
-    <PageBoundary key={pathname}>
-      <Suspense
-        fallback={
-          <p className="globe-fallback" role="status">
-            Carregando a página…
-          </p>
-        }
-      >
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage key="login" />} />
-          <Route path="/cadastro" element={<LoginPage key="register" register />} />
-          <Route element={<AppLayout />}>
-            <Route path="/pesquisa" element={<LegacyDashboardRedirect />} />
-            <Route path="/servicos" element={<LegacyDashboardRedirect />} />
-            <Route path="/energia" element={<LegacyDashboardRedirect metric="energy" />} />
-            <Route path="/emissoes" element={<LegacyDashboardRedirect metric="emissions" />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/comparar" element={<LegacyDashboardRedirect comparison />} />
-            {deferredPages.map(({ path, title }) => (
-              <Route key={path} path={path} element={<UnderConstructionPage title={title} />} />
-            ))}
-            <Route path="/servicos/:id" element={<LegacyServiceRedirect />} />
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-    </PageBoundary>
+    <SitePreloadingContext.Provider value={preloading}>
+      {preloading && <SitePreloader onFinish={finishPreloading} />}
+      <div inert={preloading} style={{ display: "contents" }}>
+      <PageBoundary key={pathname}>
+        <Suspense
+          fallback={
+            <div className="site-page-fallback" role="status" aria-live="polite">
+              <div className="site-page-fallback__spinner" aria-hidden="true" />
+              <p className="site-page-fallback__text">Carregando EcoByteMetrics…</p>
+            </div>
+          }
+        >
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage key="login" />} />
+            <Route path="/cadastro" element={<LoginPage key="register" register />} />
+            <Route element={<AppLayout />}>
+              <Route path="/pesquisa" element={<LegacyDashboardRedirect />} />
+              <Route path="/servicos" element={<LegacyDashboardRedirect />} />
+              <Route path="/energia" element={<LegacyDashboardRedirect metric="energy" />} />
+              <Route path="/emissoes" element={<LegacyDashboardRedirect metric="emissions" />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/comparar" element={<LegacyDashboardRedirect comparison />} />
+              {deferredPages.map(({ path, title }) => (
+                <Route key={path} path={path} element={<UnderConstructionPage title={title} />} />
+              ))}
+              <Route path="/servicos/:id" element={<LegacyServiceRedirect />} />
+            </Route>
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </PageBoundary>
+      </div>
+    </SitePreloadingContext.Provider>
   );
 }
 

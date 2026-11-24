@@ -18,8 +18,8 @@ export function evolutionData(history: CollectionPoint[], metric: DashboardMetri
     services.add(sample.serviceId);
   }
   const span = (last ?? 0) - (first ?? 0);
-  const intervalMs = Math.max(span <= 3600_000 ? 30_000 : span <= 86400_000 ? 300_000 : 3600_000,
-    ...samples.map(sample => (sample.bucketSeconds ?? 30) * 1000));
+  const intervalMs = samples.reduce((interval, sample) => Math.max(interval, (sample.bucketSeconds ?? 30) * 1000),
+    span <= 3600_000 ? 30_000 : span <= 86400_000 ? 300_000 : 3600_000);
   const buckets = new Map<number, { timestamp: number; first: number; last: number; total: number; count: number; covered: number }>();
   let batchStart = -Infinity;
   for (const sample of samples) {
@@ -47,7 +47,7 @@ export function evolutionData(history: CollectionPoint[], metric: DashboardMetri
     const included = mode === "cumulative" ? covered : bucket.covered;
     const available = mode === "cumulative" ? count : bucket.count;
     const value = included > 0 ? mode === "cumulative" ? total : bucket.total : null;
-    const gap = previous === null || bucket.first - previous > intervalMs * 1.5;
+    const gap = previous !== null && bucket.first - previous > intervalMs * 1.5;
     previous = bucket.last;
     const intervalFrom = intervalMs === 30_000 ? bucket.first : bucket.timestamp;
     return { timestamp: bucket.timestamp, value, gap, intervalFrom, intervalTo: intervalMs === 30_000 ? bucket.last + 1 : intervalFrom + intervalMs, from: mode === "cumulative" ? first ?? bucket.first : bucket.first, to: bucket.last, ...(included < available ? {

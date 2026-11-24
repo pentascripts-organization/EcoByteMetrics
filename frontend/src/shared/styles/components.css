@@ -17,9 +17,6 @@
 .pill-label { display: inline-flex; align-items: center; gap: var(--eb-space-2); padding: var(--eb-space-2) var(--eb-space-3); border: 1px solid #41726b33; background: #f2ffff45; border-radius: var(--eb-radius-pill); font-size: var(--eb-text-xs); font-weight: var(--eb-weight-semibold); letter-spacing: 1.7px; backdrop-filter: none; }
 .neutral-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .neutral-dot { background: #9badb0; }
-.text-link { display: inline-flex; gap: var(--eb-space-2); align-items: center; font-size: var(--eb-text-sm); font-weight: var(--eb-weight-semibold); color: var(--eb-green); }
-.text-link:hover { color: var(--eb-green); }
-button.text-link { background: transparent; padding: var(--eb-space-1) 0; }
 .mobile-menu-button { display: none; background: transparent; padding: var(--eb-space-2); border-radius: var(--eb-radius-sm); }
 .header-actions { display: flex; align-items: center; gap: var(--eb-space-5); }
 .table-scroll { overflow-x: auto; }

@@ -1,5 +1,6 @@
 import type { CollectionPoint, MonitoredService } from "../types.ts";
 import { mergeCollectionHistory, summarizeCollections } from "./history.ts";
+import { getValidCoordinates } from "./coordinates.ts";
 
 export type DashboardMetric = "emissions" | "energy";
 export const statusColors = {
@@ -7,12 +8,15 @@ export const statusColors = {
   unavailable: "#f43e48", removed: "#77828b",
 };
 
+export function normalizeApplicationSearch(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR");
+}
+
 export function filterApplications(services: MonitoredService[], search: string, status: string) {
-  const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR");
-  const query = normalize(search.trim());
+  const query = normalizeApplicationSearch(search);
   return services.filter(service =>
     (!status || service.status === status) &&
-    (!query || normalize([service.name, service.id, service.country, service.region, service.city].filter(Boolean).join(" ")).includes(query)),
+    (!query || normalizeApplicationSearch([service.name, service.id, service.country, service.region, service.city].filter(Boolean).join(" ")).includes(query)),
   );
 }
 
@@ -33,17 +37,17 @@ export function applicationImpacts(services: MonitoredService[], history: Collec
   );
 }
 
-export function groupServiceLocations(services: MonitoredService[]) {
+export function groupServiceLocations(services: MonitoredService[], includeRemoved = false) {
   const groups = new Map<string, { id: string; name: string; latitude: number; longitude: number; countryCode: string; services: MonitoredService[]; color: string; count: number }>();
   const priority = ["available", "no-metrics", "stale", "unavailable"];
   for (const service of services) {
     const { latitude, longitude } = service;
-    if (service.status === "removed" || latitude === undefined || longitude === undefined ||
-      !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) continue;
-    const id = latitude.toFixed(4) + "," + longitude.toFixed(4);
+    const coordinates = getValidCoordinates(latitude, longitude);
+    if ((!includeRemoved && service.status === "removed") || !coordinates) continue;
+    const id = coordinates.latitude.toFixed(4) + "," + coordinates.longitude.toFixed(4);
     let group = groups.get(id);
     if (!group) {
-      group = { id, name: service.city || service.region || service.name, latitude, longitude, countryCode: "", services: [], color: statusColors[service.status], count: 0 };
+      group = { id, name: service.city || service.region || service.name, latitude: coordinates.latitude, longitude: coordinates.longitude, countryCode: "", services: [], color: statusColors[service.status], count: 0 };
       groups.set(id, group);
     }
     group.services.push(service);

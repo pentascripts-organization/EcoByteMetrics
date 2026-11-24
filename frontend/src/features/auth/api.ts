@@ -3,7 +3,7 @@ import { requestJson, RequestError } from "../../shared/lib/http.ts";
 export interface Credentials { email: string; password: string }
 export interface Registration extends Credentials { name: string }
 export type RegistrationErrors = Partial<Record<keyof Registration, string>>;
-export interface AuthSession { token: string; email: string; expiresAt: number }
+export interface AuthSession { token: string; email: string; expiresAt: number; id: number; role: "ADMIN" | "USER" }
 
 const backend = (import.meta.env?.VITE_BACKEND_URL ?? "/backend").replace(/\/+$/, "");
 
@@ -16,9 +16,11 @@ export function parseSession(value: unknown, now = Date.now()): AuthSession {
     const payload: unknown = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(encoded), char => char.charCodeAt(0))));
     if (!payload || typeof payload !== "object" || !("exp" in payload) || !("email" in payload) ||
       typeof payload.exp !== "number" || !Number.isSafeInteger(payload.exp) || payload.exp * 1000 <= now ||
-      typeof payload.email !== "string" || !payload.email.trim()) throw invalid();
+      typeof payload.email !== "string" || !payload.email.trim() ||
+      !("sub" in payload) || typeof payload.sub !== "string" || !/^[1-9]\d*$/.test(payload.sub) || !Number.isSafeInteger(Number(payload.sub)) ||
+      !("role" in payload) || (payload.role !== "ADMIN" && payload.role !== "USER")) throw invalid();
     // O payload orienta a interface e o prazo; a assinatura e as permissões são validadas pelo backend.
-    return { token: value.token, email: payload.email, expiresAt: payload.exp * 1000 };
+    return { token: value.token, email: payload.email, expiresAt: payload.exp * 1000, id: Number(payload.sub), role: payload.role };
   } catch { throw invalid(); }
 }
 
@@ -89,9 +91,9 @@ export function loginErrorMessage(error: unknown): string {
   return "O serviço de acesso está indisponível no momento. Tente novamente mais tarde.";
 }
 
-export function authenticatedRequest(path: string, session: AuthSession, options: { signal?: AbortSignal } = {}) {
+export function authenticatedRequest(path: string, session: AuthSession, options: { signal?: AbortSignal; method?: "PUT"; body?: string } = {}) {
   if (!path.startsWith("/api/") || /[\\#?]/.test(path)) throw new Error("Caminho de API autenticada inválido.");
-  return requestJson(backend + path, { ...options, headers: { Authorization: "Bearer " + session.token } });
+  return requestJson(backend + path, { ...options, headers: { Authorization: "Bearer " + session.token, ...(options.body ? { "Content-Type": "application/json" } : {}) } });
 }
 
 const defaultReturn = "/dashboard?aba=administracao";

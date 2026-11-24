@@ -1,6 +1,9 @@
 import pool from "../../db/connection";
 import { fetchAvailableServices, fetchServiceMetrics, MetricsApiError } from "../../integrations/metrics-api";
-import { CarbonAPISevice, setCarbonRegionFactors } from "../../integrations/carbon-api";
+import {
+  fetchCarbonRegionList,
+  setCarbonRegionFactors,
+} from "../../integrations/carbon-api";
 import { persistCollection, type Collection } from "./collection.repository";
 import { getDiscoveredServices, publishCollection } from "../Services/services.service";
 
@@ -9,7 +12,7 @@ export const COLLECTION_INTERVAL_MS = 30_000;
 export async function collectOnce(dependencies = {
   services: fetchAvailableServices,
   metrics: fetchServiceMetrics,
-  regions: async () => (await new CarbonAPISevice().listCabons()).regions,
+  regions: async () => (await fetchCarbonRegionList()).regions,
 }) {
   // Preservar o último catálogo conhecido caso a descoberta esteja indisponível.
   // Esses serviços são registrados como indisponíveis e o restante do ciclo continua.
@@ -81,12 +84,21 @@ export async function collectOnce(dependencies = {
   }
 
   // Publicar somente os dados confirmados para manter o endpoint legado e o SQL sincronizados.
-  publishCollection(catalog, cycle.metrics, cycle.at, cycle.errors);
+  const carbonFactors = (cycle.regions ?? []).map(region => ({
+    code: region.code,
+    carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
+  }));
+
+  publishCollection(
+    catalog,
+    cycle.metrics,
+    cycle.at,
+    cycle.errors,
+    carbonFactors,
+  );
+
   if (cycle.regions) {
-    setCarbonRegionFactors(cycle.regions.map(region => ({
-      code: region.code,
-      carbonIntensity: region.carbon_intensity_gco2e_per_kwh,
-    })));
+    setCarbonRegionFactors(carbonFactors);
   }
   return cycle;
 }

@@ -11,6 +11,8 @@ export type Metric = {
     colletion_interval_metric : number
 };
 
+
+
 export type CreateMetricInput = Omit<Metric, "id_metric">;
 
 export class MetricRepository{
@@ -58,4 +60,3 @@ export class MetricRepository{
         return result.rows;
     }
 }
-

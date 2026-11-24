@@ -88,3 +88,8 @@ test("acumulado sem nenhuma emissão calculável permanece desconhecido; zero re
   assert.deepEqual(data.points.map(point=>point.value),[0,0]);
   assert.match(data.points[1]!.reason!,/1 de 2 amostras/);
 });
+
+test("the first reading does not announce a gap before it", () => {
+  const result = evolutionData([sample("a", 0)], "emissions", "intervals");
+  assert.equal(result.points[0]!.gap, false);
+});

@@ -4,15 +4,17 @@ interface GlobeCamera {
   pointOfView(target: Partial<Position>, duration: number): unknown;
 }
 
-export const INITIAL_GLOBE_POSITION = { lat: 12, lng: -35, altitude: 1.5 };
+export const INITIAL_GLOBE_POSITION = { lat: 12, lng: -35, altitude: 1.2 };
 
 export function createGlobeSelection() {
   let selectedId: string | undefined;
+  let origin = { ...INITIAL_GLOBE_POSITION };
   return {
-    update(nextId: string | undefined) {
+    update(nextId: string | undefined, current?: Position) {
+      if (!selectedId && nextId) origin = { ...(current ?? INITIAL_GLOBE_POSITION) };
       const leaving = Boolean(selectedId && !nextId);
       selectedId = nextId;
-      return leaving ? { ...INITIAL_GLOBE_POSITION } : null;
+      return leaving ? { ...origin } : null;
     },
   };
 }

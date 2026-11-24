@@ -1,6 +1,4 @@
 /* First chapter: a quiet interface over a living landscape. */
-html:has(.ecobyte-home) { scrollbar-width: none; }
-html:has(.ecobyte-home)::-webkit-scrollbar { display: none; }
 
 .ecobyte-home .site-header {
   width: min(1720px, 100%); height: 112px; padding: 0 clamp(24px, 4.5vw, 80px);

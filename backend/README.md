@@ -119,8 +119,8 @@ JWT_SECRET=sua_chave_secreta_jwt
 JWT_EXPIRES_IN=1h
 
 #Variaveis do ambiente do frontend
-FRONT_PORT=8080
-PGPORT=80
+FRONT_PORT=5173
+FRONTEND_INTERNAL_PORT=80
 ```
 
 O backend consulta `GET {CARBON_INTENSITY_URL}/regions`; a resposta deve conter `regions` com `code` e `carbon_intensity_gco2e_per_kwh`. A ausência de fator mantém consumo e ranking por kWh disponíveis, mas emissões ficam `null`/fora do ranking por CO₂e. O ranking da API mantém amostras em memória por até 7 dias e começa a acumular dados após a inicialização.
@@ -151,9 +151,9 @@ Para executar fora do Docker, copie `backend/.env.example` para `backend/.env` e
 
 Na configuração local da `Dashboardsp2`, um banco separado foi iniciado com `docker compose -p ecobytemetrics-dashboardsp2 up -d --build postgres`: container `ecobytemetrics-dashboardsp2-postgres`, volume `ecobytemetrics-dashboardsp2_postgres_data` e porta `127.0.0.1:5434`. O banco antigo e seu volume foram preservados. Use o mesmo nome de projeto ao gerenciar esse banco; não remova volumes para corrigir problemas de conexão. O backend local usa a porta `3001` para evitar colisão com containers antigos na `3000`.
 
-O worker de carbono envia datas ISO (`toISOString`) para não depender do formato regional do sistema. Cada par de localização e instante tem uma amostra própria; valores iguais em regiões ou instantes diferentes não são descartados. Repetir a mesma localização e instante atualiza a amostra com `ON CONFLICT`, usando a restrição de unicidade existente.
+O coletor de monitoramento envia datas ISO (`toISOString`) para não depender do formato regional do sistema. Cada par de localização e instante tem uma amostra própria; valores iguais em regiões ou instantes diferentes não são descartados. Repetir a mesma localização e instante atualiza a amostra com `ON CONFLICT`, usando a restrição de unicidade existente.
 
-`npm run test:worker:postgres` exercita os workers e os repositórios com SQL real em um esquema temporário dentro de uma transação. Inicializa o DDL atual nesse esquema, verifica datas sob `DateStyle` MDY e DMY, regiões com fatores iguais, repetição da coleta, coletas posteriores e a associação entre métrica e fator da localização. Um `ROLLBACK` remove todo o esquema de teste sem alterar as tabelas do projeto.
+`npm run test:worker:postgres` testa o coletor atual (`collectOnce`) e os repositórios com SQL real em um esquema temporário dentro de uma transação. Inicializa o DDL atual nesse esquema, verifica datas sob `DateStyle` MDY e DMY, regiões com fatores iguais, repetição da coleta, coletas posteriores e a associação entre métrica e fator da localização. Um `ROLLBACK` remove todo o esquema de teste sem alterar as tabelas do projeto.
 
 O servidor agora executa uma única coleta a cada 30 segundos, grava a rodada em transação e publica o cache após o commit. O frontend consulta o histórico persistido em `GET /api/monitoring`. Horários usam `TIMESTAMPTZ` e ISO UTC; fator ausente permanece desconhecido. A migração preserva dados legados e não infere fatores de carbono. Consulte o contrato, os limites e os cuidados de migração em [docs/HISTORY.md](docs/HISTORY.md).
 

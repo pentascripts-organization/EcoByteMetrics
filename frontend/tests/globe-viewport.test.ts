@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PerspectiveCamera, Vector3 } from "three";
-import { animateGlobeViewport, getGlobePixelRatio, getGlobeViewport, isGlobeInteractionPoint, restoreGlobeViewport } from "../src/features/monitoring/components/map/globeViewport.ts";
+import { animateGlobeViewport, expandedGlobeAnchor, getGlobePixelRatio, getGlobeViewport, isGlobeInteractionPoint, restoreGlobeViewport } from "../src/features/monitoring/components/map/globeViewport.ts";
 
 test("o globo mobile ocupa quase toda a menor dimensão do mapa, centralizado em retrato e paisagem", () => {
   for (const [width, height, mapWidth, mapHeight] of [[320, 720, 284, 284], [390, 844, 354, 354], [680, 900, 644, 644], [844, 390, 796, 260]]) {
@@ -192,4 +192,51 @@ test("a precisão da câmera distingue contornos e superfícies no afastamento m
   assert.ok(separation > 8 / (2 ** 24 - 1));
   assert.ok(camera.near < 115 - 101.1);
   assert.ok(camera.far > 500 + 114);
+});
+
+
+test("expanded view centers the same projection, enlarges it and restores the initial framing", () => {
+  for (const viewport of [{width:1920,height:1080}, {width:390,height:844}, {width:844,height:390}]) {
+    const anchor = expandedGlobeAnchor(viewport);
+    assert.equal(anchor.left + anchor.width / 2, viewport.width / 2);
+    assert.equal(anchor.top + anchor.height / 2, viewport.height / 2);
+    assert.ok(anchor.width <= viewport.width && anchor.height <= viewport.height);
+    const original = getGlobeViewport(viewport, {left:20,top:100,width:200,height:200});
+    const expanded = getGlobeViewport(viewport, anchor);
+    assert.deepEqual(expanded.offset, [0,0]);
+    assert.ok(expanded.fieldOfView < original.fieldOfView);
+    const camera = new PerspectiveCamera();
+    camera.position.set(12,34,250);
+    const position = camera.position.clone();
+    animateGlobeViewport(camera, original, 0, () => 0, () => {});
+    animateGlobeViewport(camera, expanded, 0, () => 0, () => {});
+    assert.ok(Math.abs(camera.fov - expanded.fieldOfView) < 1e-9);
+    assert.deepEqual(camera.position, position);
+    animateGlobeViewport(camera, original, 0, () => 0, () => {});
+    assert.ok(Math.abs(camera.fov - original.fieldOfView) < 1e-9);
+    assert.ok(Math.abs(camera.view!.offsetX + original.offset[0]) < 1e-9);
+  }
+});
+
+
+test("overview-to-detail movement interpolates scale and center for 750ms and reverses on the same camera", () => {
+  const viewport = {width:1920,height:1080};
+  const overview = getGlobeViewport(viewport,{left:240,top:300,width:560,height:520});
+  const detail = getGlobeViewport(viewport,{left:640,top:150,width:700,height:700});
+  const camera = new PerspectiveCamera();
+  animateGlobeViewport(camera,overview,0,()=>0,()=>{});
+  let pending: ((time:number)=>void) | undefined;
+  const request = (callback:(time:number)=>void) => { pending=callback; return 1; };
+  const step = (time:number) => { const callback=pending; pending=undefined; callback?.(time); };
+  const stop = animateGlobeViewport(camera,detail,750,request,()=>{pending=undefined;});
+  step(0); step(375);
+  assert.ok(camera.fov < overview.fieldOfView && camera.fov > detail.fieldOfView);
+  assert.ok(camera.view!.offsetX < -overview.offset[0] && camera.view!.offsetX > -detail.offset[0]);
+  stop();
+  const intermediate = camera.projectionMatrix.clone();
+  animateGlobeViewport(camera,overview,750,request,()=>{pending=undefined;});
+  assert.deepEqual(camera.projectionMatrix,intermediate);
+  step(400); step(1150);
+  assert.ok(Math.abs(camera.fov-overview.fieldOfView)<1e-9);
+  assert.ok(Math.abs(camera.view!.offsetX+overview.offset[0])<1e-9);
 });

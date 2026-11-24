@@ -9,7 +9,7 @@ const registration = { ...credentials, name: " Review User " };
 const createdAccount = { id_user: 1, name_user: "Review User", email_user: "review@example.invalid" };
 const response = (exp = Math.floor(Date.now() / 1000) + 3600) => ({
   tokenType: "Bearer", expiresIn: "1h",
-  token: "eyJhbGciOiJIUzI1NiJ9." + Buffer.from(JSON.stringify({ email: "review@example.invalid", sub: "1", exp })).toString("base64url") + ".fixture",
+  token: "eyJhbGciOiJIUzI1NiJ9." + Buffer.from(JSON.stringify({ email: "review@example.invalid", sub: "1", role: "USER", exp })).toString("base64url") + ".fixture",
 });
 
 test("login envia POST ao backend, normaliza apenas e-mail e mantém senha fora do estado da sessão", async t => {
@@ -34,7 +34,7 @@ test("login rejeita respostas malformadas e tokens sem prazo válido antes de in
     token({ email: "x", exp: Date.now() / 1000 - 1 }), token(null), { ...valid, token: "header.invalid.signature" }])
     assert.throws(() => parseSession(value), error => error instanceof RequestError && error.kind === "format");
   const unicode = "usuário@example.invalid";
-  assert.equal(parseSession(token({ email: unicode, exp: Math.floor(Date.now() / 1000) + 5 })).email, unicode);
+  assert.equal(parseSession(token({ email: unicode, sub: "1", role: "USER", exp: Math.floor(Date.now() / 1000) + 5 })).email, unicode);
 });
 
 test("mensagens distinguem credenciais, indisponibilidade, conexão e demora sem expor detalhes internos", () => {

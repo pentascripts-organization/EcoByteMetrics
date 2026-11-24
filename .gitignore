@@ -144,3 +144,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+backup_ecobytemetrics.sql

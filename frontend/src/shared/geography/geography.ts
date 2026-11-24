@@ -1,5 +1,4 @@
 import world from "@/shared/geography/world.json" with { type: "json" };
-import type { ResearchRegion } from "@/shared/geography/types";
 
 export interface CountryFeature {
   type: "Feature";
@@ -70,22 +69,4 @@ export function localizeCity(country: string, city: string | null) {
         ),
     )?.name ?? city
   );
-}
-
-export function getCities(
-  countryCode: string,
-  regions: ResearchRegion[],
-): GlobeCity[] {
-  return regions
-    .filter(
-      (region) => findCountry(region.country)?.properties.code === countryCode,
-    )
-    .map((region) => ({
-      id: region.code,
-      countryCode,
-      name: region.city ?? region.region,
-      latitude: region.latitude ?? null,
-      longitude: region.longitude ?? null,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }

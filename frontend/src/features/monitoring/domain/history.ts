@@ -67,7 +67,7 @@ export function mergeCollectionHistory(
       existing.intervalSeconds === point.intervalSeconds &&
       existing.regionCode === point.regionCode) {
       copyHistory();
-      history[index] = { ...existing, emissionsG: point.emissionsG };
+      history[index] = { ...existing, emissionsG: point.emissionsG, emissionCount: point.emissionCount };
     }
   }
   historyIndexes.set(history, { positions, oldestTimestamp });
