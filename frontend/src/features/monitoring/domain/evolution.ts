@@ -18,8 +18,8 @@ export function evolutionData(history: CollectionPoint[], metric: DashboardMetri
     services.add(sample.serviceId);
   }
   const span = (last ?? 0) - (first ?? 0);
-  const intervalMs = Math.max(span <= 3600_000 ? 30_000 : span <= 86400_000 ? 300_000 : 3600_000,
-    ...samples.map(sample => (sample.bucketSeconds ?? 30) * 1000));
+  const intervalMs = samples.reduce((interval, sample) => Math.max(interval, (sample.bucketSeconds ?? 30) * 1000),
+    span <= 3600_000 ? 30_000 : span <= 86400_000 ? 300_000 : 3600_000);
   const buckets = new Map<number, { timestamp: number; first: number; last: number; total: number; count: number; covered: number }>();
   let batchStart = -Infinity;
   for (const sample of samples) {

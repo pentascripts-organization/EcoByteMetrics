@@ -3,18 +3,33 @@ import type {DashboardMetric} from "./dashboard.ts";
 import type {EvolutionMode} from "./evolution.ts";
 import {mergeCollectionHistory, summarizeCollections} from "./history.ts";
 export function temporalModel(history: CollectionPoint[], services: MonitoredService[], metric: DashboardMetric, mode: EvolutionMode) {
-  const ids=new Set(services.map(s=>s.id));
-  const samples=mergeCollectionHistory([],history).filter(p=>ids.has(p.serviceId)&&Number.isFinite(Date.parse(p.collectedAt)));
-  const times=samples.map(p=>Date.parse(p.collectedAt));
-  const first=times.length?Math.min(...samples.map(p=>Date.parse(p.firstCollectedAt??p.collectedAt))):null, last=times.length?Math.max(...times):null;
-  const span=(last??0)-(first??0);
-  const base=Math.max(span<=3600000?30000:span<=86400000?300000:3600000,...samples.map(p=>(p.bucketSeconds??30)*1000));
+  const ids = new Set(services.map(service => service.id));
+  const samples: CollectionPoint[] = [];
+  const byService = new Map<string, CollectionPoint[]>();
+  let first: number | null = null;
+  let last: number | null = null;
+  let largestBucket = 30_000;
+  for (const point of mergeCollectionHistory([], history)) {
+    const time = Date.parse(point.collectedAt);
+    if (!ids.has(point.serviceId) || !Number.isFinite(time)) continue;
+    const start = Date.parse(point.firstCollectedAt ?? point.collectedAt);
+    const validStart = Number.isFinite(start) && start <= time ? start : time;
+    first = Math.min(first ?? validStart, validStart);
+    last = Math.max(last ?? time, time);
+    largestBucket = Math.max(largestBucket, (point.bucketSeconds ?? 30) * 1000);
+    samples.push(point);
+    const own = byService.get(point.serviceId);
+    if (own) own.push(point);
+    else byService.set(point.serviceId, [point]);
+  }
+  const span = (last ?? 0) - (first ?? 0);
+  const base = Math.max(span <= 3600_000 ? 30_000 : span <= 86400_000 ? 300_000 : 3600_000, largestBucket);
   const interval=base*Math.max(1,Math.ceil((span/base+1)/384));
   const start=Math.floor((first??0)/interval)*interval;
   const count=first===null?0:Math.floor(((last??start)-start)/interval)+1;
   const timestamps=Array.from({length:count},(_,i)=>start+i*interval);
   const lanes=services.map(service=>{
-    const own=samples.filter(p=>p.serviceId===service.id);
+    const own = byService.get(service.id) ?? [];
     const buckets=new Map<number,CollectionPoint[]>();
     for(const p of own){const i=Math.floor((Date.parse(p.collectedAt)-start)/interval);const group=buckets.get(i)??[];group.push(p);buckets.set(i,group);}
     let accumulated: number | null = null, recorded=0, calculated=0;

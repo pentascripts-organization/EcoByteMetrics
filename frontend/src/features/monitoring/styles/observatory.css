@@ -1,17 +1,25 @@
-/* The environment evolution owns only the remaining dashboard viewport. */
+/* Let the workspace fill the remaining height and grow when its contents need room. */
 @media (width > 760px) {
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)){height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-header{padding-top:16px;padding-bottom:12px;flex-shrink:0}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-main{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding-bottom:16px}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-main>.monitoring-heading{flex-shrink:0;margin-bottom:10px;min-height:0;padding-top:4px;padding-bottom:0}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-heading h1{font-size:clamp(32px,3vw,48px);margin:0;line-height:1.1}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-main>.monitoring-tabs{flex-shrink:0;margin-bottom:12px;min-height:44px}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-view{flex:1;min-height:0;overflow:hidden}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .evolution-panel:not(.evolution-panel--compact){height:100%;min-height:0;overflow:hidden;display:flex;flex-direction:column}
-  .monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .evolution-section{flex:1;min-height:0;overflow:auto}
+  .monitoring-shell[data-globe-view="overview"]:has(.observatory) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+  .monitoring-shell[data-globe-view="overview"]:has(.observatory) .monitoring-main,
+  .monitoring-shell[data-globe-view="overview"]:has(.observatory) .monitoring-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .observatory.observatory--focused {
+    flex: 1;
+    grid-template-rows: auto minmax(min-content, 1fr) auto;
+  }
+  .observatory .observatory-plot--treemap { min-height: 230px; }
 }
 /* Focused portal: one summary, one scene, one timeline. */
-.observatory.observatory--focused{display:grid!important;grid-template-rows:auto minmax(0,1fr) auto;gap:18px;padding:0;border:0;margin:0;pointer-events:auto;color:var(--monitoring-ink);position:relative}
+.observatory.observatory--focused{display:grid!important;grid-template-rows:auto minmax(min-content,1fr) auto;gap:18px;padding:0;border:0;margin:0;pointer-events:auto;color:var(--monitoring-ink);position:relative}
 .observatory button,.observatory select{font:inherit;cursor:pointer}
 .observatory button:disabled{opacity:.4;cursor:default}
 .observatory button:focus-visible,.observatory input:focus-visible{outline:2px solid var(--eb-focus);outline-offset:3px}
@@ -31,7 +39,6 @@
 .observatory-tools button,.observatory-modes button{border:0;padding:8px 12px;border-radius:99px;color:var(--monitoring-muted);font-size:12px;background:transparent;min-height:34px}
 .observatory-tools button[aria-pressed=true],.observatory-modes button[aria-pressed=true]{background:#fff;color:var(--eb-green);box-shadow:0 1px 5px #113b2710}
 .observatory-tools select{border:1px solid var(--eb-border);border-radius:99px;padding:10px 12px;font-size:12px;background:#fff;color:var(--monitoring-ink);height:40px}
-.observatory-tools .monitoring-filter-button.specular-button{min-width:40px;width:40px;height:40px;min-height:40px;padding:8px}.observatory-tools .specular-button__label{font-size:0;gap:0}.observatory-tools .filter-indicator{position:absolute;right:-4px;top:-2px}
 .observatory-workspace{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:28px;min-height:0}
 .observatory .observatory-stage{position:relative;display:flex;flex-direction:column;min-height:0;border:1px solid #e4eee8;border-radius:22px;padding:18px 20px 12px;background:radial-gradient(ellipse at 36% 62%,#dcf9ed90,transparent 58%),linear-gradient(145deg,#fff,#f5faf7);overflow:hidden}
 .observatory-stage-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-shrink:0;z-index:1}
@@ -70,11 +77,8 @@
 @media(max-width:1100px){.observatory-heading{grid-template-columns:1fr auto}.observatory-tools{grid-column:1/-1;justify-content:start}.observatory-kpis>div{min-width:125px}.observatory-workspace{grid-template-columns:minmax(0,1fr) 210px;gap:18px}.observatory-inspector{padding-left:18px}}
 @media(max-height:850px){.observatory.observatory--focused{gap:12px}.observatory-heading{padding-bottom:14px}.observatory-inspector h3{margin-top:18px}.observatory-footer{padding-top:10px}}
 @media(max-width:760px){.observatory-heading{gap:12px;padding-top:0}.portal-title{grid-column:1/-1}.observatory-heading p{font-size:9px;margin-top:5px;max-width:none}.observatory-eyebrow{font-size:8px;margin-bottom:4px}.observatory-kpis{grid-column:1/-1;justify-content:space-between;gap:12px}.observatory-kpis>div{border-left:0;padding-left:0;min-width:0}.observatory-kpis>div:last-child{text-align:right}.observatory-kpis dd{font-size:25px}.observatory-kpis dt{margin-bottom:4px}.observatory-tools select{font-size:16px;width:clamp(110px,34vw,145px);max-width:145px;padding-inline:8px}.observatory .observatory-stage{padding:10px 12px 8px;border-radius:16px}.observatory-stage-bar>button{font-size:11px;min-height:36px;padding:7px 10px}.observatory-inspector>.observatory-eyebrow,.observatory-inspector-info{display:none}.observatory-inspector h3{font-size:14px}.observatory-inspector .observatory-reading{font-size:23px}.observatory-footer{padding-top:8px}.observatory-timeline{gap:5px}.observatory-timeline button{min-width:30px;height:32px}.portal-timeline-labels{font-size:8px;gap:4px;flex-wrap:wrap}.portal-timeline-labels time{order:-1;width:100%;text-align:center;font-size:10px}.portal-ring-count{font-size:8px}.observatory-dialog{padding:18px}.observatory-dialog h2{font-size:23px}.portal-analysis-tabs{gap:0}.portal-analysis-tabs button{font-size:11px;padding:9px 10px}.portal-picker-row{flex-wrap:wrap}.portal-picker-row label{flex-basis:100%}.portal-select-service{margin-left:30px}.portal-analysis-dialog .portal-data-grid{grid-template-columns:1fr}.portal-analysis-section th,.portal-analysis-section td{padding:10px 4px;font-size:11px}.observatory-resource-detail{grid-template-columns:1fr 1fr}}
-/* Preserve access at high zoom and in very short windows. */
-@media (width > 760px) and (max-height: 600px) {.monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)){height:auto;min-height:100dvh;overflow:visible}.monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-main,.monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .monitoring-view{overflow:visible}.monitoring-shell[data-globe-view="overview"]:has(.evolution-panel:not(.evolution-panel--compact)) .evolution-panel:not(.evolution-panel--compact){height:auto;min-height:600px}}
 @media(prefers-reduced-motion:reduce){.observatory-dialog[open]{animation:none}}
 
-.evolution-mobile-filter, .evolution-filter-search { display: none; }
 
 @media (max-width: 760px) {
   .monitoring-shell[data-globe-view="overview"]:has(.observatory) {
@@ -89,10 +93,6 @@
     min-height: 0;
     overflow: visible;
   }
-  .monitoring-shell .monitoring-tools--evolution { display: none; }
-  .evolution-mobile-filter, .evolution-filter-search { display: block; }
-  .evolution-filter-search { grid-column: 1 / -1; }
-  .evolution-filter-search .monitoring-search { width: 100%; }
 
   .observatory.observatory--focused { display: flex !important; flex-direction: column; gap: 14px; }
   .observatory .observatory-heading { grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -108,14 +108,6 @@
   .observatory-kpis dd { font-size: clamp(17px, 5vw, 24px); }
   .observatory .observatory-tools { flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
   .observatory-tools :is(select, button), .observatory-stage-bar button { min-height: 44px; }
-  .observatory-tools .evolution-mobile-filter .monitoring-filter-button.specular-button {
-    min-width: 0;
-    width: auto;
-    height: auto;
-    min-height: 44px;
-    padding-inline: 12px;
-  }
-  .evolution-mobile-filter .specular-button__label { font-size: 13px; gap: 5px; }
   .observatory .observatory-notice { position: static; }
   .observatory .observatory-workspace { display: block; flex: none; }
   .observatory .observatory-stage { overflow: visible; gap: 10px; }

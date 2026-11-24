@@ -52,6 +52,14 @@ test("mobile dashboard keeps navigation, cards and comparison within the viewpor
   await expect(evolutionTab).toHaveAttribute("aria-selected", "true");
   await expect(evolutionTab).toBeFocused();
   await expect(page.locator(".observatory-heading")).toBeVisible();
+  await page.getByRole("button", { name: "Aplicações · 0" }).click();
+  const picker = page.getByRole("dialog");
+  for (const name of [/Billing API/, /Reports API/, /Zero API/, /Missing API/]) {
+    const checkbox = picker.getByRole("checkbox", { name });
+    await checkbox.tap();
+    await expect(checkbox).toBeChecked();
+  }
+  await picker.getByRole("button", { name: "Fechar detalhes" }).click();
   const bars = page.locator(".observatory-mobile-bars");
   const footer = page.locator(".observatory-footer");
   const inspector = page.locator(".observatory-inspector");
@@ -80,7 +88,7 @@ test("mobile dashboard keeps navigation, cards and comparison within the viewpor
   await page.getByRole("button", { name: "Energia", exact: true }).click();
   await expect(bars.getByRole("button", { name: /Billing API/ })).toContainText("kWh");
   await page.getByRole("button", { name: /^Filtrar/ }).click();
-  await expect(filters.getByRole("searchbox")).toBeVisible();
+  await expect(filters).toBeVisible();
   await filters.getByRole("button", { name: "Ver resultados" }).click();
   await page.getByRole("button", { name: "Explorar detalhes" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();

@@ -27,3 +27,15 @@ test("empty and removed services preserve honest history",()=>{
  assert.equal(temporalModel([],[service("a")],"energy","intervals").peak,null);
  const data=temporalModel([point("a",0)],[{...service("a"),status:"removed"}],"energy","intervals");assert.equal(data.lanes[0]!.total,1);
 });
+
+test("long histories keep all samples and the timeline when an aggregate start is invalid", () => {
+  const count = 130_000;
+  const points = Array.from({ length: count }, (_, i) => point(i % 2 ? "a" : "b", i));
+  points[0] = { ...points[0]!, firstCollectedAt: "invalid" };
+  const data = temporalModel(points, [service("a"), service("b")], "energy", "intervals");
+  assert.equal(data.first, at);
+  assert.equal(data.summary.count, count);
+  assert.equal(data.lanes[0]?.summary.count, count / 2);
+  assert.equal(data.lanes[1]?.summary.count, count / 2);
+  assert.ok(data.timestamps.length > 0);
+});

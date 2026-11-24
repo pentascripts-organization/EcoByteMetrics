@@ -24,7 +24,7 @@ export function generateSparklinePaths(
   paddingX = 2,
   paddingY = 4,
 ): { path: string; area: string } {
-  if (values.length === 0) {
+  if (values.length <= 1) {
     const y = height / 2;
     return {
       path: `M ${paddingX},${y} L ${width - paddingX},${y}`,
@@ -32,16 +32,12 @@ export function generateSparklinePaths(
     };
   }
 
-  if (values.length === 1) {
-    const y = height / 2;
-    return {
-      path: `M ${paddingX},${y} L ${width - paddingX},${y}`,
-      area: `M ${paddingX},${y} L ${width - paddingX},${y} L ${width - paddingX},${height} L ${paddingX},${height} Z`,
-    };
+  let min = values[0]!;
+  let max = min;
+  for (const value of values) {
+    min = Math.min(min, value);
+    max = Math.max(max, value);
   }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
   const range = max - min;
   const usableW = width - paddingX * 2;
   const usableH = height - paddingY * 2;

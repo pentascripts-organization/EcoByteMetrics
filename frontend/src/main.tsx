@@ -7,6 +7,13 @@ import "@fontsource-variable/manrope";
 import "@fontsource-variable/dm-sans";
 import "@/app/styles/index.css";
 
+const initialUrl = new URL(window.location.href);
+if (initialUrl.searchParams.has("faixa") || initialUrl.searchParams.has("faixaAtiva")) {
+  initialUrl.searchParams.delete("faixa");
+  initialUrl.searchParams.delete("faixaAtiva");
+  window.history.replaceState(window.history.state, "", initialUrl);
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
