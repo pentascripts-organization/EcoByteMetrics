@@ -177,7 +177,7 @@ test("history login preserves all selected applications and closing the drawer s
     return route.fulfill({ json: session });
   });
 
-  const selection = "aba=comparar&comparacao=ultima&app=billing-api&app=reports-api&faixa=billing-api&faixa=reports-api";
+  const selection = "aba=comparar&comparacao=ultima&app=billing-api&app=reports-api";
   await page.goto("/dashboard?" + selection);
   await page.getByRole("button", { name: /^Filtrar/ }).click({ timeout: 15_000 });
   await page.getByRole("link", { name: /Entrar para ver hist/ }).click();

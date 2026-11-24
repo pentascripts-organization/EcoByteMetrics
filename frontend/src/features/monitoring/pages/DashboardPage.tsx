@@ -239,7 +239,7 @@ export function DashboardPage() {
 
     </div>);
   const applicationSearch = <label className="monitoring-search"><Search size={21} aria-hidden="true" /><input type="search" aria-label="Buscar aplicação" placeholder="Buscar aplicação..." value={search} onChange={event => update({ busca: event.target.value }, true)} /></label>;
-  const dashboardTools = <div className={"monitoring-tools" + (tab === "evolucao" ? " monitoring-tools--evolution" : "")}>
+  const dashboardTools = <div className="monitoring-tools">
         {applicationSearch}
         {filterButton}
       </div>;
@@ -256,7 +256,6 @@ export function DashboardPage() {
       {!administration && !mobile && dashboardTools}
     </div>}
     {showFilters && <FiltersDialog onClear={clearFilters} onClose={closeFilters}><div className="monitoring-filters">
-      {!selectedId && tab === "evolucao" && <div className="evolution-filter-search">{applicationSearch}</div>}
       <section className="filter-group filter-group-location"><div className="filter-section-title"><Globe2 size={17} /><div><h3>Localização</h3><p>Encontre aplicações por país e região.</p></div></div>
       <div className="filter-select-field"><span>País</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="País" value={params.get("pais") ?? ""} options={[{value:"",label:"Todos os países"},...countries.map(country => ({value:country,label:country}))]} onChange={value => update({pais:value,cidade:"",regiao:""})} /></div>
       <div className="filter-select-field"><span>Região</span><GlideSelect accentColor="#10b981" surfaceColor="#ffffff" highlightColor="#3f3f46" textColor="#000000" size="md" radius={12} menuWidth={180} placement="bottom" align="left" popDuration={180} glideDuration={400} rememberPosition showTags ariaLabel="Região" value={params.get("regiao") ?? ""} options={[{value:"",label:"Todas as regiões"},...regionOptions.map(service => ({value:service.regionCode!,label:[service.city,service.region].filter(Boolean).join(" · ") || service.regionCode!}))]} onChange={value => update({regiao:value,cidade:""})} /></div>
@@ -471,7 +470,7 @@ export function DashboardPage() {
             {!services.length && <MonitoringState kind={loading || discovering ? "loading" : error && !snapshot.services.length ? "offline" : filtered || analysis.environmentServices.length ? "filtered" : "empty"} onReset={clearFilters} />}
           </section>}
       </div>
-      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : checkingService ? "Buscando dados da aplicação… " : serviceLookupFailed ? "Tente consultar novamente quando a conexão voltar. " : analysis.invalidDate ? null : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={(value, cursor = params.get("cursor") ?? "") => update({ ordem: value, cursor })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} error={Boolean(error)} observedAt={analysis.observedAt} filterControl={<div className="evolution-mobile-filter">{filterButton}</div>} onOpenService={openService} />}
+      {selectedId ? !selected ? <p className="monitoring-empty" role="status">{selectedOutsideFilters ? <>Esta aplicação está fora dos filtros atuais. <button className="monitoring-text-button" onClick={clearFilters}>Limpar filtros</button> </> : checkingService ? "Buscando dados da aplicação… " : serviceLookupFailed ? "Tente consultar novamente quando a conexão voltar. " : analysis.invalidDate ? null : "Esta aplicação não está no ambiente recebido. "}<button className="monitoring-text-button" onClick={back}>Voltar à lista</button></p> : null : tab === "evolucao" && <EvolutionPanel filtersOpen={mobile && showFilters} collectionEvents={analysis.collectionEvents} history={history} services={services} metric={metric} onMetric={(value, cursor = params.get("cursor") ?? "") => update({ ordem: value, cursor })} period={period} onPeriod={value => update({ periodo: value })} mode={evolutionMode} onMode={value => update({ serie: value === "intervals" ? "intervalos" : "" })} loading={historyLoading} error={Boolean(error)} observedAt={analysis.observedAt} onOpenService={openService} />}
       {!selectedId && tab === "comparar" && <ComparisonPanel onOpenService={openService} />}
       {administration && <AdministrationAccess><AdministrationPanel /></AdministrationAccess>}
     </section>

@@ -1,5 +1,4 @@
 import Observatory from "./Observatory";
-import type {ReactNode} from "react";
 import { useId, useMemo } from "react";
 import { Clock3, Info, Leaf, Zap } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -21,7 +20,6 @@ function ServiceHistoryPanel({ history, services, collectionEvents, metric, onMe
   compact?: boolean; loading: boolean; error?: boolean; observedAt: string;
   onOpenService: (id: string) => void;
   collectionEvents?: CollectionEvent[];
-  filterControl?: ReactNode;
 }) {
   const data = useMemo(() => evolutionData(history, metric, mode), [history, metric, mode]);
   const chartData = useMemo(() => {
@@ -100,7 +98,7 @@ function ServiceHistoryPanel({ history, services, collectionEvents, metric, onMe
   </section>;
 }
 
-export type EvolutionPanelProps = Parameters<typeof ServiceHistoryPanel>[0];
+export type EvolutionPanelProps = Parameters<typeof ServiceHistoryPanel>[0] & { filtersOpen?: boolean };
 export function EvolutionPanel(props: EvolutionPanelProps) {
  return !props.compact ? <Observatory {...props}/> : <ServiceHistoryPanel {...props}/>;
 }

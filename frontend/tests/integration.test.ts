@@ -598,7 +598,7 @@ test("integração do frontend: contratos HTTP, análise, telas e navegação", 
       assert.match(render("/dashboard?aba=evolucao&ordem=energy"), /kWh/);
       const empty = render("/dashboard?aba=evolucao", DashboardPage, { snapshot: { ...snapshot, history: [] } });
       assert.match(empty, /Nenhum registro neste per\u00edodo/);
-      const incomplete = render("/dashboard?aba=evolucao", DashboardPage, { snapshot: { ...snapshot, history: snapshot.history.map(point => ({ ...point, emissionsG: null })) } });
+      const incomplete = render("/dashboard?aba=evolucao&faixa=a", DashboardPage, { snapshot: { ...snapshot, history: snapshot.history.map(point => ({ ...point, emissionsG: null })) } });
       assert.match(incomplete, /Ainda faltam dados de emiss\u00f5es/);
       assert.match(incomplete, /Visualizar energia/);
       assert.ok(!incomplete.includes("NaN"));

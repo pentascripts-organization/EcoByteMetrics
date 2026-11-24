@@ -117,6 +117,9 @@ test("incomplete carbon samples stay unknown and render without layout overflow"
   );
 
   await page.goto("/dashboard?aba=evolucao");
+  await page.locator(".observatory-stage-bar > button").first().click({ timeout: 15_000 });
+  await page.getByRole("checkbox", { name: "Billing API" }).click();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: /Ainda faltam dados de emiss/ })).toBeVisible({ timeout: 15_000 });
   await expect(page.locator("body")).not.toContainText("NaN");
   const box = await page.locator(".observatory-empty").boundingBox();
@@ -136,7 +139,14 @@ test("evolution uses the visible selection for percentages and explains the curr
     services: [billing, other],
     history: [reading, { ...reading, serviceId: other.id, emissionsG: 3 }],
   }));
-  await page.goto("/dashboard?aba=evolucao&faixa=billing-api&faixa=billing-api");
+  await page.goto("/dashboard?aba=evolucao");
+  const applications = page.getByRole("button", { name: "Aplicações · 0" });
+  await expect(applications).toBeVisible({ timeout: 15_000 });
+  await applications.click();
+  const choice = page.getByRole("checkbox", { name: "Billing API" });
+  await expect(choice).not.toBeChecked();
+  await choice.click();
+  await page.keyboard.press("Escape");
   const inspector = page.locator(".observatory-inspector");
   if (info.project.name === "desktop") {
     await expect(page.locator(".observatory-treemap-card")).toBeVisible({ timeout: 15_000 });
@@ -149,6 +159,10 @@ test("evolution uses the visible selection for percentages and explains the curr
   await expect(dialog.getByRole("heading", { name: info.project.name === "mobile" ? "Como ler o gráfico de barras" : "Como ler o Treemap" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Sobre estimativas ambientais" })).toBeFocused();
+  await page.reload();
+  await expect(applications).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Selecione aplicações para visualizar a evolução" })).toBeVisible();
+  await expect(page).toHaveURL(url => !url.searchParams.has("faixa") && !url.searchParams.has("faixaAtiva"));
 });
 
 test("opening an application waits for discovery and distinguishes connection failure", async ({ page }) => {
@@ -229,6 +243,10 @@ test("changing metric preserves the paused interval and the chart follows catalo
   await expect(timeline).toHaveValue(current);
 
   await page.clock.fastForward(30_000);
+  const applications = page.getByRole("button", { name: "Aplicações · 0" });
+  await applications.click();
+  await page.getByRole("checkbox", { name: "Replacement API" }).click();
+  await page.keyboard.press("Escape");
   await expect(page.locator(".observatory-inspector").getByRole("heading", { name: "Replacement API" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Aplic.*1/, exact: true })).toBeVisible();
 });
