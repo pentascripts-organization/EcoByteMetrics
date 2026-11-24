@@ -73,8 +73,18 @@ O sistema consome duas APIs externas para realizar a coleta de métricas e o cá
 
 ### 🗄️ Estrutura do Banco de Dados
 
-> O schema vigente é o resultado de `database/DDL.sql` e das migrations `001_persisted_monitoring.sql`, `002_recover_legacy_carbon.sql` e `003_user_roles.sql`. Essas migrations adicionam `role_user`, `external_id`, `location_metadata`, `carbon_intensity`, `renewable_percent` e `monitoring_collections`.
-A modelagem do banco de dados relacional utiliza SQL nativo no PostgreSQL, sem o uso de ORM. O script oficial database/DDL.sql define cinco tabelas responsáveis pelo armazenamento dos usuários, localizações, serviços, métricas e informações de intensidade de carbono.
+O [DDL oficial](database/DDL.sql) cria seis tabelas no PostgreSQL, sem ORM.
+
+| Tabela | Responsabilidade |
+| --- | --- |
+| `users` | Contas com e-mail único e perfil `USER` ou `ADMIN`. |
+| `locations` | País, região, cidade e coordenadas dos serviços e fatores de carbono. |
+| `services` | Catálogo com localização, metadados e identificador externo único. |
+| `metrics` | Leituras por serviço e instante, com duração e contexto registrado. |
+| `carbons` | Fatores por localização e instante. A intensidade aceita zero. |
+| `monitoring_collections` | Catálogo e erros de cada rodada de coleta. |
+
+As leituras usam `TIMESTAMPTZ`. A chave única por serviço e instante evita métricas duplicadas, e o índice por horário apoia consultas históricas. O backend mantém `schema_migrations` como tabela de controle. Em bancos existentes, a migration 001 converte datas antigas assumindo UTC e acrescenta campos, índices e registros de coleta. A 001 também normaliza os tipos de carbono. A 002 recupera fatores históricos de leituras legadas quando há um registro da região no instante da leitura ou anterior a ele. A 003 adiciona os perfis. O DDL abaixo representa a instalação nova. As migrations tratam a evolução de dados antigos e não recriam o banco.
 
 <details>
 <summary><b>🗃️ Clique para expandir o Script SQL DDL (DDL.sql)</b></summary>
@@ -86,7 +96,9 @@ create table Users(
 	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	name_user varchar(50) not null,
 	email_user varchar(254) not null unique,
-	password_user varchar(255)not null
+	password_user varchar(255)not null,
+	role_user varchar(20) NOT NULL DEFAULT 'USER',
+	CONSTRAINT chk_users_role_user CHECK (role_user IN ('USER', 'ADMIN'))
 );
 create table Locations(
 	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -105,8 +117,10 @@ create table Services(
 	id_location int ,
 	name_service varchar(50)not null unique,
 	path_metric varchar(50) not null,
+	external_id text,
+	location_metadata jsonb NOT NULL DEFAULT '{}',
 	active_service BOOLEAN NOT NULL DEFAULT TRUE,
-	date_houry TIMESTAMP DEFAULT NOW(),
+	date_houry TIMESTAMPTZ DEFAULT NOW(),
 	constraint fk_service 
 		foreign key (id_location)
 		references locations(id_location)
@@ -119,12 +133,17 @@ create table Metrics (
 	CHECK (cpu_metric BETWEEN 0 AND 100),
 	ram_metric numeric not null check(ram_metric>=0),
 	hd_metric numeric not null check(hd_metric>=0),
-	network_metric numeric not null check(hd_metric>=0),
-	date_houry TIMESTAMP NOT NULL,
+	network_metric numeric not null check(network_metric>=0),
+	date_houry TIMESTAMPTZ NOT NULL,
 	colletion_interval_metric numeric not null,
+	carbon_intensity numeric,
+	renewable_percent numeric,
+	location_metadata jsonb,
 	constraint fk_service
 		foreign key (id_service)
 		references services(id_service),
+	-- A restrição UNIQUE cria automaticamente um índice B-tree composto
+	-- na ordem (id_service, date_houry), atendendo às buscas por serviço e período.
 	CONSTRAINT uq_metrics_service_date
         UNIQUE (id_service, date_houry)
 );
@@ -132,9 +151,9 @@ create table Metrics (
 create table Carbons(
 	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 	id_location int,
-	date_houry TIMESTAMP not null,
-	intesity_co2e_kwh_carbon int not null check(intesity_co2e_kwh_carbon>0),
-	renewable_percent_carbon int not null
+	date_houry TIMESTAMPTZ not null,
+	intesity_co2e_kwh_carbon numeric not null check(intesity_co2e_kwh_carbon>=0),
+	renewable_percent_carbon numeric not null
 	CHECK (renewable_percent_carbon BETWEEN 0 AND 100),
 	constraint fk_service
 		foreign key(id_location)
@@ -143,7 +162,15 @@ create table Carbons(
         UNIQUE (id_location, date_houry)
 );
 
+CREATE TABLE monitoring_collections (
+  collected_at timestamptz PRIMARY KEY,
+  catalog jsonb NOT NULL,
+  errors jsonb NOT NULL DEFAULT '{}',
+  carbon_available boolean NOT NULL
+);
+CREATE INDEX metrics_collected_at_idx ON metrics(date_houry,id_service);
 
+CREATE UNIQUE INDEX services_external_id_idx ON services(external_id);
 ```
 
 </details>
