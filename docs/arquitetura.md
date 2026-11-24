@@ -1,8 +1,10 @@
 # Arquitetura, diagramas C4 e fluxos de dados — EcoByteMetrics
 
+> Estado atual: o frontend React/Vite consulta o backend Node.js/Express, que integra o agregador de métricas e o serviço de intensidade de carbono e persiste dados no PostgreSQL usando SQL parametrizado via `pg`. Os módulos atuais incluem Auth, Users, Services, Locations, Metrics, Carbons, Monitoring, Statistics e Worker.
+
 > **Objetivo:** documentar a arquitetura proposta do EcoByteMetrics com diagramas Mermaid, incluindo contexto C4, containers C4, arquitetura lógica e fluxo de dados.
 >
-> **Importante — estado da implementação:** os diagramas descrevem a arquitetura pretendida a partir da proposta do projeto, da estrutura dos repositórios e das configurações fornecidas. Eles **não afirmam que todas as integrações já funcionam**. O frontend informa que ainda não está conectado ao backend; os arquivos de integração das APIs e o módulo `coletas` estão vazios no snapshot analisado. Por isso, os fluxos de coleta e cálculo aparecem como fluxo-alvo/planejado.
+> Os diagramas abaixo representam a arquitetura implementada no snapshot atual. Contratos de API e schema devem ser conferidos em `backend/src/app.ts`, nos routers e em `database/DDL.sql`.
 
 ## 1. Visão geral da arquitetura
 
@@ -52,7 +54,7 @@ flowchart TB
         FE["Frontend Web\nReact + TypeScript + Vite/Nginx\nInterface e dashboard"]
         BE["Backend API\nNode.js + TypeScript + Express\nEndpoints HTTP e regras de negócio"]
         DB[("Banco de dados\nPostgreSQL\nServiços, localizações, métricas e histórico")]
-        FE -->|"Solicita dados do dashboard · HTTP/JSON · pendente"| BE
+        FE -->|"Solicita dados do dashboard · HTTP/JSON"| BE
         BE -->|"Consulta e grava dados · SQL parametrizado previsto"| DB
     end
 
@@ -60,8 +62,8 @@ flowchart TB
     C["API de Intensidade de Carbono\nFatores de intensidade de carbono"]
 
     U -->|"Acessa pelo navegador · HTTP/HTTPS"| FE
-    BE -->|"Consulta serviços e métricas · integração pendente"| M
-    BE -->|"Consulta fator de carbono · integração pendente"| C
+    BE -->|"Consulta serviços e métricas · integração implementada"| M
+    BE -->|"Consulta fator de carbono · integração implementada"| C
 
     classDef person fill:#dbeafe,stroke:#2563eb,color:#172554,stroke-width:1.5px;
     classDef app fill:#bfdbfe,stroke:#1d4ed8,color:#172554,stroke-width:1.5px;
@@ -108,7 +110,7 @@ flowchart TB
     MAPI["API de Métricas"]
     CAPI["API de Intensidade de Carbono"]
 
-    FE -->|"HTTP/JSON — integração pendente"| APP
+    FE -->|"HTTP/JSON"| APP
     DB --> PG
     METRICS -->|"HTTPS/JSON"| MAPI
     CARBON -->|"HTTPS/JSON"| CAPI
@@ -121,7 +123,7 @@ flowchart TB
     class PG,MAPI,CAPI external
 ```
 
-## 5. Fluxo de dados — coleta e persistência (fluxo-alvo)
+## 5. Fluxo de dados — coleta e persistência
 
 Este é o fluxo previsto para a coleta periódica. A proposta exige descoberta de serviços, tratamento de indisponibilidade e ausência de métricas, cálculo por serviço e histórico de coletas. A implementação deve confirmar o intervalo de coleta e o tratamento de falhas.
 
@@ -156,7 +158,7 @@ flowchart TB
 
 ## 6. Fluxo de dados — consulta do dashboard
 
-O frontend deve pedir ao backend os dados para o período selecionado. O backend deve combinar dados persistidos e indicadores calculados e devolver uma resposta JSON. **No snapshot analisado, esse contrato HTTP ainda não está conectado ao frontend**: `frontend/src/services/monitoring.ts` retorna listas vazias e valores nulos.
+O frontend solicita ao backend os dados do período selecionado. O backend combina dados persistidos e indicadores calculados e devolve uma resposta JSON pelo contrato de monitoramento.
 
 ```mermaid
 sequenceDiagram
@@ -191,7 +193,7 @@ sequenceDiagram
 | Item | Situação observada |
 |---|---|
 | Frontend React + TypeScript | Existe e contém páginas para dashboard, serviços, energia, emissões e comparação |
-| Adaptador do frontend para monitoramento | Ainda retorna arrays vazios e valores `null`; a chamada HTTP está pendente |
+| Adaptador do frontend para monitoramento | Consulta o contrato de monitoramento e normaliza o snapshot recebido |
 | Backend Express | Existe; inclui CORS, JSON, rota `/health` e rotas básicas |
 | Endpoint do backend para dashboard/coletas | Não foi identificado como implementado no snapshot analisado |
 | Integração com API de métricas | Arquivo `backend/src/integrations/metrics-api.ts` está vazio |

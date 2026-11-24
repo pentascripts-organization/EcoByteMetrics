@@ -72,6 +72,8 @@ O sistema consome duas APIs externas para realizar a coleta de métricas e o cá
 ---
 
 ### 🗄️ Estrutura do Banco de Dados
+
+> O schema vigente é o resultado de `database/DDL.sql` e das migrations `001_persisted_monitoring.sql`, `002_recover_legacy_carbon.sql` e `003_user_roles.sql`. Essas migrations adicionam `role_user`, `external_id`, `location_metadata`, `carbon_intensity`, `renewable_percent` e `monitoring_collections`.
 A modelagem do banco de dados relacional utiliza SQL nativo no PostgreSQL, sem o uso de ORM. O script oficial database/DDL.sql define cinco tabelas responsáveis pelo armazenamento dos usuários, localizações, serviços, métricas e informações de intensidade de carbono.
 
 <details>
