@@ -346,3 +346,29 @@ Atualiza a frequência e os parâmetros do serviço background de polling de mé
     }
     ```
 ```
+# Contratos atuais
+
+As rotas vigentes são definidas em `backend/src/app.ts` e nos routers dos módulos:
+
+| Método | Rota |
+|---|---|
+| POST | `/auth/login` |
+| GET | `/auth/session` |
+| POST | `/auth/logout` |
+| GET | `/api/monitoring` |
+| POST | `/api/users` |
+| GET/PUT/DELETE | `/api/users/:id_user` |
+| GET | `/api/dashboard/summary` |
+| GET | `/api/dashboard/ranking` |
+| GET | `/api/statistics/summary` |
+| GET | `/api/statistics/ranking` |
+| GET | `/api/statistics/energy` |
+| GET | `/api/statistics/energy/:nome_service` |
+| GET | `/api/statistics/metrics/compare` |
+| GET/POST | `/api/services` |
+| GET/POST | `/api/metrics` |
+| GET/POST | `/api/carbons` |
+| GET/POST | `/api/locations` |
+
+`/api/services/:id/metrics` é um contrato legado. Latitude e longitude podem estar ausentes no monitoramento; nesse caso o serviço permanece nas tabelas e listas, mas não recebe marcador no mapa.
+
