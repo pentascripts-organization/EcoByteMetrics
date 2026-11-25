@@ -1,277 +1,96 @@
-> **Modelo atual de histórico:** o servidor executa `migrations/001_persisted_monitoring.sql` antes de iniciar. Serviços usam identificador externo; métricas guardam fator e localização da rodada; datas são `TIMESTAMPTZ`. O histórico é consultado em `/api/monitoring`. O DDL autoritativo está em [DDL.sql](DDL.sql), e a migração, a premissa UTC para dados legados e o contrato estão em [backend/docs/HISTORY.md](../backend/docs/HISTORY.md). Faça backup antes de migrar dados de outro ambiente.
+# 🗄️ Camada de persistência — PostgreSQL
 
-# 🗄️ Camada de Persistência — PostgreSQL Nativo
+O [DDL](DDL.sql) define a instalação nova. [DML.sql](DML.sql) provisiona contas iniciais por ambiente e armazena hashes bcrypt via `pgcrypto`. [migrations](migrations/) adaptam bancos já inicializados. Os [repositories](../backend/src/modules/) executam DML parametrizado via driver `pg`, sem ORM.
 
-Este repositório contém a modelagem de dados relacional, os scripts DDL de criação de tabelas e as orientações de gerenciamento do banco PostgreSQL da plataforma **EcoByteMetrics**.
+## MER e DER
 
----
+Conceitualmente, uma localização pode hospedar serviços e possuir fatores regionais. Um serviço recebe leituras. Conta e rodada são entidades independentes. Os [diagramas iniciais](../docs/Modelo%20MER%20e%20DER/) registram o desenho histórico. O DER abaixo representa os relacionamentos físicos atuais, com FKs opcionais e sem relacionamento relacional para o catálogo JSON de uma rodada.
 
-### 📌 Diretrizes Técnicas e de Engenharia (RP03)
-* **SQL Nativo Explícito:** A estrutura e as manipulações de dados são executadas estritamente por instruções SQL puras em DDL e DML.
-* **Proibição de ORMs:** Veto total ao uso de frameworks como Prisma, TypeORM ou Sequelize.
-* **Consultas Parametrizadas:** Toda comunicação dinâmica utiliza *placeholders* (`$1`, `$2`) para impedir vulnerabilidades de *SQL Injection*.
+```mermaid
+erDiagram
+    LOCATIONS o|--o{ SERVICES : localiza
+    LOCATIONS o|--o{ CARBONS : possui
+    SERVICES o|--o{ METRICS : recebe
+    USERS {
+        int id_user PK
+        varchar name_user
+        varchar email_user UK
+        varchar password_user
+        varchar role_user
+    }
+    LOCATIONS {
+        int id_location PK
+        varchar name_location UK
+        varchar country_location
+        varchar region_location
+        varchar city_location
+        double latitude_location
+        double longitude_location
+    }
+    SERVICES {
+        int id_service PK
+        int id_location FK
+        varchar name_service UK
+        varchar path_metric
+        text external_id UK
+        jsonb location_metadata
+        boolean active_service
+        timestamptz date_houry
+    }
+    METRICS {
+        bigint id_metric PK
+        int id_service FK
+        numeric cpu_metric
+        numeric ram_metric
+        numeric hd_metric
+        numeric network_metric
+        timestamptz date_houry
+        numeric colletion_interval_metric
+        numeric carbon_intensity
+        numeric renewable_percent
+        jsonb location_metadata
+    }
+    CARBONS {
+        int id_carbon PK
+        int id_location FK
+        timestamptz date_houry
+        numeric intesity_co2e_kwh_carbon
+        numeric renewable_percent_carbon
+    }
+    MONITORING_COLLECTIONS {
+        timestamptz collected_at PK
+        jsonb catalog
+        jsonb errors
+        boolean carbon_available
+    }
+    SCHEMA_MIGRATIONS {
+        text version PK
+        timestamptz applied_at
+    }
+```
 
----
+| Estrutura | Restrições e índices relevantes |
+|---|---|
+| `users` | E-mail único. Perfil `USER` por padrão e domínio `USER` ou `ADMIN`. |
+| `locations` | Nome único, latitude e longitude obrigatórias com limites geográficos. Serviços sem coordenadas podem ficar sem FK e manter metadados JSON. |
+| `services` | Nome único e índice único em `external_id`, que admite nulo. |
+| `metrics` | CPU de 0 a 100, memória, disco e rede não negativos. Unicidade `(id_service, date_houry)`; índice de consulta por `(date_houry, id_service)`. Intensidade, percentual renovável e metadados podem ser nulos. |
+| `carbons` | Intensidade não negativa e percentual de 0 a 100. Par `(id_location, date_houry)` único. |
+| `monitoring_collections` | Uma rodada por instante, com catálogo, erros e disponibilidade de fatores. |
+| `schema_migrations` | Controle do [executor de migrations](../backend/src/db/migrate.ts) por versão e data de aplicação. |
 
-### 📂 Estrutura da Pasta
+## Instalação, evolução e persistência
+
+Inicie o serviço `postgres` pelo [Compose da raiz](../compose.yaml), com as credenciais e as seis variáveis das contas iniciais configuradas no [modelo de ambiente](../.env.example). Use e-mails distintos e senhas próprias entre 8 e 72 bytes para a carga inicial. O entrypoint executa o DDL e o DML em um volume vazio. Alterações das variáveis de seed após a inicialização não atualizam contas existentes. A senha do PostgreSQL é independente da senha da aplicação.
+
+Em volumes existentes, o backend aplica `001_persisted_monitoring` (estrutura de histórico, índices e datas legadas assumidas em UTC), `002_recover_legacy_carbon` (recupera fatores regionais contemporâneos ou anteriores para registros elegíveis) e `003_user_roles` (perfis), nessa ordem. O executor usa transação, trava de migração e tabela de controle. Se a preparação falhar, o HTTP não inicia. Consulte [histórico](../backend/docs/HISTORY.md).
+
+A [persistência de rodadas](../backend/src/modules/Monitoring/collection.repository.ts) grava catálogo, localizações, fatores, métricas e erros em uma transação. O [repositório de leitura](../backend/src/modules/Monitoring/monitoring.repository.ts) reconstrói o snapshot e as janelas históricas. O volume `postgres_data` monta `/var/lib/postgresql/data`. O serviço no Compose se chama `postgres`, e a porta publicada é 5433 na configuração de exemplo.
+
+Para diagnosticar e verificar persistência em ambiente de homologação, rode o comando abaixo antes e depois de `docker compose restart postgres`, mantendo o mesmo projeto Compose. Compare os instantes das rodadas anteriores ao reinício e depois verifique se novas rodadas aparecem.
 
 ```bash
-database/
-├── README.md       # Orientações para restauração, DML e volume Docker
-├── Dockerfile      # Arquivo de configuração do conteiner database 
-└── DDL.sql         # Estrutura principal do banco
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT collected_at, carbon_available FROM monitoring_collections ORDER BY collected_at DESC LIMIT 5"'
 ```
 
-
-### 🛠️ Restaurando o Banco de Dados em um Ambiente Limpo
-
-Para aplicar a estrutura oficial em um container PostgreSQL vazio, execute o comando abaixo no terminal:
-
-```bash
-docker exec -i greener_postgres psql -U greener_user -d greener_db < database/DDL.sql
-```
-
----
-
-### 🗃️ Modelo DDL Oficial (`database/schema.sql`)
-
-O script `database/DDL.sql` define a estrutura física relacional do sistema:
-
-```sql
-create table Users(
-	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_user varchar(50) not null,
-	email_user varchar(254) not null unique,
-	password_user varchar(255)not null
-);
-create table Locations(
-	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_location varchar(50)not null unique,
-	country_location varchar(50),
-	region_location varchar(50),
-	city_location varchar(50),
-	latitude_location double precision not null
-	CHECK (latitude_location BETWEEN -90 AND 90),
-	longitude_location double precision not null
-	CHECK (longitude_location BETWEEN -180 AND 180)
-);
-
-create table Services(
-	id_service int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_location int ,
-	name_service varchar(50)not null unique,
-	path_metric varchar(50) not null,
-	external_id text,
-	location_metadata jsonb NOT NULL DEFAULT '{}',
-	active_service BOOLEAN NOT NULL DEFAULT TRUE,
-	date_houry TIMESTAMPTZ DEFAULT NOW(),
-	constraint fk_service 
-		foreign key (id_location)
-		references locations(id_location)
-);
-
-create table Metrics (
-	id_metric bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_service int,
-	cpu_metric numeric not null
-	CHECK (cpu_metric BETWEEN 0 AND 100),
-	ram_metric numeric not null check(ram_metric>=0),
-	hd_metric numeric not null check(hd_metric>=0),
-	network_metric numeric not null check(network_metric>=0),
-	date_houry TIMESTAMPTZ NOT NULL,
-	colletion_interval_metric numeric not null,
-	carbon_intensity numeric,
-	renewable_percent numeric,
-	location_metadata jsonb,
-	constraint fk_service
-		foreign key (id_service)
-		references services(id_service),
-	CONSTRAINT uq_metrics_service_date
-        UNIQUE (id_service, date_houry)
-);
-
-create table Carbons(
-	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_location int,
-	date_houry TIMESTAMPTZ not null,
-	intesity_co2e_kwh_carbon numeric not null check(intesity_co2e_kwh_carbon>=0),
-	renewable_percent_carbon numeric not null
-	CHECK (renewable_percent_carbon BETWEEN 0 AND 100),
-	constraint fk_service
-		foreign key(id_location)
-		references locations(id_location),
-	CONSTRAINT uq_metrics_Carbon_date
-        UNIQUE (id_location, date_houry)
-);
-
-CREATE TABLE monitoring_collections (
-  collected_at timestamptz PRIMARY KEY,
-  catalog jsonb NOT NULL,
-  errors jsonb NOT NULL DEFAULT '{}',
-  carbon_available boolean NOT NULL
-);
-CREATE INDEX metrics_collected_at_idx ON metrics(date_houry,id_service);
-
-
-CREATE UNIQUE INDEX services_external_id_idx ON services(external_id);
-
-```
-
----
-
-### 🔍 Localização das Consultas DML na Aplicação
-
-As operações DML de manipulação de dados ficam isoladas nos repositórios do backend (`backend/src/modules/`):
-
-#### 1. Inserção na Tabela `Metrics` (`metrics.repository.ts`)
-```sql
-INSERT INTO Metrics (
-  id_service, date_houry, path_metric, colletion_interval_metric,
-  cpu_metric, ram_metric, hd_metric, network_metric
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
-```
-
-#### 2. Consulta de Histórico Temporal de Amostragens (`collections.repository.ts`)
-```sql
-SELECT id_metric, id_service, date_houry, cpu_metric, ram_metric, hd_metric, network_metric
-FROM Metrics
-WHERE id_service = $1
-ORDER BY date_houry DESC
-LIMIT $2;
-```
-
----
-
-### 📊 Consulta para Análise e Agregação de Resultados
-
-Query SQL utilizada pelo backend para consolidar os rankings de consumo e emissão por período:
-
-```sql
-const sortColumn =
-    orderBy === "kwh"
-    ? '"consumoKwh"'
-    : '"emissaoCo2eG"';
-
-	WITH sample_energy AS (
-            SELECT
-                m.id_service AS service_id,
-                m.date_houry AS collected_at,
-                m.colletion_interval_metric AS collection_interval_seconds,
-
-                m.carbon_intensity AS carbon_intensity_gco2e_per_kwh,
-
-                (
-                    (m.cpu_metric / 100.0 * 120) +
-                    (m.ram_metric * 0.375) +
-                    (m.hd_metric * 0.01) +
-                    (m.network_metric * 0.02)
-                ) * m.colletion_interval_metric / 3600000.0
-                    AS consumption_kwh
-
-            FROM Metrics AS m
-
-            INNER JOIN Services AS s
-                ON s.id_service = m.id_service
-
-
-            WHERE s.active_service = TRUE
-        ),
-
-        sample_impact AS (
-            SELECT
-                service_id,
-                collected_at,
-                consumption_kwh,
-                consumption_kwh *
-                    carbon_intensity_gco2e_per_kwh AS emissions_co2e_g
-            FROM sample_energy
-        ),
-		SELECT
-            s.id_service AS id,
-            s.name_service AS nome,
-
-            COALESCE(
-                SUM(i.consumption_kwh), 0
-            )::float8 AS "consumoKwh",
-            SUM(i.emissions_co2e_g)::float8 AS "emissaoCo2eG"
-
-            FROM Services AS s
-
-            LEFT JOIN sample_impact AS i
-                ON i.service_id = s.id_service
-                AND i.collected_at >=
-                    NOW() - $1::interval
-
-            WHERE s.active_service = TRUE
-
-            GROUP BY
-                s.id_service,
-                s.name_service
-
-            ORDER BY
-                ${sortColumn} DESC,
-                nome ASC;
-```
-
----
-
-### 💾 Persistência de Dados em Container Docker
-
-A preservação dos registros após a reinicialização dos containers é garantida pelo volume nomeado `pgdata` configurado no arquivo `compose.yaml`:
-
-```yaml
-postgres:
-    build: ./database
-    
-    container_name: database_EcoByteMetrics
-    restart: unless-stopped
-
-    environment:
-      POSTGRES_DB: ${POSTGRES_DATABASE}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-    ports:
-      - "${POSTGRES_PORT_CONTEINER}:${POSTGRES_PORT}"
-
-    volumes:
-      - postgres_data:/var/lib/postgresql
-      - ./database:/docker-entrypoint-initdb.d
-
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DATABASE\""]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-volumes:
-  postgres_data:
-```
-
-## Primeiro usuário administrador
-
-O `DML.sql` não define uma senha padrão e não cria um administrador automaticamente. A senha do ADMIN é escolhida pelo responsável pela implantação; não existe uma senha de administrador compartilhada pelo projeto.
-
-1. Gere um hash bcrypt usando a dependência `bcryptjs` já instalada no backend. No terminal, dentro de `backend`, solicite a senha sem gravá-la no repositório:
-
-   ```bash
-   read -rsp "Senha forte para o ADMIN: " ADMIN_PASSWORD; echo
-   ADMIN_HASH=$(ADMIN_PASSWORD="$ADMIN_PASSWORD" node -e 'const bcrypt = require("bcryptjs"); process.stdout.write(bcrypt.hashSync(process.env.ADMIN_PASSWORD, 12))')
-   unset ADMIN_PASSWORD
-   ```
-
-2. Insira a conta com uma consulta parametrizada. Substitua os parâmetros pelos valores escolhidos e passe o hash gerado em `$3` (não passe a senha em texto puro):
-
-   ```sql
-   INSERT INTO users (name_user, email_user, password_user, role_user)
-   VALUES ($1, $2, $3, 'ADMIN')
-   ON CONFLICT (email_user) DO NOTHING;
-   ```
-
-   Exemplo de parâmetros: `$1` = nome do administrador; `$2` = e-mail em letras minúsculas; `$3` = conteúdo de `ADMIN_HASH`.
-
-3. Faça login em `POST /auth/login` com o e-mail e a senha escolhidos no passo 1. A API compara a senha com o hash bcrypt e emite um JWT com `role: "ADMIN"`.
-
-**Não confunda credenciais:** `POSTGRES_PASSWORD` autentica a conexão com o PostgreSQL; a senha escolhida acima autentica o usuário ADMIN na aplicação. As senhas aleatórias usadas pelos testes são apenas fixtures e não são credenciais de implantação. Novos cadastros pela API recebem sempre o perfil `USER`.
-
-Não versione `.env`, senhas, hashes de produção ou tokens. Se a conta já existir, `ON CONFLICT DO NOTHING` não altera seu perfil nem sua senha; faça a recuperação por um procedimento administrativo autorizado.
+Use o [runbook](../docs/troubleshooting.md) para exportar um backup e validar a recuperação em um banco separado. A opção `docker compose down --volumes` apaga o volume do projeto e seu histórico.

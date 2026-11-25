@@ -22,7 +22,7 @@ O proxy remove `/backend` antes de encaminhar a consulta. Mantenha a API na mesm
 
 A home, a página 404 e as telas de acesso podem ser abertas sem o backend. Monitoramento e comparação precisam de respostas da API para mostrar aplicações reais; não existe modo de demonstração automático.
 
-A aba Administração exige sessão em desenvolvimento e produção. Uma visita sem sessão vai ao login, preservando o destino e os filtros; a tela de login também oferece o caminho para cadastro. Após entrar, o painel apresenta o título Administração, o e-mail da conta e o botão Sair. A área de conteúdo permanece vazia por enquanto; não há consulta ou alteração de configurações de coleta nessa tela.
+A aba Administração exige sessão. Uma visita sem sessão redireciona ao login e preserva destino e filtros. O perfil `ADMIN` vê o cartão da conta, configurações de coleta em modo somente leitura e serviços monitorados. `USER` vê **Sua conta**, com consulta e edição dos próprios dados. O painel identifica exportação, gestão de usuários e controle de coleta como recursos futuros.
 
 ## Login e sessão
 
@@ -37,8 +37,6 @@ O formulário de entrada envia `{ email, password }` para `POST /backend/auth/lo
 - Após confirmar a criação, volta ao login com o e-mail preenchido, a senha vazia e o destino original preservado. Cadastro não inicia sessão automaticamente. A confirmação e o e-mail ficam apenas em memória. Se a conexão cair sem confirmar o resultado do POST, a mensagem orienta tentar entrar antes de cadastrar novamente.
 - Sem PostgreSQL disponível, as telas informam indisponibilidade e não criam sessão. Não há credenciais de demonstração nem autenticação simulada no aplicativo.
 
-A implementação foi testada com respostas controladas e com o backend e PostgreSQL reais pelo proxy do Vite, usando contas temporárias removidas ao terminar. A revisão visual do fluxo no navegador e a autorização das futuras operações administrativas continuam pendentes. Nesta configuração local, `BACKEND_PROXY_TARGET` aponta para `http://127.0.0.1:3001` para evitar colisão com containers antigos na porta 3000.
-
 ## Medir o peso
 
 Para medir o tamanho do build, execute `npm run measure:build`. O relatório distingue arquivos publicados, código inicial e estimativa de gzip.
@@ -50,11 +48,11 @@ Para medir o tamanho do build, execute `npm run measure:build`. O relatório dis
 | `/` | Landing page com quatro vídeos, seções explicativas e acesso ao dashboard |
 | `/dashboard` | Lista, filtros, estados, globo, resumo e evolução das amostras |
 | `/dashboard?servico=ID` | Resumo e recursos da última coleta; totais por período na Evolução; globo permanece à esquerda no desktop |
-| `/comparar` | Seleção de aplicações e comparação da última coleta ou dos totais no período |
-| `/dashboard?aba=administracao` | Tela reservada, com autenticação obrigatória, conta conectada e saída; configurações removidas temporariamente |
+| `/comparar` | Redireciona para a aba Comparar, com seleção de aplicações e comparação da última coleta ou dos totais do período |
+| `/dashboard?aba=administracao` | Sessão obrigatória. Administração para ADMIN e Sua conta para USER |
 | `/login` | Formulário conectado ao backend, sessão restaurada pelo servidor, retorno seguro e tratamento de erros |
 | `/cadastro` | Criação de conta pela API, validação e retorno ao login com confirmação e e-mail preenchido |
-| `/gerenciamento` | Funcionalidade pendente do backend |
+| `/gerenciamento` | Página de funcionalidade em construção |
 | `/pesquisa`, `/servicos` | Redirecionam ao dashboard preservando a consulta |
 | `/servicos/:id` | Redireciona ao detalhe da aplicação |
 | `/energia`, `/emissoes` | Redirecionam à evolução com a métrica correspondente |
@@ -77,13 +75,15 @@ O transporte compartilhado em `src/shared/lib/http.ts` solicita JSON, não usa c
 ## Verificar
 
 ```powershell
-npm test
+npm run test:unit
+npm run test:e2e:install
+npm run test:e2e
 npm run lint
 npm run build
 npm run preview
 ```
 
-Os testes cobrem contratos HTTP com respostas controladas, erros, cancelamento, preservação de dados, agrupamento geográfico, filtros, ranking, comparação, gráficos, câmera, rotação, transição e reprodução de vídeos. Os testes de telas usam renderização React no servidor; não executam o navegador ou o WebGL.
+Os testes cobrem contratos HTTP com respostas controladas, erros, cancelamento, preservação de dados, agrupamento geográfico, filtros, ranking, comparação, gráficos, câmera, rotação, transição e reprodução de vídeos. As suítes unitárias incluem renderização React e contratos com respostas controladas. A suíte Playwright executa Chromium e cobre navegação, Administração e Evolução com respostas controladas. Consulte [tests](tests/) e [a configuração do Playwright](playwright.config.ts).
 
 ## Distribuir somente o frontend
 
@@ -101,6 +101,10 @@ Este Compose inicia apenas o frontend na porta 5173 e encaminha `/backend/` para
 `app/` compõe rotas, layouts e providers. `features/home`, `features/auth` e `features/monitoring` contêm as funcionalidades. `shared/` reúne componentes, HTTP, preferências, estilos e geografia independentes das funcionalidades. O alias `@/` aponta para `src/`.
 
 Não coloque credenciais no frontend nem implemente histórico fictício para contornar a ausência de endpoints. Validação de permissões e operações administrativas pertence ao servidor.
+
+[AppProviders](src/app/providers/AppProviders.tsx) reúne os providers da aplicação. [MonitoringProvider](src/features/monitoring/providers/MonitoringProvider.tsx) controla polling e estado do snapshot, lido por `useMonitoring`. [AnalysisProvider](src/features/monitoring/providers/AnalysisProvider.tsx) compartilha consultas de análise, lidas por `useAnalysis`. [AuthProvider](src/features/auth/AuthProvider.tsx) gerencia sessão, e o provider de preferências trata configurações locais da interface. Os [contratos do monitoramento](src/features/monitoring/api/contracts.ts) filtram e normalizam a entrada HTTP.
+
+No dashboard, [MonitoringState](src/features/monitoring/components/MonitoringState.tsx) trata estados de consulta. A lista, o detalhe, o globo, a Evolução e o comparador têm apresentação adaptada em CSS, incluindo [dashboard-mobile.css](src/features/monitoring/styles/dashboard-mobile.css). Valide navegação e legibilidade nas larguras usadas na homologação.
 
 ## Ranking histórico e comparação
 

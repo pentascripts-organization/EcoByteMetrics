@@ -337,35 +337,23 @@ Se o backend não iniciar devido a uma migração:
 
 As migrações são verificadas e aplicadas durante a inicialização da aplicação.
 
-### 6.6. Backup e preservação dos dados
+### 6.6. Backup e recuperação
 
-Antes de qualquer intervenção que possa afetar os dados, recomenda-se realizar um backup.
+Faça o dump dentro do contêiner e copie o arquivo binário para o host. Execute a partir da raiz. Escolha um nome de destino novo para preservar backups anteriores.
 
-No PowerShell, na raiz do projeto:
-
-```powershell
-docker compose exec -T postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > .\ecobytemetrics-backup.sql
+```bash
+docker compose exec postgres sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/ecobytemetrics.dump'
+docker compose cp postgres:/tmp/ecobytemetrics.dump ./ecobytemetrics.dump
+docker compose exec postgres pg_restore -l /tmp/ecobytemetrics.dump
 ```
 
-Verifique se o arquivo foi criado:
+Para ensaiar recuperação, use um PostgreSQL separado com um banco vazio, criado pelo operador, e um usuário autorizado a restaurar e criar as extensões necessárias. Com o cliente PostgreSQL e o dump no host, substitua destino e porta pelos do ambiente de teste.
 
-```powershell
-Get-Item .\ecobytemetrics-backup.sql
+```bash
+pg_restore --exit-on-error --no-owner --no-privileges -h 127.0.0.1 -p 5434 -U restore_user -d ecobytemetrics_restore ./ecobytemetrics.dump
 ```
 
-O backup deve ser armazenado em local seguro, fora do versionamento do projeto.
-
-A restauração deve ser realizada somente após verificar a integridade do arquivo, testar o procedimento em ambiente isolado e obter autorização do responsável pela base de dados.
-
-**Atenção:** não utilize o comando abaixo como procedimento comum de recuperação:
-
-```powershell
-docker compose down -v
-```
-
-A opção `-v` remove os volumes associados ao projeto, podendo apagar os dados persistidos do PostgreSQL.
-
-O volume `postgres_data` deve ser preservado durante reinicializações e operações normais de manutenção.
+Confira esquema, versões de migration e rodadas restauradas antes de conectar a aplicação ao destino. Use o [guia do banco](../database/README.md#instalação-evolução-e-persistência) para comparar as coletas. Trate o dump como dado sensível, pois inclui as contas e seus hashes. A opção `docker compose down --volumes` apaga o histórico e as contas armazenados no volume do projeto.
 
 ## 7. Verificação Após a Recuperação
 
@@ -481,3 +469,10 @@ As evidências devem ser registradas sem expor credenciais, tokens ou informaç�
 - `backend/src/modules/Monitoring/monitoring.router.ts`
 - `frontend/nginx.conf`
 - `frontend/src/features/monitoring/pages/DashboardPage.tsx`
+
+## 10. Diagnóstico de login e sessão
+
+1. Confira o HTTP direto em `http://localhost:3000/health` e pelo proxy em `http://localhost:5173/backend/health`. Se apenas o proxy falhar, verifique `docker compose logs --tail 100 frontend` e o destino interno do proxy.
+2. Verifique o PostgreSQL e as migrations antes de investigar credenciais. Alterar as variáveis de seed em um volume já inicializado não altera contas existentes.
+3. Em `/login`, use as credenciais da aplicação. Consulte os status e as condições de `/auth/login` e `/auth/session` na [API](api.md). Em produção, use HTTPS para a restauração por cookie Secure. Mantenha interface e proxy na mesma origem.
+4. Em caso de `401`, autentique novamente. Em caso de `403`, confirme o perfil e o ID da conta ou a permissão de escrita exigida pela rota. O painel de configurações aparece para `ADMIN`. Um `503` na restauração requer verificar o banco e os logs do backend.

@@ -24,59 +24,94 @@ flowchart LR
 
 O [Compose](../compose.yaml) executa frontend, backend e PostgreSQL. O navegador acessa a API por meio do proxy. A aplicação usa SQL parametrizado no PostgreSQL, sem ORM.
 
-## Arquitetura lógica do backend
+## Componentes
 
 ```mermaid
 flowchart LR
-    App["app.ts · Express"] --> Auth["Auth · JWT e controle de acesso"]
-    App --> R["Routers, controllers e serviços"]
-    R --> Q["Repositórios de consulta"]
-    W["worker.job.ts · agendamento"] --> Col["collector.ts · coleta"]
-    Col --> Ext["Integrações HTTP externas"]
-    Q --> Pool["db/connection.ts · pool"]
-    Col --> Pool
+    HTTP["Express e tratamento de erros"] --> Auth["Auth e Users"]
+    HTTP --> Monitor["Monitoring: snapshot e histórico"]
+    HTTP --> Stats["Statistics: ranking e comparação SQL"]
+    HTTP --> Cache["Dashboard e rotas em memória"]
+    Worker["Worker: disparo inicial e periódico"] --> Collector["Collector: validação e orquestração"]
+    Collector --> APIs["Clientes de métricas e carbono"]
+    Collector --> Write["Repositório de rodadas"]
+    Collector --> Cache
+    Auth --> Pool["Pool pg"]
+    Monitor --> Pool
+    Stats --> Pool
+    Write --> Pool
     Pool --> Pg[("PostgreSQL")]
 ```
 
-[server.ts](../backend/src/server.ts) executa as migrations antes de iniciar o servidor e o agendamento. [worker.job.ts](../backend/src/modules/Worker/worker.job.ts) evita rodadas concorrentes, e [collector.ts](../backend/src/modules/Monitoring/collector.ts) integra as fontes externas e persiste a rodada. O catálogo em memória atende as rotas de últimas leituras. As consultas analíticas usam dados persistidos.
+[server.ts](../backend/src/server.ts) prepara o banco antes de iniciar o HTTP. [app.ts](../backend/src/app.ts) registra as rotas e o tratador de exceções. A [API](api.md) distingue o monitoramento persistido das rotas de diagnóstico e cache.
 
-## Coleta e persistência
+## Descoberta, coleta, carbono e persistência
 
 ```mermaid
 sequenceDiagram
-    participant W as Agendador
+    participant W as Worker
     participant C as Coletor
-    participant A as APIs externas
+    participant M as Agregador
+    participant A as Serviço de carbono
     participant P as PostgreSQL
-    W->>C: Dispara coleta periódica
-    C->>A: Consulta catálogo, métricas e fatores regionais
-    A-->>C: Leituras e fatores disponíveis
-    C->>P: Persiste serviços, localizações, fatores, métricas e rodada
-    P-->>C: Confirma a transação
-    C-->>W: Atualiza o estado publicado da rodada
+    W->>C: Dispara no início e a cada 30 segundos
+    C->>M: GET /services
+    alt Catálogo válido
+        M-->>C: Catálogo atual
+    else Descoberta falhou com catálogo em memória
+        C->>C: Preserva catálogo em memória e sinaliza indisponibilidade
+    else Descoberta falhou sem catálogo
+        C-->>W: Encerra a rodada com erro
+    end
+    opt Rodada pode continuar
+        C->>A: GET /regions
+        A-->>C: Fatores regionais ou falha
+        opt Descoberta bem-sucedida
+            C->>M: GET /metrics por serviço em lotes de seis
+            M-->>C: Amostra ou erro individual
+        end
+        C->>P: Persiste catálogo, fatores, métricas e rodada em transação
+        alt Commit confirmado
+            P-->>C: Confirma gravação
+            C->>C: Publica catálogo, leituras e estados no cache
+        else Falha de persistência
+            C->>P: Rollback quando a transação foi iniciada
+            C-->>W: Registra falha e mantém estado anterior
+        end
+    end
 ```
 
-A rodada registra o catálogo e as falhas de coleta em `monitoring_collections`. A leitura guarda a intensidade disponível naquele momento. Leituras sem fator têm cobertura de emissões incompleta. O [DDL](../database/DDL.sql) estrutura a instalação nova, e as [migrations](../database/migrations/) adaptam bancos anteriores antes do uso.
+O [agendador](../backend/src/modules/Worker/worker.job.ts) ignora ciclos sobrepostos no mesmo processo. O [coletor](../backend/src/modules/Monitoring/collector.ts) valida a amostra e registra falhas por serviço. A [persistência](../backend/src/modules/Monitoring/collection.repository.ts) associa a intensidade pelo código regional. Quando falta fator, a energia continua disponível e a emissão tem cobertura incompleta.
 
-## Consulta do dashboard e sessão
+## Snapshot, histórico, comparação e autenticação
 
 ```mermaid
 sequenceDiagram
     participant U as Navegador
-    participant B as Backend
+    participant B as API pelo proxy
     participant P as PostgreSQL
-    U->>B: POST /auth/login
-    B->>P: Consulta a conta
-    B-->>U: JWT e cookie HttpOnly
-    U->>B: GET /api/monitoring com view e período
-    opt Histórico detalhado
-        B->>B: Valida o JWT por Bearer ou cookie
+    loop Consulta da Visão geral
+        U->>B: GET /api/monitoring?view=latest
+        B->>P: Busca catálogo e leituras recentes
+        B-->>U: Snapshot ou erro
     end
-    B->>P: Consulta catálogo e histórico persistido
-    B-->>U: Snapshot com serviços, leituras e cobertura
+    opt Evolução ou comparação por período
+        U->>B: GET /api/monitoring?view=analysis com intervalo
+        B->>P: Busca histórico e cobertura da janela
+        B-->>U: Série temporal
+        U->>U: Prepara gráficos e compara serviços
+    end
+    opt Login e histórico detalhado
+        U->>B: POST /auth/login
+        B->>P: Consulta conta
+        B-->>U: JWT e cookie HttpOnly, ou erro de login
+        U->>B: GET /api/monitoring?view=history com sessão válida
+        B->>P: Consulta histórica até o corte
+        B-->>U: Leituras e metadados disponíveis
+    end
 ```
 
-A Visão geral usa `view=latest`. Evolução e Comparar usam `view=analysis`. O histórico detalhado exige autenticação. O adaptador [monitoring.ts](../frontend/src/features/monitoring/api/monitoring.ts) valida e normaliza o snapshot. A Administração consulta as configurações da coleta em modo somente leitura e usa as rotas de conta autenticadas. As permissões e os parâmetros estão na [documentação da API](api.md).
+A comparação pela última coleta reutiliza o snapshot resumido. O endpoint de comparação SQL atende consumidores da API e tem janela própria. O [adaptador do frontend](../frontend/src/features/monitoring/api/monitoring.ts) valida as respostas. Em falha HTTP, o [provider](../frontend/src/features/monitoring/providers/MonitoringProvider.tsx) pode preservar o snapshot anterior com indicação de indisponibilidade. A Administração usa consulta de configurações e operações da conta autenticada. O [router de autenticação](../backend/src/modules/Auth/auth.router.ts) restaura a sessão pelo cookie, e o [repositório de monitoramento](../backend/src/modules/Monitoring/monitoring.repository.ts) lê o histórico persistido.
 
 ## Referências
 
