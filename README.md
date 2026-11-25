@@ -7,7 +7,7 @@ O **EcoByteMetrics** é uma plataforma web voltada para a análise e o monitoram
 ---
 
 ### 💡 Sobre o Projeto
-A plataforma resolve a falta de visibilidade sobre o impacto ambiental de arquiteturas em nuvem e microsserviços. O sistema conecta-se ao ambiente para listar e monitorar dinamicamente os microsserviços ativos, identificando indisponividades e falhas na exportação de métricas. 
+A plataforma resolve a falta de visibilidade sobre o impacto ambiental de arquiteturas em nuvem e microsserviços. O sistema conecta-se ao ambiente para listar e monitorar dinamicamente os microsserviços ativos, identificando indisponividades e falhas na exportação de métricas.
 
 A utilização de recursos de hardware, como CPU, memória e rede, é convertida em consumo elétrico (kWh) e emissões de carbono (CO₂e) com base na localização geográfica e em fatores regionais de emissão. A aplicação disponibiliza painéis operacionais, rankings de impacto, mapeamento geográfico e comparadores de eficiência entre serviços.
 
@@ -66,8 +66,12 @@ A camada de interface web foi desenvolvida com React e TypeScript para promover 
 ### 🔌 Integração com APIs Externas
 O sistema consome duas APIs externas para realizar a coleta de métricas e o cálculo do impacto ambiental.
 
-1. **Agregador de Métricas:** A rota `GET /services` realiza a descoberta das aplicações e o endpoint `GET /metrics/{id_servico}` obtém as amostras de consumo de hardware (`METRICS_AGGREGATOR_URL=http://agregador-metricas.local:8080`).
-2. **Serviço de Intensidade de Carbono:** A rota `GET /carbon-intensity/{code}` obtém os fatores regionais de emissão para o cálculo de carbono (`CARBON_INTENSITY_URL=http://carbon-intensity.local:8081`).
+1. **Agregador de Métricas**, em `API_METRIC`. O coletor consulta `GET /services` e `GET /metrics/{id}`.
+2. **Serviço de Intensidade de Carbono**, em `API_CARBON`. Cada rodada consulta `GET /regions` e associa o fator pela região do serviço.
+
+O MVP inclui catálogo e estados operacionais, ranking por impacto, detalhe de aplicações, globo interativo, histórico e evolução temporal, comparação e autenticação JWT. A aba **Administração** mostra conta, serviços e parâmetros de coleta em modo de consulta para `ADMIN`. O perfil `USER` tem a visão **Sua conta**. A intensidade ausente limita a cobertura de emissões. A metodologia produz [estimativas](docs/calculos.md).
+
+Exportação CSV/JSON, gestão administrativa de contas pela interface, pausa, ajuste do intervalo pela interface e simulação de migração geográfica permanecem indisponíveis.
 
 ---
 
@@ -86,108 +90,7 @@ O [DDL oficial](database/DDL.sql) cria seis tabelas no PostgreSQL, sem ORM.
 
 As leituras usam `TIMESTAMPTZ`. A chave única por serviço e instante evita métricas duplicadas, e o índice por horário apoia consultas históricas. O backend mantém `schema_migrations` como tabela de controle. Em bancos existentes, a migration 001 converte datas antigas assumindo UTC e acrescenta campos, índices e registros de coleta. A 001 também normaliza os tipos de carbono. A 002 recupera fatores históricos de leituras legadas quando há um registro da região no instante da leitura ou anterior a ele. A 003 adiciona os perfis. O DDL abaixo representa a instalação nova. As migrations tratam a evolução de dados antigos e não recriam o banco.
 
-<details>
-<summary><b>🗃️ Clique para expandir o Script SQL DDL (DDL.sql)</b></summary>
-
-<br>
-
-```sql
-create table Users(
-	id_user int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_user varchar(50) not null,
-	email_user varchar(254) not null unique,
-	password_user varchar(255)not null,
-	role_user varchar(20) NOT NULL DEFAULT 'USER',
-	CONSTRAINT chk_users_role_user CHECK (role_user IN ('USER', 'ADMIN'))
-);
-create table Locations(
-	id_location int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	name_location varchar(50)not null unique,
-	country_location varchar(50),
-	region_location varchar(50),
-	city_location varchar(50),
-	latitude_location double precision not null
-	CHECK (latitude_location BETWEEN -90 AND 90),
-	longitude_location double precision not null
-	CHECK (longitude_location BETWEEN -180 AND 180)
-);
-
-create table Services(
-	id_service int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_location int ,
-	name_service varchar(50)not null unique,
-	path_metric varchar(50) not null,
-	external_id text,
-	location_metadata jsonb NOT NULL DEFAULT '{}',
-	active_service BOOLEAN NOT NULL DEFAULT TRUE,
-	date_houry TIMESTAMPTZ DEFAULT NOW(),
-	constraint fk_service 
-		foreign key (id_location)
-		references locations(id_location)
-);
-
-create table Metrics (
-	id_metric bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_service int,
-	cpu_metric numeric not null
-	CHECK (cpu_metric BETWEEN 0 AND 100),
-	ram_metric numeric not null check(ram_metric>=0),
-	hd_metric numeric not null check(hd_metric>=0),
-	network_metric numeric not null check(network_metric>=0),
-	date_houry TIMESTAMPTZ NOT NULL,
-	colletion_interval_metric numeric not null,
-	carbon_intensity numeric,
-	renewable_percent numeric,
-	location_metadata jsonb,
-	constraint fk_service
-		foreign key (id_service)
-		references services(id_service),
-	-- A restrição UNIQUE cria automaticamente um índice B-tree composto
-	-- na ordem (id_service, date_houry), atendendo às buscas por serviço e período.
-	CONSTRAINT uq_metrics_service_date
-        UNIQUE (id_service, date_houry)
-);
-
-create table Carbons(
-	id_carbon int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-	id_location int,
-	date_houry TIMESTAMPTZ not null,
-	intesity_co2e_kwh_carbon numeric not null check(intesity_co2e_kwh_carbon>=0),
-	renewable_percent_carbon numeric not null
-	CHECK (renewable_percent_carbon BETWEEN 0 AND 100),
-	constraint fk_service
-		foreign key(id_location)
-		references locations(id_location),
-	CONSTRAINT uq_metrics_Carbon_date
-        UNIQUE (id_location, date_houry)
-);
-
-CREATE TABLE monitoring_collections (
-  collected_at timestamptz PRIMARY KEY,
-  catalog jsonb NOT NULL,
-  errors jsonb NOT NULL DEFAULT '{}',
-  carbon_available boolean NOT NULL
-);
-CREATE INDEX metrics_collected_at_idx ON metrics(date_houry,id_service);
-
-CREATE UNIQUE INDEX services_external_id_idx ON services(external_id);
-```
-
-</details>
-
-Relacionamentos entre as tabelas:
-
-Users: armazena os dados de cadastro dos usuários, incluindo e-mail único e senha armazenada em formato de hash.
-
-Locations: armazena informações geográficas, como país, região, cidade e coordenadas.
-
-Services: registra os serviços e permite relacioná-los às localizações por meio de uma chave estrangeira.
-
-Metrics: armazena amostras de métricas de hardware associadas aos serviços.
-
-Carbons: armazena informações de intensidade de carbono e percentual de energia renovável associadas às localizações.
-
-As chaves estrangeiras conectam Services a Locations, Metrics a Services e Carbons a Locations.
+Consulte o [modelo relacional, a inicialização e as migrations](database/README.md).
 
 ---
 
@@ -251,11 +154,11 @@ O desenvolvimento do MVP foi planejado em três entregas incrementais ao longo d
 | **US07** | **Visualização Geográfica em Mapa:** Exibição interativa da posição dos serviços em mapa. | RF13 | **Sprint 3** |
 | **US08** | **Comparador & Consolidação MVP:** Módulo de comparação entre serviços e entrega do MVP containerizado. | RF15, RP05, RP07 | **Sprint 3** |
 
-As histórias de usuário seguem critérios objetivos de alinhamento e prontidão (DoR) e de conclusão e validação (DoD).
+A Sprint 3 também registrou a [US09 — Observabilidade, Relatórios e Otimização](https://github.com/pentascripts-organization/EcoByteMetrics/issues/128), ainda aberta. O [plano de entregas](docs/plano-de-entregas.md) registra o andamento e as evidências.
 
 ---
 
-## Planeamento das Sprints
+## Planejamento das Sprints
 
 ```mermaid
 graph LR
@@ -265,36 +168,34 @@ graph LR
 
 ---
 
-### Tabela de desenvolvimento e datas de previstas de cada etapa
+### Períodos planejados e demonstrações
 
 |             Período              |            Documentação da Sprint            |                   Vídeo                   |
 | :------------------------------: | :------------------------------------------: | :---------------------------------------: |
 | **Sprint 1:** 28/09 a 19/10/2026 | [Sprint Review](./docs/sprints/sprint-1/sprint-1.md) | [▶ YouTube](https://youtu.be/7RxJdSmYO0c) |
 | **Sprint 2:** 20/10 a 09/11/2026 | [Sprint Review](./docs/sprints/sprint-2/sprint-2.md) | [▶ YouTube](https://youtu.be/I2eUKGZDlMA) |
-| **Sprint 3:** 10/11 a 23/11/2026 | [Sprint Review](./docs/sprints/sprint-3/sprint-3.md) | [▶ YouTube](https://youtu.be/-J-_2v4ASvk)) |
+| **Sprint 3:** 10/11 a 23/11/2026 | [Sprint Review](./docs/sprints/sprint-3/sprint-3.md) | [▶ YouTube](https://youtu.be/-J-_2v4ASvk) |
 
 ---
 
 ### 🚀 Como Executar o Projeto
-Toda a infraestrutura do sistema é orquestrada através de containers Docker para garantir facilidade de execução.
+Instale Docker Engine com Compose v2. Na raiz, copie [`.env.example`](.env.example) para `.env` se o arquivo ainda não existir. No PowerShell, use `Copy-Item .env.example .env`. Configure `POSTGRES_PASSWORD`, `JWT_SECRET` e as duas famílias `ADMIN_SEED_*` e `USER_SEED_*` com valores próprios antes de iniciar. Preserve `POSTGRES_HOST=postgres` e a porta interna `5432` no Compose. As APIs configuradas por `API_METRIC` e `API_CARBON` precisam estar acessíveis para a coleta.
 
-#### Pré-requisitos
-É necessário ter o Docker Engine e o Docker Compose instalados no ambiente local.
+```bash
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+```
 
-#### Passo a Passo
-1. **Configurar as Variáveis de Ambiente:**
-   Crie o arquivo de ambiente `.env` copiando o modelo de exemplo:
-   ```bash
-   cp .env.example .env
-   ```
+| Serviço Compose | Contêiner padrão | Acesso local padrão |
+|---|---|---|
+| `frontend` | `ecobytemetrics-frontend` | [Interface](http://localhost:5173), com proxy `/backend` |
+| `backend` | `ecobytemetrics-backend` | [Health HTTP](http://localhost:3000/health) |
+| `postgres` | `database_EcoByteMetrics` | Porta 5433 do host, 5432 no contêiner |
 
-2. **Iniciar os Containers:**
-   Suba os serviços do frontend, backend e banco de dados via Docker Compose:
-   ```bash
-   docker compose up --build -d
-   ```
-3. **Acessos Locais:**
-   Após a inicialização, o painel web fica disponível em `http://localhost:5173` e a API REST em `http://localhost:3000`.
+Na primeira inicialização de um volume vazio, o PostgreSQL executa o DDL e provisiona as contas iniciais com os dados do ambiente. Em um volume existente, o backend aplica as migrations na inicialização. Acesse `/login` com a conta provisionada ou cadastre uma conta `USER` em `/cadastro`. Use `docker compose stop` para parar os serviços preservando o volume. Consulte o [runbook](docs/troubleshooting.md) para diagnóstico.
+
+Com Node.js 24, execute `npm ci` em cada módulo antes dos testes. No backend, use `npm test` e `npm run build`. No frontend, use `npm run test:unit`, `npm run lint`, `npm run build`, `npm run test:e2e:install` e `npm run test:e2e`. Os READMEs de [backend](backend/README.md) e [frontend](frontend/README.md) descrevem os pré-requisitos específicos.
 
 ---
 
@@ -353,10 +254,7 @@ greener/
 <th><a href="https://github.com/EnzoSuzukiProkopas"><img src="https://github.com/EnzoSuzukiProkopas.png" width="90px" height="90px"/></a></th>
 </tr>
 <tr>
-<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
-<th><a href="Link do Linkedin"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
+<td colspan="4"></td>
 <th><a href="https://www.linkedin.com/in/enzo-suzuki-1756b7435/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=flat&logo=linkedin&logoColor=white"></a></th>
 </tr>
 </tbody>
@@ -382,3 +280,7 @@ Para detalhamento técnico completo e acompanhamento do projeto, consulte os arq
 * 🧮 **[Memória de Cálculo Ambiental](./docs/calculos.md):** Fórmulas e fatores de conversão em kWh e CO₂e.
 * 📄 **[Relatório da Sprint Review 1](./docs/sprints/sprint-1/sprint-1.md):** Resumo das entregas, autoavaliação e evidências da Sprint 1.
 * 📄 **[Relatório da Sprint Review 2](./docs/sprints/sprint-2/sprint-2.md):** Resumo das entregas, autoavaliação e evidências da Sprint 2.
+
+- [Matriz de requisitos e rubrica](docs/rastreabilidade.md)
+- [Auditoria do MVP e encaminhamentos](docs/auditoria-final.md)
+- [Sprint Review 3](docs/sprints/sprint-3/sprint-3.md)
