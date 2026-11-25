@@ -42,6 +42,9 @@ export function createAuthStore(restoreOnStart = false) {
     getSnapshot: () => state,
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     checkExpiration,
+    acknowledgeSignOut() {
+      if (state.notice === "signed-out") update({ ...state, notice: null });
+    },
     expireSession,
     async restore() {
       if (pending || state.session) return;

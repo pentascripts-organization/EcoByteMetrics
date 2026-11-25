@@ -14,10 +14,11 @@ export function AdministrationPanel() {
   const { session, logout, pending, error } = useAuth();
   if (!session) return null;
 
+  const isAdmin = session.role === "ADMIN";
   const signOut = () => void logout();
   return <section className="administration-panel" aria-labelledby="administration-title">
     <header className="administration-heading">
-      <h2 id="administration-title">Administração</h2>
+      <h2 id="administration-title">{isAdmin ? "Administração" : "Sua conta"}</h2>
       <div className="administration-account">
         <span>{session.email}</span>
         <button type="button" disabled={pending} onClick={signOut}><LogOut size={16} aria-hidden="true" />{pending ? "Saindo…" : "Sair"}</button>
@@ -26,19 +27,21 @@ export function AdministrationPanel() {
     {error && <p className="monitoring-notice" role="alert">{error}</p>}
     <div className="administration-grid">
       <AccountCard session={session} signOut={signOut} pending={pending} />
-      <MonitoringSettingsCard />
+      {isAdmin && <MonitoringSettingsCard />}
     </div>
-    <MonitoredServicesCard />
-    <section className="administration-future" aria-labelledby="future-title">
-      <h3 id="future-title">Recursos futuros</h3>
-      <p>Funcionalidades planejadas para próximas versões.</p>
-      <div className="administration-grid administration-grid--future">
-        {futureFeatures.map(({ title, description, Icon }) => <article className="administration-card administration-card--future" key={title}>
-          <Icon size={20} aria-hidden="true" />
-          <div><h4>{title}</h4><p>{description}</p></div>
-          <span className="administration-tag">Indisponível</span>
-        </article>)}
-      </div>
-    </section>
+    {isAdmin && <>
+      <MonitoredServicesCard />
+      <section className="administration-future" aria-labelledby="future-title">
+        <h3 id="future-title">Recursos futuros</h3>
+        <p>Funcionalidades planejadas para próximas versões.</p>
+        <div className="administration-grid administration-grid--future">
+          {futureFeatures.map(({ title, description, Icon }) => <article className="administration-card administration-card--future" key={title}>
+            <Icon size={20} aria-hidden="true" />
+            <div><h4>{title}</h4><p>{description}</p></div>
+            <span className="administration-tag">Indisponível</span>
+          </article>)}
+        </div>
+      </section>
+    </>}
   </section>;
 }

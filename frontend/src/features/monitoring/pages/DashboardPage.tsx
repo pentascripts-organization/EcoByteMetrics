@@ -77,7 +77,7 @@ function ServiceStatus({ service }: { service: MonitoredService }) {
 export function DashboardPage() {
   const { snapshot, loading, error, refresh, period, setHistoryOpen } = useMonitoring();
   const analysis = useAnalysis();
-  const { session } = useAuth();
+  const { session, acknowledgeSignOut } = useAuth();
   const [params, setParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [applicationPage, setApplicationPage] = useState(0);
@@ -111,6 +111,9 @@ export function DashboardPage() {
   const lens: ImpactLens = params.get("lente") === "energy" ? "energy" : params.get("lente") === "emissions" ? "emissions" : "status";
   const tab = params.get("aba") === "administracao" ? "administracao" : params.get("aba") === "comparar" ? "comparar" : params.get("aba") === "evolucao" ? "evolucao" : params.get("aba") === "mapa" && mobile ? "mapa" : "geral";
   const administration = !selectedId && tab === "administracao";
+  useEffect(() => {
+    if (!administration) acknowledgeSignOut();
+  }, [administration, acknowledgeSignOut]);
   const detailTab = ["recursos", "evolucao"].includes(params.get("detalhe") ?? "") ? params.get("detalhe")! : "resumo";
   const legacyHistoryDrawer = params.get("painel") === "historico";
   const historyDrawerRequested = params.get("filtros") === "historico" || legacyHistoryDrawer;

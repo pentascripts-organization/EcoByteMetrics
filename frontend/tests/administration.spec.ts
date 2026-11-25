@@ -95,6 +95,8 @@ test("user edits only their own account and the session renews before logout", a
   await page.goto(route);
   const card = page.getByRole("region", { name: "Minha conta" });
   await expect(card.getByText("USER", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sua conta" })).toBeVisible();
+  await expect(page.getByRole("region", { name: /Configura.+o da coleta|Servi.os monitorados|Recursos futuros/ })).toHaveCount(0);
   await card.getByRole("button", { name: "Editar conta" }).click();
   const dialog = page.getByRole("dialog", { name: "Editar conta" });
   const password = dialog.locator('input[name="password"]');
@@ -112,7 +114,13 @@ test("user edits only their own account and the session renews before logout", a
   await expect(card.getByText("updated@example.test", { exact: true })).toBeVisible();
   await expect(card.getByText("Conta atualizada com sucesso.")).toBeVisible();
   await card.getByRole("button", { name: "Sair" }).click();
-  await expect(page).toHaveURL(url => !url.searchParams.has("aba"));
+  await expect(page).toHaveURL(url => url.pathname === "/dashboard" && !url.searchParams.has("aba"));
+  await page.getByRole("tab", { name: /Administra/ }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/login" && url.searchParams.get("retorno") === route);
+  await page.locator('input[name="email"]').fill("updated@example.test");
+  await page.locator('input[name="password"]').fill("example-password");
+  await page.getByRole("button", { name: "Entrar no ambiente" }).click();
+  await expect(page.getByRole("heading", { name: "Sua conta" })).toBeVisible();
 });
 
 test("administration handles empty services, settings failure and an expired session", async ({ page }) => {
